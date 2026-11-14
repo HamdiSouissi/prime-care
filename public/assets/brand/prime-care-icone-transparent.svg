@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<title id="title">PRIME CARE — icône transparente</title><desc id="desc">Monogramme PC entrelacé bleu nuit et indigo-violet sur fond transparent.</desc>
+<defs><linearGradient id="pcAccent" x1="0" y1="1" x2="1" y2="0"><stop offset="0%" stop-color="#5E5CE6"/><stop offset="100%" stop-color="#BF5AF2"/></linearGradient></defs>
+<g transform="translate(15 11) scale(1.02)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M58 218 V76 C58 53 75 36 98 36 H159 C196 36 217 57 217 87 C217 117 196 137 165 137 H133" stroke="#0A1633" stroke-width="24"/>
+  <path d="M177 105 C163 97 148 93 132 93 C91 93 62 123 62 163 C62 202 91 231 130 231 C154 231 174 221 188 204" stroke="url(#pcAccent)" stroke-width="24"/>
+</g>
+</svg>
