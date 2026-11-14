@@ -1,8 +1,8 @@
 /**
- * Prime Care — Animated Launch Loader (§6.8) & Mini Loader
+ * Prime Care — Animated Launch Loader (§6.8 + Additif B §9.5) & Mini Loader
  */
 const SESSION_KEY = 'pc_launch_loader_shown';
-const MIN_DURATION_MS = 1200;
+const MIN_DURATION_MS = 1650;
 const MAX_DURATION_MS = 4000;
 
 export function initLaunchLoader() {
@@ -11,7 +11,7 @@ export function initLaunchLoader() {
     return;
   }
 
-  const forceShow = loader.dataset.forceShow === '1';
+  const forceShow = loader.dataset.forceLoader === '1' || loader.dataset.forceShow === '1';
   const alreadyShown = sessionStorage.getItem(SESSION_KEY) === '1';
 
   if (alreadyShown && !forceShow) {

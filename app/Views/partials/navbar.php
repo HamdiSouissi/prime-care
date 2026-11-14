@@ -2,46 +2,43 @@
 
 declare(strict_types=1);
 
-use App\Core\View;
-
-/** @var string $pageTitle */
-$pageTitle = $pageTitle ?? 'Prime Care';
-/** @var string|null $backUrl */
-$backUrl = $backUrl ?? null;
-/** @var string $backLabel */
-$backLabel = $backLabel ?? 'Précédent';
-/** @var bool $showNavbarLogo */
-$showNavbarLogo = $showNavbarLogo ?? false;
-/** @var string|null $rightActionHtml */
-$rightActionHtml = $rightActionHtml ?? (View::yieldSection('navbar_right') !== '' ? View::yieldSection('navbar_right') : null);
+$pageTitle = (string) ($pageTitle ?? 'Prime Care');
+$backUrl = isset($backUrl) ? (string) $backUrl : null;
+$backLabel = (string) ($backLabel ?? 'Retour');
+$isHome = (bool) ($isHome ?? false);
+$navbarActionHtml = View::yieldSection('navbar_action');
+$currentUser = auth();
+$avatarClass = avatar_color_class((int) ($currentUser['id'] ?? 1));
 ?>
-<header class="pc-navbar">
+<header class="pc-navbar" data-navbar>
   <div class="pc-navbar__inner">
     <div class="pc-navbar__left">
-      <?php if ($backUrl !== null) : ?>
-        <a href="<?= e($backUrl) ?>" class="pc-navbar__back">
-          <?= icon('chevron-left', '', 22) ?>
+      <?php if ($backUrl !== null): ?>
+        <a href="<?= e($backUrl) ?>" class="pc-navbar__back" aria-label="<?= e($backLabel) ?>">
+          <?= icon('chevron-left', 22) ?>
           <span><?= e($backLabel) ?></span>
         </a>
-      <?php elseif ($showNavbarLogo) : ?>
-        <a href="/patient" class="inline-flex items-center gap-2 text-brand" style="min-height: 44px;" aria-label="Fiche patient">
-          <?= icon('heart-pulse', '', 18) ?>
-          <span class="text-footnote" style="font-weight: 600;">M. Benali</span>
+      <?php elseif ($isHome): ?>
+        <a href="/patient" class="pc-navbar__patient-pill" aria-label="Fiche patient">
+          <?= icon('heart-pulse', 20) ?>
+          <span>M. Benali</span>
         </a>
       <?php endif; ?>
     </div>
 
-    <div class="pc-navbar__center-title"><?= e($pageTitle) ?></div>
+    <div class="pc-navbar__center-title" data-navbar-compact-title>
+      <?= e($pageTitle) ?>
+    </div>
 
     <div class="pc-navbar__right">
-      <?php if ($rightActionHtml !== null) : ?>
-        <?= $rightActionHtml ?>
-      <?php else : ?>
-        <a href="/profile" class="pc-avatar" style="width: 34px; height: 34px; font-size: 13px; background-color: <?= e(auth()['color_hex'] ?? '#5E5CE6') ?>;" aria-label="Mon profil">
-          <?php if (!empty(auth()['avatar_path'])) : ?>
-            <img src="/media/<?= e(auth()['avatar_path']) ?>" alt="<?= e(auth()['first_name'] ?? '') ?>">
-          <?php else : ?>
-            <?= e(initials((string) (auth()['first_name'] ?? 'P'), (string) (auth()['last_name'] ?? 'C'))) ?>
+      <?php if ($navbarActionHtml !== ''): ?>
+        <?= $navbarActionHtml ?>
+      <?php elseif ($currentUser !== null): ?>
+        <a href="/profile" class="pc-avatar pc-avatar--sm <?= e($avatarClass) ?>" aria-label="Mon profil">
+          <?php if (!empty($currentUser['avatar_path'])): ?>
+            <img src="/media/<?= e((string) $currentUser['avatar_path']) ?>" alt="<?= e((string) $currentUser['first_name']) ?>">
+          <?php else: ?>
+            <?= e(initials((string) ($currentUser['first_name'] ?? 'P'), (string) ($currentUser['last_name'] ?? 'C'))) ?>
           <?php endif; ?>
         </a>
       <?php endif; ?>
@@ -49,11 +46,11 @@ $rightActionHtml = $rightActionHtml ?? (View::yieldSection('navbar_right') !== '
   </div>
 </header>
 
-<div class="pc-large-header">
+<div class="pc-large-header" data-navbar-large-header>
   <div class="pc-large-header__title-wrap">
-    <?php if ($showNavbarLogo) : ?>
-      <span class="pc-large-header__logo">
-        <?= brand_svg('icone-transparent', '', 28) ?>
+    <?php if ($isHome): ?>
+      <span class="pc-large-header__logo" aria-hidden="true">
+        <?= brand_svg('prime-care-icone-transparent.svg') ?>
       </span>
     <?php endif; ?>
     <h1 class="pc-large-header__title"><?= e($pageTitle) ?></h1>

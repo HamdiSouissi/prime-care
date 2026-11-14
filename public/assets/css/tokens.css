@@ -5,23 +5,32 @@
   [data-theme="light"] {
     color-scheme: light;
 
-    /* iOS Grouped Neutrals — Light */
-    --bg: #F2F2F7;
+    /* Proposition B — Bleu nuit (Surfaces & Textes — Mode Clair) */
+    --bg: #F4F6FB;
     --surface: #FFFFFF;
-    --surface-2: #F7F7FA;
-    --surface-3: #EFEFF4;
-    --separator: rgba(60, 60, 67, 0.12);
-    --text: #1C1C1E;
-    --text-2: rgba(60, 60, 67, 0.62);
-    --text-3: rgba(60, 60, 67, 0.32);
+    --surface-1: #FFFFFF;
+    --surface-2: #EEF2F9;
+    --surface-3: #E2E8F4;
+    --header: #0A1633;
+    --header-2: #11224D;
+    --header-text: #FFFFFF;
+    --header-muted: rgba(255, 255, 255, 0.76);
+    --border: rgba(10, 22, 51, 0.08);
+    --separator: rgba(10, 22, 51, 0.08);
+    --text: #0A1633;
+    --text-1: #0A1633;
+    --text-2: #475569;
+    --text-3: #94A3B8;
 
-    /* Brand */
+    /* Identité Prime Care */
     --brand: #5E5CE6;
+    --brand-purple: #BF5AF2;
     --brand-soft: rgba(94, 92, 230, 0.12);
     --brand-ink: #0A1633;
-    --brand-gradient: linear-gradient(45deg, #5E5CE6 0%, #BF5AF2 100%);
+    --brand-gradient: linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%);
+    --accent-cyan: #00C7BE;
 
-    /* Domain Modules */
+    /* Couleurs métiers par domaine */
     --c-vitals: #FF2D55;
     --c-vitals-soft: rgba(255, 45, 85, 0.12);
     --c-meds: #00C7BE;
@@ -32,10 +41,10 @@
     --c-notes-soft: rgba(175, 82, 222, 0.14);
     --c-team: #5E5CE6;
     --c-team-soft: rgba(94, 92, 230, 0.12);
-    --c-docs: #007AFF;
-    --c-docs-soft: rgba(0, 122, 255, 0.12);
+    --c-docs: #0A84FF;
+    --c-docs-soft: rgba(10, 132, 255, 0.12);
 
-    /* Semantic Statuses */
+    /* Statuts sémantiques */
     --ok: #34C759;
     --ok-soft: rgba(52, 199, 89, 0.14);
     --warn: #FFCC00;
@@ -43,16 +52,19 @@
     --warn-ink: #5C4500;
     --danger: #FF3B30;
     --danger-soft: rgba(255, 59, 48, 0.12);
-    --info: #007AFF;
-    --info-soft: rgba(0, 122, 255, 0.12);
+    --info: #0A84FF;
+    --info-soft: rgba(10, 132, 255, 0.12);
 
-    /* Elevation & Blur */
-    --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
-    --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.14);
-    --backdrop-overlay: rgba(10, 22, 51, 0.42);
-    --glass-bg: color-mix(in srgb, var(--surface) 72%, transparent);
+    /* Élévation : cartes 24px sans ombre portée (Proposition B) */
+    --shadow-card: none;
+    --shadow-float: none;
+    --shadow-tabbar: 0 12px 32px rgba(10, 22, 51, 0.12);
+    --shadow-sheet: 0 -8px 32px rgba(10, 22, 51, 0.18);
+    --backdrop-overlay: rgba(10, 22, 51, 0.52);
+    --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
+    --tabbar-bg: rgba(255, 255, 255, 0.92);
 
-    /* Spacing (4/8px grid) */
+    /* Espacements (grille 4/8px) */
     --sp-1: 4px;
     --sp-2: 8px;
     --sp-3: 12px;
@@ -62,29 +74,30 @@
     --sp-8: 32px;
     --sp-10: 40px;
 
-    /* Radii */
-    --r-sm: 8px;
-    --r-md: 12px;
-    --r-lg: 20px;
+    /* Rayons (Cartes à 24px — Proposition B) */
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 24px;
+    --r-card: 24px;
     --r-sheet: 28px;
     --r-pill: 999px;
 
-    /* Motion */
+    /* Mouvement */
     --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     --dur-press: 120ms;
     --dur-appear: 220ms;
     --dur-sheet: 350ms;
 
-    /* Typography */
+    /* Typographie */
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;
 
-    /* Layout Safe Areas */
+    /* Zones de sécurité (Safe Areas) */
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
-    --tabbar-height: 64px;
+    --tabbar-height: 68px;
     --navbar-height: 52px;
     --screen-pad: 16px;
   }
@@ -95,18 +108,25 @@
     }
   }
 
-  /* Automatic Dark Mode */
+  /* Mode Sombre automatique (Proposition B — Bleu nuit profond) */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #000000;
-      --surface: #1C1C1E;
-      --surface-2: #2C2C2E;
-      --surface-3: #3A3A3C;
-      --separator: rgba(84, 84, 88, 0.45);
-      --text: #FFFFFF;
-      --text-2: rgba(235, 235, 245, 0.62);
-      --text-3: rgba(235, 235, 245, 0.32);
+      --bg: #070D1F;
+      --surface: #0F172A;
+      --surface-1: #0F172A;
+      --surface-2: #162038;
+      --surface-3: #1E293B;
+      --header: #060C1D;
+      --header-2: #0D1936;
+      --header-text: #FFFFFF;
+      --header-muted: rgba(255, 255, 255, 0.76);
+      --border: rgba(255, 255, 255, 0.09);
+      --separator: rgba(255, 255, 255, 0.09);
+      --text: #F8FAFC;
+      --text-1: #F8FAFC;
+      --text-2: #94A3B8;
+      --text-3: #64748B;
 
       --brand: #7D7AFF;
       --brand-soft: rgba(125, 122, 255, 0.20);
@@ -117,32 +137,42 @@
       --c-meals-soft: rgba(255, 149, 0, 0.22);
       --c-notes-soft: rgba(175, 82, 222, 0.22);
       --c-team-soft: rgba(125, 122, 255, 0.20);
-      --c-docs-soft: rgba(0, 122, 255, 0.22);
+      --c-docs-soft: rgba(10, 132, 255, 0.22);
 
       --ok-soft: rgba(52, 199, 89, 0.22);
       --warn-soft: rgba(255, 204, 0, 0.24);
       --warn-ink: #FFE57F;
       --danger-soft: rgba(255, 59, 48, 0.22);
-      --info-soft: rgba(0, 122, 255, 0.22);
+      --info-soft: rgba(10, 132, 255, 0.22);
 
+      --shadow-card: none;
       --shadow-float: none;
+      --shadow-tabbar: 0 12px 32px rgba(0, 0, 0, 0.55);
       --shadow-sheet: 0 -4px 24px rgba(0, 0, 0, 0.65);
-      --backdrop-overlay: rgba(0, 0, 0, 0.68);
-      --glass-bg: color-mix(in srgb, var(--surface) 72%, transparent);
+      --backdrop-overlay: rgba(3, 7, 18, 0.75);
+      --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
+      --tabbar-bg: rgba(15, 23, 42, 0.92);
     }
   }
 
-  /* Explicit Dark Mode */
+  /* Mode Sombre explicite (Proposition B — Bleu nuit profond) */
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #000000;
-    --surface: #1C1C1E;
-    --surface-2: #2C2C2E;
-    --surface-3: #3A3A3C;
-    --separator: rgba(84, 84, 88, 0.45);
-    --text: #FFFFFF;
-    --text-2: rgba(235, 235, 245, 0.62);
-    --text-3: rgba(235, 235, 245, 0.32);
+    --bg: #070D1F;
+    --surface: #0F172A;
+    --surface-1: #0F172A;
+    --surface-2: #162038;
+    --surface-3: #1E293B;
+    --header: #060C1D;
+    --header-2: #0D1936;
+    --header-text: #FFFFFF;
+    --header-muted: rgba(255, 255, 255, 0.76);
+    --border: rgba(255, 255, 255, 0.09);
+    --separator: rgba(255, 255, 255, 0.09);
+    --text: #F8FAFC;
+    --text-1: #F8FAFC;
+    --text-2: #94A3B8;
+    --text-3: #64748B;
 
     --brand: #7D7AFF;
     --brand-soft: rgba(125, 122, 255, 0.20);
@@ -153,17 +183,20 @@
     --c-meals-soft: rgba(255, 149, 0, 0.22);
     --c-notes-soft: rgba(175, 82, 222, 0.22);
     --c-team-soft: rgba(125, 122, 255, 0.20);
-    --c-docs-soft: rgba(0, 122, 255, 0.22);
+    --c-docs-soft: rgba(10, 132, 255, 0.22);
 
     --ok-soft: rgba(52, 199, 89, 0.22);
     --warn-soft: rgba(255, 204, 0, 0.24);
     --warn-ink: #FFE57F;
     --danger-soft: rgba(255, 59, 48, 0.22);
-    --info-soft: rgba(0, 122, 255, 0.22);
+    --info-soft: rgba(10, 132, 255, 0.22);
 
+    --shadow-card: none;
     --shadow-float: none;
+    --shadow-tabbar: 0 12px 32px rgba(0, 0, 0, 0.55);
     --shadow-sheet: 0 -4px 24px rgba(0, 0, 0, 0.65);
-    --backdrop-overlay: rgba(0, 0, 0, 0.68);
-    --glass-bg: color-mix(in srgb, var(--surface) 72%, transparent);
+    --backdrop-overlay: rgba(3, 7, 18, 0.75);
+    --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
+    --tabbar-bg: rgba(15, 23, 42, 0.92);
   }
 }

@@ -9,6 +9,8 @@
   .flex-col { flex-direction: column; }
   .flex-wrap { flex-wrap: wrap; }
   .flex-1 { flex: 1; }
+  .min-w-0 { min-width: 0; }
+  .shrink-0 { flex-shrink: 0; }
 
   .gap-1 { gap: var(--sp-1); }
   .gap-2 { gap: var(--sp-2); }
@@ -24,19 +26,38 @@
   .mt-5 { margin-top: var(--sp-5); }
   .mt-6 { margin-top: var(--sp-6); }
 
+  .mb-1 { margin-bottom: var(--sp-1); }
   .mb-2 { margin-bottom: var(--sp-2); }
   .mb-3 { margin-bottom: var(--sp-3); }
   .mb-4 { margin-bottom: var(--sp-4); }
   .mb-6 { margin-bottom: var(--sp-6); }
 
+  .py-1 { padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
+  .py-6 { padding-top: var(--sp-6); padding-bottom: var(--sp-6); }
+
   .text-center { text-align: center; }
+  .text-left { text-align: left; }
   .text-right { text-align: right; }
   .text-muted { color: var(--text-2); }
   .text-subtle { color: var(--text-3); }
   .text-brand { color: var(--brand); }
+  .text-brand-ink { color: var(--brand-ink); }
   .text-ok { color: var(--ok); }
   .text-warn { color: var(--warn-ink); }
   .text-danger { color: var(--danger); }
+  .text-white { color: #FFFFFF; }
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 700; }
+  .pre-line { white-space: pre-line; }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cursor-pointer { cursor: pointer; }
+  .pointer-none { pointer-events: none; }
+  .min-h-touch { min-height: 44px; }
+  .max-w-prose { max-width: 340px; }
 
   .w-full { width: 100%; }
   .hidden { display: none !important; }

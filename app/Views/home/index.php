@@ -2,200 +2,176 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth;
-
-/** @var array<string, mixed>|null $patient */
-/** @var array<int, array<string, mixed>> $contacts */
-/** @var int $teamCount */
-$user = Auth::user() ?? [];
-$firstName = (string) ($user['first_name'] ?? 'Fatou');
+$user = is_array($user ?? null) ? $user : (auth() ?? []);
+$patient = is_array($patient ?? null) ? $patient : [];
+$firstName = (string) ($user['first_name'] ?? 'Équipe');
 $role = (string) ($user['role'] ?? 'caregiver');
-$isAdmin = $role === 'admin';
-$isCaregiverOrCoord = in_array($role, ['caregiver', 'coordinator'], true);
-
-$patientName = ($patient['first_name'] ?? 'Henri') . ' ' . ($patient['last_name'] ?? 'Benali');
+$patientFirst = (string) ($patient['first_name'] ?? 'Henri');
+$patientLast = (string) ($patient['last_name'] ?? 'Benali');
+$patientName = trim($patientFirst . ' ' . $patientLast);
 $patientAge = isset($patient['birth_date']) ? calculate_age((string) $patient['birth_date']) : 84;
-$diabetesType = (string) ($patient['diabetes_type'] ?? 'Diabète de type 2');
 ?>
-<!-- Gradient Hero Header (§3.2, §6.2) -->
+<!-- En-tête Bleu nuit avec halos lumineux (Additif B §9.3) -->
 <section class="pc-home-hero" aria-label="En-tête d’accueil">
   <div class="flex items-center justify-between">
     <div>
-      <p class="pc-home-hero__date"><?= e(french_full_date()) ?></p>
-      <h2 class="pc-home-hero__greeting">Bonjour <?= e($firstName) ?></h2>
+      <div class="pc-home-hero__date"><?= e(french_full_date()) ?></div>
+      <div class="pc-home-hero__greeting">Bonjour <?= e($firstName) ?></div>
     </div>
-    <span class="pc-badge" style="background: rgba(255,255,255,0.2); color: #FFFFFF;">
+    <span class="pc-badge pc-badge--hero">
       <?= e(t('roles.' . $role)) ?>
     </span>
   </div>
 
-  <!-- Patient Summary Card inside Hero -->
   <a href="/patient" class="pc-home-patient">
     <div class="pc-home-patient__avatar">
-      <?= e(initials((string) ($patient['first_name'] ?? 'H'), (string) ($patient['last_name'] ?? 'B'))) ?>
+      <?= e(initials($patientFirst, $patientLast)) ?>
     </div>
-    <div class="flex-1" style="min-width: 0;">
-      <div class="text-headline" style="color: #FFFFFF;"><?= e($patientName) ?> · <?= $patientAge ?> ans</div>
-      <div class="text-footnote" style="color: rgba(255,255,255,0.88);">
-        <?= e($diabetesType) ?> · Cible <?= e(number_format((float) ($patient['target_glycemia_fasting_min'] ?? 0.8), 2, ',', ' ')) ?>–<?= e(number_format((float) ($patient['target_glycemia_fasting_max'] ?? 1.3), 2, ',', ' ')) ?> g/L
+    <div class="flex-1 min-w-0">
+      <div class="text-headline text-white"><?= e($patientName) ?> · <?= $patientAge ?> ans</div>
+      <div class="pc-home-patient__subtitle">
+        <?= e((string) ($patient['diabetes_type'] ?? 'Diabète de type 2')) ?> · Cible à jeun <?= e(number_format((float) ($patient['target_glycemia_fasting_min'] ?? 0.80), 2, ',', ' ')) ?>–<?= e(number_format((float) ($patient['target_glycemia_fasting_max'] ?? 1.30), 2, ',', ' ')) ?> g/L
       </div>
     </div>
-    <span style="color: rgba(255,255,255,0.85);">
-      <?= icon('chevron-right', '', 20) ?>
+    <span class="text-white">
+      <?= icon('chevron-right', 20) ?>
     </span>
   </a>
 </section>
 
-<!-- Quick Action Bar (3-click rule: 1 tap from Home) -->
-<?php if ($isCaregiverOrCoord) : ?>
+<!-- Carte de garde / pointage du jour -->
+<?php if (in_array($role, ['caregiver', 'coordinator'], true)): ?>
   <section class="pc-card flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
-      <span class="pc-list-icon" style="background: var(--c-team); width: 42px; height: 42px; border-radius: 12px;">
-        <?= icon('clock', '', 22) ?>
+      <span class="pc-list-icon pc-list-icon--lg pc-list-icon--team">
+        <?= icon('clock', 22) ?>
       </span>
       <div>
-        <div class="text-headline">Prise de poste à domicile</div>
-        <div class="text-footnote text-muted">Pointage QR code + GPS (Phase 3)</div>
+        <div class="text-headline">Poste du jour · Domicile</div>
+        <div class="text-footnote text-muted">Pointage QR / GPS disponible en Phase 3</div>
       </div>
     </div>
-    <a href="/coming-soon/timeclock" class="pc-btn pc-btn--primary pc-btn--sm">
+    <a href="/coming-soon/clock" class="pc-btn pc-btn--tinted pc-btn--sm">
       J’arrive
     </a>
   </section>
-<?php elseif ($isAdmin) : ?>
+<?php else: ?>
   <section class="pc-card flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
-      <span class="pc-list-icon" style="background: var(--c-team); width: 42px; height: 42px; border-radius: 12px;">
-        <?= icon('users', '', 22) ?>
+      <span class="pc-list-icon pc-list-icon--lg pc-list-icon--team">
+        <?= icon('users', 22) ?>
       </span>
       <div>
-        <div class="text-headline">Équipe de soins active</div>
-        <div class="text-footnote text-muted"><?= $teamCount ?> comptes configurés · Gestion des accès</div>
+        <div class="text-headline">Équipe de soins à domicile</div>
+        <div class="text-footnote text-muted">5 intervenants configurés · Suivi continu 24h/24</div>
       </div>
     </div>
-    <a href="/users" class="pc-btn pc-btn--tinted pc-btn--sm">
-      Gérer l’équipe
-    </a>
+    <?php if (can('users', 'view')): ?>
+      <a href="/users" class="pc-btn pc-btn--tinted pc-btn--sm">Équipe</a>
+    <?php endif; ?>
   </section>
 <?php endif; ?>
 
-<!-- Health & Care Module Skeletons ("Bientôt disponible" — Phase 2/3) -->
-<div>
-  <div class="pc-section-header">Suivi quotidien · Modules médicaux</div>
-  <div class="pc-module-grid pc-card-stagger">
-    <!-- Glycémie & Constantes -->
+<!-- Cartes de synthèse médicale (Squelettes Phase 2) -->
+<section aria-labelledby="home-summary-heading">
+  <div class="pc-section-header" id="home-summary-heading">Suivi quotidien (Phase 2 — Bientôt disponible)</div>
+
+  <div class="pc-module-grid pc-module-grid--2col pc-card-stagger">
     <a href="/coming-soon/glycemia" class="pc-card">
       <div class="pc-health-card__head">
-        <span class="pc-health-card__module" style="color: var(--c-vitals);">
-          <?= icon('droplet', '', 18) ?>
-          <span>Glycémie & Constantes</span>
+        <span class="pc-health-card__module pc-health-card__module--vitals">
+          <?= icon('droplet', 18) ?>
+          <span>Glycémie</span>
         </span>
-        <span class="pc-badge pc-badge--brand">Bientôt disponible</span>
+        <span class="pc-badge pc-badge--brand">Phase 2</span>
       </div>
       <div class="pc-health-card__body">
-        <div class="flex-1">
-          <div class="pc-skeleton mb-2" style="width: 110px; height: 28px;"></div>
-          <div class="pc-skeleton" style="width: 170px; height: 14px;"></div>
+        <div>
+          <div class="pc-skeleton pc-skeleton--lg mb-2"></div>
+          <div class="pc-skeleton pc-skeleton--sm"></div>
         </div>
-        <div class="pc-skeleton" style="width: 84px; height: 36px; border-radius: 10px;"></div>
+        <div class="pc-skeleton pc-skeleton--pill"></div>
       </div>
-      <p class="text-footnote text-muted mt-3">
-        Courbes glycémiques, tension artérielle, SpO2 et seuils d’alerte (Phase 2).
-      </p>
     </a>
 
-    <!-- Prochaine prise de médicament -->
     <a href="/coming-soon/medication" class="pc-card">
       <div class="pc-health-card__head">
-        <span class="pc-health-card__module" style="color: var(--c-meds);">
-          <?= icon('pill', '', 18) ?>
-          <span>Plan de traitement & Insuline</span>
+        <span class="pc-health-card__module pc-health-card__module--meds">
+          <?= icon('pill', 18) ?>
+          <span>Prochaine prise</span>
         </span>
-        <span class="pc-badge pc-badge--brand">Bientôt disponible</span>
+        <span class="pc-badge pc-badge--brand">Phase 2</span>
       </div>
       <div class="pc-health-card__body">
-        <div class="flex-1">
-          <div class="pc-skeleton mb-2" style="width: 140px; height: 24px;"></div>
-          <div class="pc-skeleton" style="width: 190px; height: 14px;"></div>
+        <div>
+          <div class="pc-skeleton pc-skeleton--md mb-2"></div>
+          <div class="pc-skeleton pc-skeleton--sm"></div>
         </div>
-        <span class="pc-btn pc-btn--tinted pc-btn--sm" style="pointer-events: none;">Donné</span>
+        <span class="pc-btn pc-btn--tinted pc-btn--sm pointer-none">Donné</span>
       </div>
-      <p class="text-footnote text-muted mt-3">
-        Validation en 1 tap des prises de médicaments et doses d’insuline (Phase 2).
-      </p>
     </a>
 
-    <!-- Repas & Hydratation -->
     <a href="/coming-soon/meal" class="pc-card">
       <div class="pc-health-card__head">
-        <span class="pc-health-card__module" style="color: var(--c-meals);">
-          <?= icon('utensils', '', 18) ?>
-          <span>Repas & Hydratation</span>
+        <span class="pc-health-card__module pc-health-card__module--meals">
+          <?= icon('utensils', 18) ?>
+          <span>Dernier repas</span>
         </span>
-        <span class="pc-badge pc-badge--brand">Bientôt disponible</span>
+        <span class="pc-badge pc-badge--brand">Phase 2</span>
       </div>
       <div class="pc-health-card__body">
-        <div class="flex-1">
-          <div class="pc-skeleton mb-2" style="width: 125px; height: 22px;"></div>
-          <div class="pc-skeleton" style="width: 165px; height: 14px;"></div>
+        <div>
+          <div class="pc-skeleton pc-skeleton--md mb-2"></div>
+          <div class="pc-skeleton pc-skeleton--sm"></div>
         </div>
-        <div class="pc-skeleton" style="width: 52px; height: 52px; border-radius: 12px;"></div>
+        <div class="pc-skeleton pc-skeleton--thumb"></div>
       </div>
-      <p class="text-footnote text-muted mt-3">
-        Photos avant/après repas, quantité consommée et apports hydriques (Phase 2).
-      </p>
     </a>
 
-    <!-- Journal & Transmissions -->
     <a href="/coming-soon/journal" class="pc-card">
       <div class="pc-health-card__head">
-        <span class="pc-health-card__module" style="color: var(--c-notes);">
-          <?= icon('notebook-pen', '', 18) ?>
-          <span>Journal & Transmissions</span>
+        <span class="pc-health-card__module pc-health-card__module--notes">
+          <?= icon('notebook-pen', 18) ?>
+          <span>Transmissions</span>
         </span>
-        <span class="pc-badge pc-badge--brand">Bientôt disponible</span>
+        <span class="pc-badge pc-badge--brand">Phase 2</span>
       </div>
       <div class="pc-health-card__body">
-        <div class="flex-1">
-          <div class="pc-skeleton mb-2" style="width: 180px; height: 18px;"></div>
-          <div class="pc-skeleton" style="width: 140px; height: 14px;"></div>
+        <div class="w-full">
+          <div class="pc-skeleton pc-skeleton--md mb-2"></div>
+          <div class="pc-skeleton pc-skeleton--sm"></div>
         </div>
       </div>
-      <p class="text-footnote text-muted mt-3">
-        Soins rapides (toilette, change) et transmissions de fin de poste (Phase 2).
-      </p>
     </a>
   </div>
-</div>
+</section>
 
-<!-- Accès direct Fiche Patient & Urgences -->
-<div>
-  <div class="pc-section-header">Accès rapide · Patient & Urgences</div>
+<!-- Accès rapides Phase 1 -->
+<section aria-labelledby="home-quick-heading">
+  <div class="pc-section-header" id="home-quick-heading">Dossier patient & Urgences</div>
   <div class="pc-list-group">
     <a href="/patient" class="pc-list-item">
-      <span class="pc-list-icon" style="background: var(--c-vitals);">
-        <?= icon('alert-triangle', '', 18) ?>
+      <span class="pc-list-icon pc-list-icon--vitals">
+        <?= icon('heart-pulse', 18) ?>
       </span>
       <div class="pc-list-body">
-        <div class="pc-list-title">Protocole d’hypoglycémie & Consignes</div>
-        <div class="pc-list-subtitle">Conduite à tenir immédiate si glycémie &lt; 0,70 g/L</div>
+        <div class="pc-list-title">Fiche d’urgence & Protocole d’hypoglycémie</div>
+        <div class="pc-list-subtitle">Contacts SAMU 15, médecin traitant, consignes permanentes</div>
       </div>
-      <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+      <span class="pc-list-chevron"><?= icon('chevron-right', 18) ?></span>
     </a>
 
-    <?php foreach (array_slice($contacts, 0, 2) as $contact) : ?>
-      <div class="pc-list-item">
-        <span class="pc-list-icon" style="background: var(--ok);">
-          <?= icon('phone', '', 18) ?>
+    <?php if (!empty($patient['attending_physician_phone'])): ?>
+      <a href="tel:<?= e(preg_replace('/\s+/', '', (string) $patient['attending_physician_phone']) ?? '') ?>" class="pc-list-item">
+        <span class="pc-list-icon pc-list-icon--ok">
+          <?= icon('phone', 18) ?>
         </span>
         <div class="pc-list-body">
-          <div class="pc-list-title"><?= e($contact['full_name']) ?></div>
-          <div class="pc-list-subtitle"><?= e($contact['relation_role']) ?> · <?= e($contact['phone']) ?></div>
+          <div class="pc-list-title">Appeler <?= e((string) ($patient['attending_physician_name'] ?? 'le médecin traitant')) ?></div>
+          <div class="pc-list-subtitle"><?= e((string) $patient['attending_physician_phone']) ?></div>
         </div>
-        <a href="tel:<?= e(preg_replace('/\s+/', '', (string) $contact['phone']) ?? '') ?>" class="pc-contact-btn pc-contact-btn--call" aria-label="Appeler <?= e($contact['full_name']) ?>">
-          <?= icon('phone', '', 18) ?>
-        </a>
-      </div>
-    <?php endforeach; ?>
+        <span class="pc-badge pc-badge--ok">Appel direct</span>
+      </a>
+    <?php endif; ?>
   </div>
-</div>
+</section>

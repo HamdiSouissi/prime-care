@@ -1,83 +1,65 @@
-# Design System Prime Care — Direction artistique Apple Santé (iOS 17/18)
+# Design System — Prime Care (« Proposition B — Bleu nuit »)
 
-> **Prime Care** · « Suivi de soins à domicile » · Application créée par **[Prime Vision Solutions](https://primevisionsolutions.fr)**
-
----
-
-## 1. Principes directeurs
-
-1. **Ergonomie à une main (Zone du pouce)** :
-   - Navigation principale fixée en bas de l’écran (`pc-tabbar`) avec 5 entrées et un bouton d’action rapide central (`+`) de 52 × 52 px.
-   - Cibles tactiles minimales de **44 × 44 px** (48 × 48 px pour les actions principales et 56 × 56 px pour les boutons critiques).
-   - **Règle des 3 clics** : toute action courante (appel d’urgence, consultation du protocole d’hypoglycémie, changement de thème, ouverture de la saisie rapide) est accessible en 3 taps maximum depuis l’accueil.
-2. **Clarté médicale & Garde de nuit** :
-   - Deux thèmes complets (**Clair** par défaut et **Sombre** automatique ou forcé) pilotés par les variables CSS de `public/assets/css/tokens.css` et l’attribut `data-theme="auto|light|dark"` sur `<html>`.
-   - Chiffres tabulaires (`font-variant-numeric: tabular-nums`) obligatoires sur toutes les valeurs médicales, heures et numéros.
-3. **Architecture CSS par couches (`@layer`)** :
-   - `@layer reset, tokens, base, components, utilities, pages;` sans aucun préprocesseur ni framework CSS externe.
+> **Produit** : Prime Care — *Suivi de soins à domicile*  
+> **Éditeur** : [Prime Vision Solutions](https://primevisionsolutions.fr)  
+> **Direction artistique** : **Proposition B — Bleu nuit** (`docs/ADDENDUM_DESIGN_B.md`)  
+> **Architecture CSS** : `@layer reset, tokens, base, components, utilities, pages;`  
+> **Vitrine interactive** : `/design` (accessible au rôle `admin`)
 
 ---
 
-## 2. Identité visuelle & Déclinaisons du logo (`public/assets/brand/`)
+## 1. Principes directeurs (Proposition B — Bleu nuit)
 
-Les 6 fichiers originaux de la marque sont conservés intacts dans `public/assets/brand/` :
-- `prime-care-icone-degrade.svg` & `.png` : carré arrondi dégradé indigo-violet (`#5E5CE6` → `#BF5AF2`) avec monogramme **PC** blanc.
-- `prime-care-icone-transparent.svg` & `.png` : monogramme **PC** entrelacé (P en `currentColor`, C en dégradé `#5E5CE6` → `#BF5AF2`).
-- `prime-care-logo-complet.svg` & `.png` : monogramme **PC** + logotype **PRIME CARE** vectorisé (`viewBox="0 0 790 280"`).
-
-Les déclinaisons générées par `php bin/make-icons.php` couvrent :
-- `prime-care-logo-complet-blanc.svg` (en-têtes sombres et exports),
-- `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` (180×180), `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `badge-96.png`, `og-image.png` (1200×630).
+1. **Identité Bleu nuit & Dégradé signature** :
+   - En-têtes et écrans d’immersion (accueil, connexion, loader) en **Bleu nuit profond (`#0A1633`)** animés de **halos lumineux** indigo (`#5E5CE6`) et violet (`#BF5AF2`).
+   - Dégradé officiel Prime Care : **`#5E5CE6 → #BF5AF2`** (`linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%)`).
+2. **Cartes à 24 px sans ombre portée** :
+   - Toutes les cartes (`.pc-card`, `.pc-list-group`, `.pc-empty-state`, `.pc-hypo-card`) adoptent un rayon de **`24px`** (`var(--r-card)`), **`box-shadow: none`** et une bordure fine `1px solid var(--border)`.
+3. **Barre d’onglets flottante** :
+   - La barre d’onglets basse (`.pc-tabbar`) flotte au-dessus du bord inférieur (`border-radius: 24px`, `left/right: 12px`) avec un bouton central **« + »** en dégradé `#5E5CE6 → #BF5AF2`.
+4. **Usage à une main & Règle des 3 clics** :
+   - Cibles tactiles d’au moins **44 × 44 px**, police des champs `>= 16px` (aucun zoom intempestif sur iOS Safari), et accès en **≤ 3 taps** à toutes les actions vitales.
+5. **Zéro CDN & Zéro style en ligne (CSP stricte)** :
+   - Police `Inter Variable` et icônes SVG `Lucide` 100 % auto-hébergées dans `public/assets/vendor/`.
+   - Aucune directive `unsafe-inline` dans la CSP : les couleurs d’avatars utilisent une palette fixe de 8 classes (`.pc-avatar--c1` à `.pc-avatar--c8`) calculées côté serveur via `avatar_color_class(int $userId)`.
 
 ---
 
-## 3. Palette de couleurs (`tokens.css`)
+## 2. Tokens de couleurs (`public/assets/css/tokens.css`)
 
-| Token CSS | Mode Clair | Mode Sombre | Usage |
+### Surfaces & Neutres
+
+| Token | Mode Clair | Mode Sombre | Usage |
 |---|---|---|---|
-| `--bg` | `#F2F2F7` | `#000000` | Fond général iOS Grouped Background |
-| `--surface` | `#FFFFFF` | `#1C1C1E` | Cartes et listes groupées |
-| `--surface-2` | `#F9F9FB` | `#2C2C2E` | Champs de saisie et sous-cartes |
-| `--brand` | `#5E5CE6` | `#7D7AFF` | Indigo Santé principal |
-| `--brand-ink` | `#0A1633` | `#FFFFFF` | Couleur du P et du texte « PRIME CARE » |
-| `--accent-cyan` | `#00C7BE` | `#5AC8FA` | Turquoise secondaire |
-| `--c-vitals` | `#FF2D55` | `#FF375F` | Module Constantes & Glycémie |
-| `--c-meds` | `#007AFF` | `#0A84FF` | Module Médicaments & Insuline |
-| `--c-meals` | `#FF9500` | `#FF9F0A` | Module Repas & Hydratation |
-| `--c-notes` | `#AF52DE` | `#BF5AF2` | Module Journal & Transmissions |
-| `--c-team` | `#34C759` | `#30D158` | Module Planning, Pointage & Équipe |
-| `--ok` / `--warn` / `--danger` | `#34C759` / `#FF9500` / `#FF3B30` | `#30D158` / `#FF9F0A` / `#FF453A` | États sémantiques (normal, surveillance, alerte critique) |
+| `--bg` | `#F4F6FB` | `#070D1F` | Fond général de l’application |
+| `--surface-1` | `#FFFFFF` | `#0F172A` | Cartes à 24 px sans ombre |
+| `--surface-2` | `#EEF2F9` | `#162038` | Champs de saisie, pastilles |
+| `--surface-3` | `#E2E8F4` | `#1E293B` | États actifs, squelettes |
+| `--header` | `#0A1633` | `#060C1D` | En-tête Bleu nuit profond |
+| `--border` | `rgba(10,22,51,0.08)` | `rgba(255,255,255,0.09)` | Bordure fine des cartes 24 px |
+| `--text-1` | `#0A1633` | `#F8FAFC` | Texte principal |
+| `--text-2` | `#475569` | `#94A3B8` | Texte secondaire |
+
+### Marque & Modules métiers
+
+| Token | Valeur | Usage |
+|---|---|---|
+| `--brand` | `#5E5CE6` (Clair) / `#7D7AFF` (Sombre) | Indigo Prime Care |
+| `--brand-purple` | `#BF5AF2` | Violet du dégradé signature |
+| `--brand-gradient` | `linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%)` | Dégradé officiel `#5E5CE6 → #BF5AF2` |
+| `--c-vitals` | `#FF2D55` | Constantes vitales & Glycémie |
+| `--c-meds` | `#00C7BE` | Médicaments & Insuline |
+| `--c-meals` | `#FF9500` | Repas & Hydratation |
+| `--c-notes` | `#AF52DE` | Journal & Transmissions |
+| `--c-team` | `#5E5CE6` | Planning & Équipe |
 
 ---
 
-## 4. Échelle typographique (`Inter Variable` auto-hébergée)
+## 3. Composants clés de la Proposition B
 
-- `.text-display` : `clamp(2.25rem, 6vw, 2.75rem)` · Bold 700 · `tabular-nums` (valeurs phares de glycémie)
-- `.text-large-title` : `clamp(1.75rem, 5vw, 2.125rem)` · Bold 700 (titres d’écran façon iOS)
-- `.text-title-1` : `1.5rem` (24 px) · Bold 700
-- `.text-title-2` : `1.25rem` (20 px) · Semibold 600
-- `.text-title-3` : `1.0625rem` (17 px) · Semibold 600
-- `.text-headline` : `1rem` (16 px) · Semibold 600
-- `.text-body` : `1rem` (16 px) · Regular 400 (minimum 16 px sur tous les champs pour éviter le zoom automatique d’iOS Safari)
-- `.text-subhead` : `0.875rem` (14 px)
-- `.text-footnote` : `0.8125rem` (13 px)
-- `.text-caption` : `0.75rem` (12 px) · Medium 500
-
----
-
-## 5. Composants UI (`components.css` & modules JS)
-
-1. **Barre de navigation (`partials/navbar.php` + `js/modules/navbar.js`)** :
-   - Fond translucide `backdrop-filter: blur(20px) saturate(180%)`.
-   - Grand titre (`Large Title`) qui se replie automatiquement au défilement via `IntersectionObserver`.
-2. **Barre d’onglets (`partials/tabbar.php` + `js/modules/tabs.js`)** :
-   - 5 entrées adaptées au rôle (`caregiver`/`coordinator` : Accueil, Aujourd’hui, `+`, Journal, Plus ; `admin` : Accueil, Santé, `+`, Équipe, Plus).
-3. **Feuille modale iOS (`js/modules/sheet.js`)** :
-   - Glissement depuis le bas (`var(--ease-spring)`), fermeture au glissement vertical (`touchstart`/`touchmove`/`touchend`), piège de focus clavier et touche `Escape`.
-4. **Contrôle segmenté (`js/modules/segmented.js`)** :
-   - Indicateur actif animé et commutation en direct du thème Auto / Clair / Sombre.
-5. **Clavier PIN iOS (`js/modules/pin-pad.js`)** :
-   - 10 touches circulaires de 72 px, pastilles de progression, soumission automatique au 4e chiffre, animation `shake` + vibration haptique en cas d’erreur.
-6. **Loader de lancement (`partials/loader.php`, `partials/loader-mini.php`, `js/modules/loader.js`)** :
-   - Séquence en 3 temps (tracé `stroke-dashoffset` du P puis du C, apparition de « PRIME CARE » + « by Prime Vision Solutions », pulsation respirante et fondu de sortie).
-   - Joué une seule fois par session (`sessionStorage['pc_loader_shown']`) avec filet de sécurité CSS pur si JS est désactivé et respect strict de `prefers-reduced-motion: reduce`.
+- **Loader Bleu nuit (`.pc-loader`)** : fond `#0A1633` avec halos, monogramme `PC` animé, logotype blanc, barre de progression horizontale (`.pc-loader__progress-bar`) en dégradé `#5E5CE6 → #BF5AF2` et signature **« by Prime Vision Solutions »**.
+- **Écran de connexion en deux parties (`/login`, `/login/pin`)** :
+  1. **« Qui êtes-vous ? »** (`.pc-who-grid`) : sélection visuelle des profils disposant d’un jeton d’appareil de confiance valide (`trusted_devices`).
+  2. **Clavier PIN (`.pc-pin-pad`)** : saisie 4–6 chiffres soumettant uniquement le `selector` du profil.
+- **En-tête d’accueil Bleu nuit (`.pc-home-hero`)** : fond `var(--header)` avec halos radial-gradient et bandeau patient vitré (`.pc-home-patient`).
+- **Barre d’onglets flottante (`.pc-tabbar`)** : capsule flottante `24px` avec bouton central `+` en dégradé `#5E5CE6 → #BF5AF2`.
