@@ -145,6 +145,15 @@ final class Session
     }
 
     /**
+     * Retrieve and consume a one-time flash message (alias for flash($key)).
+     */
+    public static function getFlash(string $key, mixed $default = null): mixed
+    {
+        $val = self::flash($key);
+        return $val ?? $default;
+    }
+
+    /**
      * Check if a flash key exists without consuming it.
      */
     public static function hasFlash(string $key): bool

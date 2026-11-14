@@ -59,6 +59,14 @@ final class View
     }
 
     /**
+     * Check whether a named section has been captured and is non-empty.
+     */
+    public static function hasSection(string $name): bool
+    {
+        return isset(self::$sections[$name]) && trim(self::$sections[$name]) !== '';
+    }
+
+    /**
      * Output a captured section by name.
      */
     public static function yieldSection(string $name, string $default = ''): string
@@ -113,7 +121,8 @@ final class View
     public static function partial(string $partial, array $data = []): string
     {
         $viewsDir = (string) Config::get('paths.views', dirname(__DIR__) . '/Views');
-        $partialFile = $viewsDir . '/partials/' . ltrim($partial, '/') . '.php';
+        $cleanPartial = preg_replace('#^partials/#', '', ltrim($partial, '/')) ?: ltrim($partial, '/');
+        $partialFile = $viewsDir . '/partials/' . $cleanPartial . '.php';
 
         if (!is_file($partialFile)) {
             throw new RuntimeException("Partial introuvable : {$partial}", 500);

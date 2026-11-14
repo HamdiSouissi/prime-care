@@ -2,21 +2,24 @@
 
 declare(strict_types=1);
 
+if (!can('vitals', 'create')) {
+    return;
+}
 ?>
-<div id="quick-add-sheet" class="pc-sheet-backdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="quick-add-title">
+<div class="pc-sheet-backdrop" id="quick-add-sheet" role="dialog" aria-modal="true" aria-labelledby="quick-add-title">
   <div class="pc-sheet">
-    <div class="pc-sheet__handle"></div>
+    <div class="pc-sheet__handle" aria-hidden="true"></div>
     <div class="pc-sheet__header">
-      <h2 id="quick-add-title" class="pc-sheet__title">Ajouter une saisie</h2>
-      <button type="button" class="pc-btn pc-btn--icon pc-btn--secondary" data-close-sheet aria-label="Fermer">
-        <?= icon('x', '', 20) ?>
+      <h2 class="pc-sheet__title" id="quick-add-title">Saisie rapide</h2>
+      <button type="button" class="pc-btn pc-btn--ghost pc-btn--icon" data-sheet-close aria-label="Fermer">
+        <?= icon('x', 22) ?>
       </button>
     </div>
 
     <div class="pc-quick-grid">
       <a href="/coming-soon/glycemia" class="pc-quick-tile">
-        <span class="pc-quick-tile__icon" style="background: var(--c-vitals-soft); color: var(--c-vitals);">
-          <?= icon('droplet', '', 22) ?>
+        <span class="pc-quick-tile__icon pc-quick-tile__icon--vitals">
+          <?= icon('droplet', 22) ?>
         </span>
         <div>
           <div>Glycémie</div>
@@ -24,29 +27,29 @@ declare(strict_types=1);
         </div>
       </a>
 
-      <a href="/coming-soon/blood-pressure" class="pc-quick-tile">
-        <span class="pc-quick-tile__icon" style="background: var(--c-vitals-soft); color: var(--c-vitals);">
-          <?= icon('heart-pulse', '', 22) ?>
+      <a href="/coming-soon/vitals" class="pc-quick-tile">
+        <span class="pc-quick-tile__icon pc-quick-tile__icon--vitals">
+          <?= icon('heart-pulse', 22) ?>
         </span>
         <div>
           <div>Tension</div>
-          <div class="text-caption text-muted">Sys / Dia</div>
+          <div class="text-caption text-muted">Syst. / Diast.</div>
         </div>
       </a>
 
-      <a href="/coming-soon/temperature" class="pc-quick-tile">
-        <span class="pc-quick-tile__icon" style="background: var(--c-vitals-soft); color: var(--c-vitals);">
-          <?= icon('thermometer', '', 22) ?>
+      <a href="/coming-soon/vitals" class="pc-quick-tile">
+        <span class="pc-quick-tile__icon pc-quick-tile__icon--vitals">
+          <?= icon('thermometer', 22) ?>
         </span>
         <div>
           <div>Température</div>
-          <div class="text-caption text-muted">Corporelle</div>
+          <div class="text-caption text-muted">SpO2 & Poids</div>
         </div>
       </a>
 
       <a href="/coming-soon/medication" class="pc-quick-tile">
-        <span class="pc-quick-tile__icon" style="background: var(--c-meds-soft); color: var(--c-meds);">
-          <?= icon('pill', '', 22) ?>
+        <span class="pc-quick-tile__icon pc-quick-tile__icon--meds">
+          <?= icon('pill', 22) ?>
         </span>
         <div>
           <div>Médicament</div>
@@ -55,21 +58,21 @@ declare(strict_types=1);
       </a>
 
       <a href="/coming-soon/meal" class="pc-quick-tile">
-        <span class="pc-quick-tile__icon" style="background: var(--c-meals-soft); color: var(--c-meals);">
-          <?= icon('utensils', '', 22) ?>
+        <span class="pc-quick-tile__icon pc-quick-tile__icon--meals">
+          <?= icon('utensils', 22) ?>
         </span>
         <div>
           <div>Repas</div>
-          <div class="text-caption text-muted">Photo & Glucides</div>
+          <div class="text-caption text-muted">Photo & Quantité</div>
         </div>
       </a>
 
       <a href="/coming-soon/journal" class="pc-quick-tile">
-        <span class="pc-quick-tile__icon" style="background: var(--c-notes-soft); color: var(--c-notes);">
-          <?= icon('notebook-pen', '', 22) ?>
+        <span class="pc-quick-tile__icon pc-quick-tile__icon--notes">
+          <?= icon('notebook-pen', 22) ?>
         </span>
         <div>
-          <div>Note</div>
+          <div>Note / Soin</div>
           <div class="text-caption text-muted">Transmission</div>
         </div>
       </a>

@@ -10,6 +10,10 @@ use App\Core\Router;
 use App\Core\Session;
 use App\Core\View;
 
+if (!class_exists('View', false)) {
+    class_alias(View::class, 'View');
+}
+
 if (!function_exists('e')) {
     /**
      * Escape a value for safe HTML output (XSS protection).
@@ -78,9 +82,17 @@ if (!function_exists('asset')) {
 if (!function_exists('icon')) {
     /**
      * Render an inline Lucide SVG icon from public/assets/vendor/lucide/.
+     * Supports both icon('eye', 20) and icon('eye', 'custom-class', 20).
      */
-    function icon(string $name, string $class = '', int $size = 20): string
+    function icon(string $name, string|int $classOrSize = '', int $size = 20): string
     {
+        if (is_int($classOrSize)) {
+            $size = $classOrSize;
+            $class = '';
+        } else {
+            $class = $classOrSize;
+        }
+
         $safeName = preg_replace('/[^a-z0-9-]/', '', strtolower($name)) ?: 'info';
         $publicDir = (string) Config::get('paths.public', dirname(__DIR__, 2) . '/public');
         $svgPath = $publicDir . '/assets/vendor/lucide/' . $safeName . '.svg';
@@ -117,9 +129,15 @@ if (!function_exists('brand_svg')) {
     {
         $map = [
             'logo-complet' => 'prime-care-logo-complet.svg',
+            'prime-care-logo-complet.svg' => 'prime-care-logo-complet.svg',
+            'logo-complet-blanc' => 'prime-care-logo-complet-blanc.svg',
+            'prime-care-logo-complet-blanc.svg' => 'prime-care-logo-complet-blanc.svg',
             'icone-transparent' => 'prime-care-icone-transparent.svg',
+            'prime-care-icone-transparent.svg' => 'prime-care-icone-transparent.svg',
             'icone-degrade' => 'prime-care-icone-degrade.svg',
+            'prime-care-icone-degrade.svg' => 'prime-care-icone-degrade.svg',
             'badge' => 'prime-care-badge.svg',
+            'prime-care-badge.svg' => 'prime-care-badge.svg',
         ];
 
         $filename = $map[$variant] ?? 'prime-care-logo-complet.svg';
@@ -211,6 +229,28 @@ if (!function_exists('errors')) {
             return $fieldErrors[0] ?? null;
         }
         return is_string($fieldErrors) ? $fieldErrors : null;
+    }
+}
+
+if (!function_exists('has_error')) {
+    /**
+     * Check whether a field has a validation error in session.
+     */
+    function has_error(string $field): bool
+    {
+        $err = errors($field);
+        return is_string($err) && $err !== '';
+    }
+}
+
+if (!function_exists('field_error')) {
+    /**
+     * Get the first validation error message for a field.
+     */
+    function field_error(string $field): ?string
+    {
+        $err = errors($field);
+        return is_string($err) && $err !== '' ? $err : null;
     }
 }
 
@@ -367,9 +407,36 @@ if (!function_exists('initials')) {
     }
 }
 
+if (!function_exists('avatar_color_class')) {
+    /**
+     * Return a deterministic avatar color class (.pc-avatar--c1 to .pc-avatar--c8) from a user ID.
+     */
+    function avatar_color_class(int $userId): string
+    {
+        $index = ((max(1, $userId) - 1) % 8) + 1;
+        return 'pc-avatar--c' . $index;
+    }
+}
+
 if (!function_exists('csp_nonce')) {
     function csp_nonce(): string
     {
         return View::cspNonce();
     }
 }
+
+if (!function_exists('can')) {
+    /**
+     * Check RBAC permission for the currently authenticated user.
+     */
+    function can(string $resource, string $action): bool
+    {
+        $user = Auth::user();
+        $role = is_array($user) && isset($user['role']) ? (string) $user['role'] : '';
+        if ($role === '') {
+            return false;
+        }
+        return \App\Services\Policy::allows($role, $resource, $action);
+    }
+}
+

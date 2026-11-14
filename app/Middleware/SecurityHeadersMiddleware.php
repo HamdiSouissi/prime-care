@@ -10,7 +10,8 @@ use App\Core\Response;
 use App\Core\View;
 
 /**
- * Applies strict security HTTP headers including nonce-based Content-Security-Policy.
+ * Applies strict security HTTP headers including nonce-based Content-Security-Policy
+ * (no unsafe-inline) and global clickjacking protection (X-Frame-Options: DENY, frame-ancestors 'none').
  */
 final class SecurityHeadersMiddleware
 {
@@ -19,13 +20,11 @@ final class SecurityHeadersMiddleware
         $response = $next($request);
         $nonce = View::cspNonce();
         $env = (string) Config::get('app.env', 'development');
-        $denyFraming = (bool) Config::get('security.deny_framing', $env === 'production');
 
         $cspDirectives = [
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'",
             "style-src 'self' 'nonce-{$nonce}'",
-            "style-src-attr 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self'",
             "connect-src 'self'",
@@ -33,15 +32,12 @@ final class SecurityHeadersMiddleware
             "worker-src 'self'",
             "base-uri 'self'",
             "form-action 'self'",
+            "frame-ancestors 'none'",
         ];
-
-        if ($denyFraming) {
-            $cspDirectives[] = "frame-ancestors 'none'";
-            $response->withHeader('X-Frame-Options', 'DENY');
-        }
 
         $response
             ->withHeader('Content-Security-Policy', implode('; ', $cspDirectives))
+            ->withHeader('X-Frame-Options', 'DENY')
             ->withHeader('X-Content-Type-Options', 'nosniff')
             ->withHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->withHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');

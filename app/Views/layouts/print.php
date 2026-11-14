@@ -2,34 +2,35 @@
 
 declare(strict_types=1);
 
-/** @var string $pageTitle */
-$pageTitle = $pageTitle ?? 'Rapport médical — Prime Care';
-/** @var string $content */
-$content = $content ?? '';
+$pageTitle = (string) ($pageTitle ?? 'Rapport médical — Prime Care');
+$nonce = csp_nonce();
 ?>
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($pageTitle) ?></title>
-  <link rel="stylesheet" href="<?= e(asset('css/tokens.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/base.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/components.css')) ?>">
+  <link rel="stylesheet" href="/assets/css/tokens.css" nonce="<?= e($nonce) ?>">
+  <link rel="stylesheet" href="/assets/css/base.css" nonce="<?= e($nonce) ?>">
+  <link rel="stylesheet" href="/assets/css/components.css" nonce="<?= e($nonce) ?>">
+  <link rel="stylesheet" href="/assets/css/utilities.css" nonce="<?= e($nonce) ?>">
+  <link rel="stylesheet" href="/assets/css/app.css" nonce="<?= e($nonce) ?>">
 </head>
-<body style="background:#FFFFFF; color:#1C1C1E; padding:32px;">
-  <header style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #E5E5EA; padding-bottom:16px; margin-bottom:24px;">
-    <div style="color:#0A1633;">
-      <?= brand_svg('logo-complet', '', 180) ?>
+<body class="pc-print-body">
+  <header class="pc-print-header">
+    <div class="text-brand-ink">
+      <?= brand_svg('prime-care-logo-complet.svg') ?>
     </div>
-    <div style="font-size:13px; color:#636366;">Suivi de soins à domicile</div>
+    <div class="text-footnote text-muted">Suivi de soins à domicile</div>
   </header>
 
   <main>
     <?= $content ?>
   </main>
 
-  <footer style="margin-top:32px; padding-top:16px; border-top:1px solid #E5E5EA; font-size:12px; color:#8E8E93; text-align:center;">
-    Généré avec Prime Care — <a href="https://primevisionsolutions.fr" target="_blank" rel="noopener">Prime Vision Solutions</a>
+  <footer class="pc-print-footer">
+    Document généré par Prime Care — Application créée par Prime Vision Solutions (https://primevisionsolutions.fr)
   </footer>
 </body>
 </html>
