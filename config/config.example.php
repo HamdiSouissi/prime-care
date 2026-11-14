@@ -51,8 +51,10 @@ return [
 
     'security' => [
         'login_max_attempts' => 5,
+        'ip_max_attempts' => 30,
         'login_lockout_minutes' => 15,
         'remember_days' => 30,
+        'trusted_device_days' => 90,
         'password_reset_minutes' => 60,
         'password_min_length' => 10,
         'pin_min_length' => 4,

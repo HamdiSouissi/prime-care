@@ -8,57 +8,75 @@ use DateTimeImmutable;
 use DateTimeZone;
 
 /**
- * Database-backed login rate limiter enforcing max attempts per identifier and IP address.
+ * Database-backed login rate limiter enforcing separate max attempts per account/identifier
+ * (default 5 / 15 min) and per IP address (default 30 / 15 min for shared household Wi-Fi).
  */
 final class RateLimiter
 {
     /**
-     * Check if the identifier or IP has reached the maximum failed login attempts within the lockout window.
+     * Check if the identifier or IP has reached its maximum failed login attempts within the lockout window.
      */
     public static function tooManyAttempts(string $identifier, string $ip, ?string $nowUtc = null): bool
     {
-        $maxAttempts = (int) Config::get('security.login_max_attempts', 5);
-        $lockoutMinutes = (int) Config::get('security.login_lockout_minutes', 15);
-
-        $now = $nowUtc !== null
-            ? new DateTimeImmutable($nowUtc, new DateTimeZone('UTC'))
-            : new DateTimeImmutable('now', new DateTimeZone('UTC'));
-        $windowStart = $now->modify("-{$lockoutMinutes} minutes")->format('Y-m-d H:i:s');
-
-        $pdo = Database::connection();
-        $normalizedId = mb_strtolower(trim($identifier));
-
-        // Count failed attempts by identifier within window
-        if ($normalizedId !== '') {
-            $stmtId = $pdo->prepare(
-                'SELECT COUNT(*) FROM `login_attempts`
-                 WHERE `identifier` = :identifier AND `success` = 0 AND `attempted_at` >= :window_start'
-            );
-            $stmtId->execute([
-                'identifier' => $normalizedId,
-                'window_start' => $windowStart,
-            ]);
-            if ((int) $stmtId->fetchColumn() >= $maxAttempts) {
-                return true;
-            }
+        if (self::isAccountLocked($identifier, $nowUtc)) {
+            return true;
         }
 
-        // Count failed attempts by IP within window
-        if ($ip !== '') {
-            $stmtIp = $pdo->prepare(
-                'SELECT COUNT(*) FROM `login_attempts`
-                 WHERE `ip_address` = :ip AND `success` = 0 AND `attempted_at` >= :window_start'
-            );
-            $stmtIp->execute([
-                'ip' => $ip,
-                'window_start' => $windowStart,
-            ]);
-            if ((int) $stmtIp->fetchColumn() >= $maxAttempts) {
-                return true;
-            }
+        if (self::isIpLocked($ip, $nowUtc)) {
+            return true;
         }
 
         return false;
+    }
+
+    /**
+     * Check if a specific account / identifier (or PIN selector) has reached its lockout limit (default 5 / 15 min).
+     */
+    public static function isAccountLocked(string $identifier, ?string $nowUtc = null): bool
+    {
+        $normalizedId = mb_strtolower(trim($identifier));
+        if ($normalizedId === '') {
+            return false;
+        }
+
+        $maxAttempts = (int) Config::get('security.login_max_attempts', 5);
+        $windowStart = self::windowStart($nowUtc);
+
+        $stmt = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM `login_attempts`
+             WHERE `identifier` = :identifier AND `success` = 0 AND `attempted_at` >= :window_start'
+        );
+        $stmt->execute([
+            'identifier' => $normalizedId,
+            'window_start' => $windowStart,
+        ]);
+
+        return (int) $stmt->fetchColumn() >= $maxAttempts;
+    }
+
+    /**
+     * Check if an IP address has reached its shared-network lockout limit (default 30 / 15 min).
+     */
+    public static function isIpLocked(string $ip, ?string $nowUtc = null): bool
+    {
+        $cleanIp = trim($ip);
+        if ($cleanIp === '') {
+            return false;
+        }
+
+        $ipMaxAttempts = (int) Config::get('security.ip_max_attempts', 30);
+        $windowStart = self::windowStart($nowUtc);
+
+        $stmt = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM `login_attempts`
+             WHERE `ip_address` = :ip AND `success` = 0 AND `attempted_at` >= :window_start'
+        );
+        $stmt->execute([
+            'ip' => $cleanIp,
+            'window_start' => $windowStart,
+        ]);
+
+        return (int) $stmt->fetchColumn() >= $ipMaxAttempts;
     }
 
     /**
@@ -90,17 +108,30 @@ final class RateLimiter
     }
 
     /**
-     * Clear recent failed attempts for an identifier/IP upon successful login.
+     * Clear failed attempts for the authenticated identifier upon successful login.
      */
-    public static function clear(string $identifier, string $ip): void
+    public static function clear(string $identifier, string $ip = ''): void
     {
         $normalizedId = mb_strtolower(trim($identifier));
+        if ($normalizedId === '') {
+            return;
+        }
+
         $stmt = Database::connection()->prepare(
-            'DELETE FROM `login_attempts` WHERE (`identifier` = :identifier OR `ip_address` = :ip) AND `success` = 0'
+            'DELETE FROM `login_attempts` WHERE `identifier` = :identifier AND `success` = 0'
         );
         $stmt->execute([
             'identifier' => $normalizedId,
-            'ip' => $ip,
         ]);
+    }
+
+    private static function windowStart(?string $nowUtc = null): string
+    {
+        $lockoutMinutes = (int) Config::get('security.login_lockout_minutes', 15);
+        $now = $nowUtc !== null
+            ? new DateTimeImmutable($nowUtc, new DateTimeZone('UTC'))
+            : new DateTimeImmutable('now', new DateTimeZone('UTC'));
+
+        return $now->modify("-{$lockoutMinutes} minutes")->format('Y-m-d H:i:s');
     }
 }
