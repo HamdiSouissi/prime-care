@@ -1,0 +1,1485 @@
+@layer components {
+  /* ==========================================================================
+     1. LAUNCH LOADER BLEU NUIT (§6.8 + Additif B §9.5) & MINI LOADER
+     ========================================================================== */
+  @keyframes pc-draw-stroke {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes pc-breathe {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.04);
+    }
+  }
+
+  @keyframes pc-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pc-progress-fill {
+    from {
+      width: 0%;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  /* CSS-only failsafe: automatically hides the loader after 4s even if JS fails */
+  @keyframes pc-loader-failsafe {
+    0%,
+    92% {
+      opacity: 1;
+      visibility: visible;
+    }
+    100% {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  .pc-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
+    background-color: #0A1633;
+    color: #FFFFFF;
+    transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out), visibility 300ms;
+    animation: pc-loader-failsafe 4s linear forwards;
+  }
+
+  .pc-loader::before,
+  .pc-loader::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .pc-loader::before {
+    width: 280px;
+    height: 280px;
+    top: -60px;
+    right: -60px;
+    background: radial-gradient(circle, rgba(94, 92, 230, 0.45) 0%, transparent 70%);
+  }
+
+  .pc-loader::after {
+    width: 260px;
+    height: 260px;
+    bottom: -60px;
+    left: -60px;
+    background: radial-gradient(circle, rgba(191, 90, 242, 0.35) 0%, transparent 70%);
+  }
+
+  .pc-loader > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .pc-loader.is-dismissed {
+    opacity: 0;
+    transform: scale(1.03);
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .pc-loader__monogram {
+    width: 96px;
+    height: 96px;
+    animation: pc-breathe 1.6s ease-in-out 900ms infinite;
+  }
+
+  .pc-loader__path-p {
+    stroke: #FFFFFF;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: pc-draw-stroke 650ms var(--ease-out) 0ms forwards;
+  }
+
+  .pc-loader__path-c {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: pc-draw-stroke 600ms var(--ease-out) 220ms forwards;
+  }
+
+  .pc-loader__wordmark {
+    margin-top: 16px;
+    color: #FFFFFF;
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-align: center;
+    opacity: 0;
+    animation: pc-fade-up 320ms var(--ease-out) 750ms forwards;
+  }
+
+  .pc-loader__slogan {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72);
+    opacity: 0;
+    animation: pc-fade-up 320ms var(--ease-out) 880ms forwards;
+  }
+
+  .pc-loader__progress {
+    width: 180px;
+    height: 4px;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.16);
+    margin-top: 20px;
+    overflow: hidden;
+  }
+
+  .pc-loader__progress-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: var(--brand-gradient);
+    animation: pc-progress-fill 1050ms var(--ease-out) 120ms forwards;
+  }
+
+  .pc-loader__byline {
+    margin-top: 14px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.86);
+    opacity: 0;
+    animation: pc-fade-up 320ms var(--ease-out) 980ms forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pc-loader__path-p,
+    .pc-loader__path-c {
+      stroke-dashoffset: 0 !important;
+      animation: none !important;
+    }
+    .pc-loader__wordmark,
+    .pc-loader__slogan,
+    .pc-loader__byline {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+    .pc-loader__progress-bar {
+      width: 100% !important;
+      animation: none !important;
+    }
+    .pc-loader__monogram {
+      animation: none !important;
+    }
+  }
+
+  .pc-loader-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--brand-ink);
+    animation: pc-breathe 1.4s ease-in-out infinite;
+  }
+
+  /* ==========================================================================
+     2. NAVIGATION BAR & COLLAPSING LARGE TITLE (§6.4, §6.5)
+     ========================================================================== */
+  .pc-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding-top: var(--safe-top);
+    background-color: var(--surface);
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--dur-appear) var(--ease-out);
+    user-select: none;
+  }
+
+  .pc-navbar.is-scrolled {
+    border-bottom-color: var(--border);
+  }
+
+  .pc-navbar__inner {
+    display: grid;
+    grid-template-columns: minmax(76px, 1fr) auto minmax(76px, 1fr);
+    align-items: center;
+    height: var(--navbar-height);
+    padding: 0 var(--screen-pad);
+    max-width: 100%;
+  }
+
+  .pc-navbar__left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: start;
+  }
+
+  .pc-navbar__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 6px 0 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--brand);
+    transition: transform var(--dur-press) var(--ease-out), opacity var(--dur-press);
+  }
+
+  .pc-navbar__back:active {
+    transform: scale(0.97);
+    opacity: 0.7;
+  }
+
+  .pc-navbar__patient-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    color: var(--brand);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .pc-navbar__center-title {
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  }
+
+  .pc-navbar.is-scrolled .pc-navbar__center-title {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .pc-navbar__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: end;
+  }
+
+  .pc-large-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px var(--screen-pad) 12px;
+  }
+
+  .pc-large-header__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .pc-large-header__logo {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    color: var(--brand-ink);
+  }
+
+  .pc-large-header__title {
+    font-size: clamp(26px, 7vw, 32px);
+    line-height: 1.18;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  /* ==========================================================================
+     3. FLOATING BOTTOM TAB BAR & CENTRAL "+" BUTTON (Additif B §5 / D2.2)
+     ========================================================================== */
+  .pc-tabbar {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(12px + var(--safe-bottom));
+    max-width: 448px;
+    height: 66px;
+    margin: 0 auto;
+    z-index: 50;
+    border-radius: 33px;
+    background-color: #0A1633;
+    background-color: rgba(10, 22, 51, 0.94);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 30px rgba(10, 22, 51, 0.35);
+    user-select: none;
+  }
+
+  .pc-tabbar__list {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 66px;
+    padding: 0 8px;
+    gap: 4px;
+  }
+
+  .pc-tabbar__item {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.60);
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out), transform var(--dur-press) var(--ease-out);
+  }
+
+  .pc-tabbar__label {
+    display: none;
+  }
+
+  .pc-tabbar__item:active {
+    transform: scale(0.95);
+  }
+
+  .pc-tabbar__item.is-active {
+    background-color: rgba(255, 255, 255, 0.14);
+    color: #FFFFFF;
+    padding: 8px 14px;
+  }
+
+  .pc-tabbar__item.is-active .pc-tabbar__label {
+    display: inline;
+    color: #FFFFFF;
+    white-space: nowrap;
+  }
+
+  .pc-tabbar__plus-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pc-tabbar__plus-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(45deg, #5E5CE6, #BF5AF2);
+    color: #FFFFFF;
+    box-shadow: 0 8px 20px rgba(191, 90, 242, 0.45);
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-spring), box-shadow var(--dur-press);
+  }
+
+  .pc-tabbar__plus-btn:active {
+    transform: scale(0.93);
+  }
+
+  /* ==========================================================================
+     4. BUTTONS (§6.5)
+     ========================================================================== */
+  .pc-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    min-width: 44px;
+    padding: 12px 20px;
+    border-radius: var(--r-md);
+    border: none;
+    font-size: 16px;
+    line-height: 22px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform var(--dur-press) var(--ease-out), opacity var(--dur-press), background-color 150ms;
+  }
+
+  .pc-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .pc-btn:disabled,
+  .pc-btn.is-disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+  }
+
+  .pc-btn--primary {
+    background: var(--brand-gradient);
+    background-color: var(--brand);
+    color: #FFFFFF;
+  }
+
+  .pc-btn--tinted {
+    background-color: var(--brand-soft);
+    color: var(--brand);
+  }
+
+  .pc-btn--ghost {
+    background-color: transparent;
+    color: var(--brand);
+  }
+
+  .pc-btn--secondary {
+    background-color: var(--surface-2);
+    color: var(--text);
+  }
+
+  .pc-btn--danger {
+    background-color: var(--danger);
+    color: #FFFFFF;
+  }
+
+  .pc-btn--danger-soft {
+    background-color: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  .pc-btn--block {
+    width: 100%;
+  }
+
+  .pc-btn--sm {
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .pc-btn--icon {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  @keyframes pc-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .pc-btn__spinner {
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: pc-spin 650ms linear infinite;
+  }
+
+  /* ==========================================================================
+     5. GROUPED INSET LISTS & CARDS AT 24PX WITHOUT SHADOW (Additif B §9.2)
+     ========================================================================== */
+  .pc-section-header {
+    padding: 0 12px 6px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-2);
+  }
+
+  .pc-list-group {
+    background-color: var(--surface-1);
+    border-radius: var(--r-card);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: none;
+  }
+
+  .pc-list-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 12px 16px;
+    color: var(--text);
+    background-color: transparent;
+    width: 100%;
+    border: none;
+    text-align: left;
+    transition: background-color 120ms;
+  }
+
+  a.pc-list-item:active,
+  button.pc-list-item:active {
+    background-color: var(--surface-2);
+  }
+
+  .pc-list-item + .pc-list-item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 60px;
+    right: 0;
+    height: 1px;
+    background-color: var(--border);
+  }
+
+  .pc-list-item--no-icon + .pc-list-item--no-icon::before {
+    left: 16px;
+  }
+
+  .pc-list-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-sm);
+    flex-shrink: 0;
+    color: #FFFFFF;
+    background-color: var(--brand);
+  }
+
+  .pc-list-icon--lg {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .pc-list-icon--brand { background-color: var(--brand); }
+  .pc-list-icon--vitals { background-color: var(--c-vitals); }
+  .pc-list-icon--meds { background-color: var(--c-meds); }
+  .pc-list-icon--meals { background-color: var(--c-meals); }
+  .pc-list-icon--notes { background-color: var(--c-notes); }
+  .pc-list-icon--team { background-color: var(--c-team); }
+  .pc-list-icon--docs { background-color: var(--c-docs); }
+  .pc-list-icon--ok { background-color: var(--ok); }
+  .pc-list-icon--warn { background-color: var(--warn); }
+  .pc-list-icon--danger { background-color: var(--danger); }
+  .pc-list-icon--info { background-color: var(--info); }
+  .pc-list-icon--neutral { background-color: #64748B; }
+  .pc-list-icon--surface { background-color: var(--surface-3); color: var(--text-2); }
+
+  .pc-list-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-list-title {
+    font-size: 16px;
+    line-height: 21px;
+    font-weight: 600;
+    color: var(--text);
+    overflow-wrap: break-word;
+  }
+
+  .pc-list-subtitle {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+
+  .pc-list-subtitle--truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    display: block;
+  }
+
+  .pc-list-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text-2);
+    flex-shrink: 0;
+  }
+
+  .pc-list-chevron {
+    color: var(--text-3);
+    flex-shrink: 0;
+  }
+
+  /* ==========================================================================
+     6. CARDS AT 24PX WITHOUT SHADOW (Additif B §9.2)
+     ========================================================================== */
+  @keyframes pc-card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pc-card {
+    background-color: var(--surface-1);
+    border-radius: var(--r-card);
+    border: 1px solid var(--border);
+    padding: 18px;
+    box-shadow: none;
+    animation: pc-card-enter var(--dur-appear) var(--ease-out) both;
+  }
+
+  .pc-card--subtle {
+    background-color: var(--surface-2);
+  }
+
+  .pc-card-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .pc-card-stagger > *:nth-child(2) { animation-delay: 30ms; }
+  .pc-card-stagger > *:nth-child(3) { animation-delay: 60ms; }
+  .pc-card-stagger > *:nth-child(4) { animation-delay: 90ms; }
+  .pc-card-stagger > *:nth-child(5) { animation-delay: 120ms; }
+  .pc-card-stagger > *:nth-child(6) { animation-delay: 150ms; }
+
+  .pc-health-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .pc-health-card__module,
+  .pc-health-card__header {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+
+  .pc-health-card__module--vitals,
+  .text-vitals { color: var(--c-vitals); }
+  .pc-health-card__module--meds,
+  .text-meds { color: var(--c-meds); }
+  .pc-health-card__module--meals,
+  .text-meals { color: var(--c-meals); }
+  .pc-health-card__module--notes,
+  .text-notes { color: var(--c-notes); }
+
+  .pc-health-card__time {
+    font-size: 13px;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pc-health-card__body {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .pc-health-card__value {
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+
+  .pc-health-card__unit {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-2);
+    margin-left: 4px;
+  }
+
+  /* ==========================================================================
+     7. FORM FIELDS, SEGMENTED, SWITCH, STEPPER, CHIPS (§6.3, §6.5)
+     ========================================================================== */
+  .pc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pc-label {
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .pc-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .pc-input,
+  .pc-select,
+  .pc-textarea {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    border: 1.5px solid transparent;
+    background-color: var(--surface-2);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 22px;
+    transition: border-color 150ms, background-color 150ms;
+  }
+
+  .pc-input--with-eye {
+    padding-right: 48px;
+  }
+
+  .pc-textarea {
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .pc-textarea--sm {
+    min-height: 70px;
+  }
+
+  .pc-input::placeholder,
+  .pc-textarea::placeholder {
+    color: var(--text-3);
+  }
+
+  .pc-input:focus,
+  .pc-select:focus,
+  .pc-textarea:focus {
+    outline: none;
+    border-color: var(--brand);
+    background-color: var(--surface);
+  }
+
+  .pc-input.has-error,
+  .pc-select.has-error,
+  .pc-textarea.has-error {
+    border-color: var(--danger);
+  }
+
+  .pc-input-eye {
+    position: absolute;
+    right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+
+  .pc-help {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text-2);
+  }
+
+  .pc-field-error {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--danger);
+  }
+
+  .pc-segmented {
+    display: inline-flex;
+    width: 100%;
+    padding: 3px;
+    border-radius: var(--r-md);
+    background-color: var(--surface-2);
+    gap: 2px;
+  }
+
+  .pc-segmented__btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-2);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 180ms var(--ease-spring), color 180ms;
+  }
+
+  .pc-segmented__btn.is-active {
+    background-color: var(--surface-1);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .pc-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 52px;
+    height: 32px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .pc-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .pc-switch__track {
+    position: absolute;
+    inset: 0;
+    background-color: var(--surface-3);
+    border-radius: var(--r-pill);
+    transition: background-color 200ms var(--ease-out);
+  }
+
+  .pc-switch__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 28px;
+    height: 28px;
+    background-color: #FFFFFF;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22);
+    transition: transform 200ms var(--ease-spring);
+  }
+
+  .pc-switch input:checked + .pc-switch__track {
+    background-color: var(--ok);
+  }
+
+  .pc-switch input:checked + .pc-switch__track .pc-switch__thumb {
+    transform: translateX(20px);
+  }
+
+  .pc-stepper {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--surface-2);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+
+  .pc-stepper__btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--brand);
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .pc-stepper__btn:active {
+    background-color: var(--brand-soft);
+  }
+
+  .pc-stepper__val {
+    min-width: 48px;
+    text-align: center;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pc-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 16px;
+    border-radius: var(--r-pill);
+    border: 1.5px solid var(--border);
+    background-color: var(--surface-1);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 150ms var(--ease-out);
+  }
+
+  .pc-chip.is-selected {
+    background-color: var(--brand-soft);
+    border-color: var(--brand);
+    color: var(--brand);
+    font-weight: 600;
+  }
+
+  /* ==========================================================================
+     8. BOTTOM SHEET & CONFIRMATION ALERT (§6.5)
+     ========================================================================== */
+  .pc-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background-color: var(--backdrop-overlay);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--dur-sheet) var(--ease-out), visibility var(--dur-sheet);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .pc-sheet-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .pc-sheet {
+    width: 100%;
+    max-width: 480px;
+    max-height: 90dvh;
+    overflow-y: auto;
+    background-color: var(--surface-1);
+    border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+    padding: 10px var(--screen-pad) calc(var(--safe-bottom) + 24px);
+    box-shadow: var(--shadow-sheet);
+    transform: translateY(100%);
+    transition: transform var(--dur-sheet) var(--ease-spring);
+  }
+
+  .pc-sheet-backdrop.is-open .pc-sheet {
+    transform: translateY(0);
+  }
+
+  .pc-sheet__handle {
+    width: 38px;
+    height: 5px;
+    border-radius: var(--r-pill);
+    background-color: var(--text-3);
+    margin: 2px auto 14px;
+  }
+
+  .pc-sheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .pc-sheet__title {
+    font-size: 20px;
+    line-height: 25px;
+    font-weight: 700;
+  }
+
+  .pc-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .pc-quick-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background-color: var(--surface-2);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    transition: transform var(--dur-press) var(--ease-out), background-color 120ms;
+  }
+
+  .pc-quick-tile:active {
+    transform: scale(0.97);
+  }
+
+  .pc-quick-tile__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .pc-quick-tile__icon--vitals { background: var(--c-vitals-soft); color: var(--c-vitals); }
+  .pc-quick-tile__icon--meds { background: var(--c-meds-soft); color: var(--c-meds); }
+  .pc-quick-tile__icon--meals { background: var(--c-meals-soft); color: var(--c-meals); }
+  .pc-quick-tile__icon--notes { background: var(--c-notes-soft); color: var(--c-notes); }
+
+  /* Confirmation Alert */
+  .pc-alert-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background-color: var(--backdrop-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 200ms var(--ease-out), visibility 200ms;
+  }
+
+  .pc-alert-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .pc-alert-dialog {
+    width: 100%;
+    max-width: 310px;
+    background-color: var(--surface-1);
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    text-align: center;
+    transform: scale(0.94);
+    transition: transform 220ms var(--ease-spring);
+  }
+
+  .pc-alert-backdrop.is-open .pc-alert-dialog {
+    transform: scale(1);
+  }
+
+  .pc-alert-dialog__body {
+    padding: 20px 18px 16px;
+  }
+
+  .pc-alert-dialog__title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .pc-alert-dialog__desc {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text-2);
+  }
+
+  .pc-alert-dialog__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--border);
+  }
+
+  .pc-alert-dialog__btn {
+    min-height: 46px;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--brand);
+    cursor: pointer;
+  }
+
+  .pc-alert-dialog__btn + .pc-alert-dialog__btn {
+    border-left: 1px solid var(--border);
+  }
+
+  .pc-alert-dialog__btn--danger {
+    color: var(--danger);
+  }
+
+  /* ==========================================================================
+     9. TOASTS & ANIMATED CHECKMARK (§6.5, §6.6)
+     ========================================================================== */
+  .pc-toast-container {
+    position: fixed;
+    top: calc(var(--safe-top) + 12px);
+    left: 16px;
+    right: 16px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .pc-toast {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 420px;
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    background-color: var(--surface-1);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 500;
+    animation: pc-fade-up 240ms var(--ease-spring) forwards;
+  }
+
+  .pc-toast__check path {
+    stroke-dasharray: 28;
+    stroke-dashoffset: 28;
+    animation: pc-check-draw 380ms var(--ease-out) 60ms forwards;
+  }
+
+  @keyframes pc-check-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* ==========================================================================
+     10. AVATARS (8-COLOR PALETTE WITHOUT INLINE STYLE — C5), BADGES, SKELETONS
+     ========================================================================== */
+  .pc-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: #5E5CE6;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .pc-avatar--sm {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .pc-avatar--lg {
+    width: 72px;
+    height: 72px;
+    font-size: 26px;
+  }
+
+  .pc-avatar--xl {
+    width: 88px;
+    height: 88px;
+    font-size: 32px;
+  }
+
+  /* 8 Fixed Avatar Color Classes (C5 — Zero inline style) */
+  .pc-avatar--c1 { background-color: #5E5CE6; }
+  .pc-avatar--c2 { background-color: #00C7BE; }
+  .pc-avatar--c3 { background-color: #AF52DE; }
+  .pc-avatar--c4 { background-color: #FF9F0A; }
+  .pc-avatar--c5 { background-color: #34C759; }
+  .pc-avatar--c6 { background-color: #0A84FF; }
+  .pc-avatar--c7 { background-color: #FF2D55; }
+  .pc-avatar--c8 { background-color: #5856D6; }
+
+  .pc-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .pc-avatar__dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--surface-1);
+    background-color: var(--ok);
+  }
+
+  .pc-avatar__dot--active {
+    background-color: var(--ok);
+  }
+
+  .pc-avatar__dot--inactive {
+    background-color: var(--text-3);
+  }
+
+  .pc-avatar__dot--lg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .pc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .pc-badge--brand {
+    background-color: var(--brand-soft);
+    color: var(--brand);
+  }
+
+  .pc-badge--ok {
+    background-color: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .pc-badge--warn {
+    background-color: var(--warn-soft);
+    color: var(--warn-ink);
+  }
+
+  .pc-badge--danger {
+    background-color: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  .pc-badge--info {
+    background-color: var(--info-soft);
+    color: var(--info);
+  }
+
+  .pc-badge--hero {
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #FFFFFF;
+  }
+
+  /* Skeleton Shimmer */
+  @keyframes pc-shimmer {
+    0% { opacity: 0.55; }
+    50% { opacity: 1; }
+    100% { opacity: 0.55; }
+  }
+
+  .pc-skeleton {
+    background-color: var(--surface-3);
+    border-radius: var(--r-sm);
+    animation: pc-shimmer 1.6s ease-in-out infinite;
+  }
+
+  .pc-skeleton--lg { width: 110px; height: 28px; }
+  .pc-skeleton--md { width: 140px; height: 22px; }
+  .pc-skeleton--sm { width: 165px; height: 14px; }
+  .pc-skeleton--pill { width: 84px; height: 36px; border-radius: 10px; }
+  .pc-skeleton--thumb { width: 52px; height: 52px; border-radius: 12px; }
+
+  /* Empty State */
+  .pc-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 32px 20px;
+    background-color: var(--surface-1);
+    border-radius: var(--r-card);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .pc-empty-state__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    background-color: var(--brand-soft);
+    color: var(--brand);
+  }
+
+  .pc-empty-state__icon--danger { background-color: var(--danger-soft); color: var(--danger); }
+  .pc-empty-state__icon--warn { background-color: var(--warn-soft); color: var(--warn-ink); }
+  .pc-empty-state__icon--vitals { background-color: var(--c-vitals-soft); color: var(--c-vitals); }
+  .pc-empty-state__icon--meds { background-color: var(--c-meds-soft); color: var(--c-meds); }
+  .pc-empty-state__icon--meals { background-color: var(--c-meals-soft); color: var(--c-meals); }
+  .pc-empty-state__icon--notes { background-color: var(--c-notes-soft); color: var(--c-notes); }
+
+  /* PIN Pad (§3.1 + Additif B §9.6) */
+  @keyframes pc-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+  }
+
+  .pc-pin-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 16px 0 20px;
+  }
+
+  .pc-pin-dots.is-shaking {
+    animation: pc-shake 380ms var(--ease-out);
+  }
+
+  .pc-pin-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--brand);
+    background-color: transparent;
+    transition: background-color 120ms, transform 120ms var(--ease-spring);
+  }
+
+  .pc-pin-dot.is-filled {
+    background-color: var(--brand);
+    transform: scale(1.12);
+  }
+
+  .pc-pin-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    max-width: 268px;
+    margin: 0 auto;
+  }
+
+  .pc-pin-key {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 68px;
+    height: 68px;
+    margin: 0 auto;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--surface-2);
+    color: var(--text);
+    font-size: 24px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 100ms, background-color 100ms;
+  }
+
+  .pc-pin-key--ghost {
+    background-color: transparent;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .pc-pin-key:active {
+    transform: scale(0.93);
+    background-color: var(--brand-soft);
+    color: var(--brand);
+  }
+
+  /* Publisher Credit (§6.9) */
+  .pc-credit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text-3);
+  }
+
+  .pc-credit__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 0 4px;
+    color: var(--text-3);
+    text-decoration: none;
+    transition: opacity 150ms;
+  }
+
+  .pc-credit__publisher {
+    color: var(--text-2);
+    font-weight: 500;
+  }
+
+  .pc-credit--on-gradient .pc-credit__link,
+  .pc-credit--on-gradient .pc-credit__publisher {
+    color: rgba(255, 255, 255, 0.85);
+  }
+}

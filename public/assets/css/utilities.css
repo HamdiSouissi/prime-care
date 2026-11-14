@@ -1,0 +1,75 @@
+@layer utilities {
+  .flex { display: flex; }
+  .inline-flex { display: inline-flex; }
+  .grid { display: grid; }
+  .items-center { align-items: center; }
+  .items-start { align-items: flex-start; }
+  .justify-between { justify-content: space-between; }
+  .justify-center { justify-content: center; }
+  .flex-col { flex-direction: column; }
+  .flex-wrap { flex-wrap: wrap; }
+  .flex-1 { flex: 1; }
+  .min-w-0 { min-width: 0; }
+  .shrink-0 { flex-shrink: 0; }
+
+  .gap-1 { gap: var(--sp-1); }
+  .gap-2 { gap: var(--sp-2); }
+  .gap-3 { gap: var(--sp-3); }
+  .gap-4 { gap: var(--sp-4); }
+  .gap-5 { gap: var(--sp-5); }
+  .gap-6 { gap: var(--sp-6); }
+
+  .mt-1 { margin-top: var(--sp-1); }
+  .mt-2 { margin-top: var(--sp-2); }
+  .mt-3 { margin-top: var(--sp-3); }
+  .mt-4 { margin-top: var(--sp-4); }
+  .mt-5 { margin-top: var(--sp-5); }
+  .mt-6 { margin-top: var(--sp-6); }
+
+  .mb-1 { margin-bottom: var(--sp-1); }
+  .mb-2 { margin-bottom: var(--sp-2); }
+  .mb-3 { margin-bottom: var(--sp-3); }
+  .mb-4 { margin-bottom: var(--sp-4); }
+  .mb-6 { margin-bottom: var(--sp-6); }
+
+  .py-1 { padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
+  .py-6 { padding-top: var(--sp-6); padding-bottom: var(--sp-6); }
+
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .text-right { text-align: right; }
+  .text-muted { color: var(--text-2); }
+  .text-subtle { color: var(--text-3); }
+  .text-brand { color: var(--brand); }
+  .text-brand-ink { color: var(--brand-ink); }
+  .text-ok { color: var(--ok); }
+  .text-warn { color: var(--warn-ink); }
+  .text-danger { color: var(--danger); }
+  .text-white { color: #FFFFFF; }
+  .font-semibold { font-weight: 600; }
+  .font-bold { font-weight: 700; }
+  .pre-line { white-space: pre-line; }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cursor-pointer { cursor: pointer; }
+  .pointer-none { pointer-events: none; }
+  .min-h-touch { min-height: 44px; }
+  .max-w-prose { max-width: 340px; }
+
+  .w-full { width: 100%; }
+  .hidden { display: none !important; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}

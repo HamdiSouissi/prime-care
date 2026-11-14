@@ -1,0 +1,200 @@
+@layer reset, tokens, base, components, utilities, pages;
+
+@layer tokens {
+  :root,
+  [data-theme="light"] {
+    color-scheme: light;
+
+    /* Proposition B — Bleu nuit (§2 de l'additif — Mode Clair) */
+    --bg: #F4F7FC;
+    --surface: #FFFFFF;
+    --surface-1: #FFFFFF;
+    --surface-2: #EEF2F9;
+    --surface-3: #E2E8F4;
+    --header: #0A1633;
+    --header-2: #11224D;
+    --header-text: #FFFFFF;
+    --header-muted: rgba(255, 255, 255, 0.76);
+    --border: rgba(10, 22, 51, 0.08);
+    --separator: rgba(10, 22, 51, 0.08);
+    --text: #0A1633;
+    --text-1: #0A1633;
+    --text-2: #475569;
+    --text-3: #94A3B8;
+
+    /* Identité Prime Care */
+    --brand: #5E5CE6;
+    --brand-purple: #BF5AF2;
+    --brand-soft: rgba(94, 92, 230, 0.12);
+    --brand-ink: #0A1633;
+    --brand-gradient: linear-gradient(45deg, #5E5CE6, #BF5AF2);
+    --accent-cyan: #00C7BE;
+
+    /* Couleurs métiers par domaine */
+    --c-vitals: #FF2D55;
+    --c-vitals-soft: rgba(255, 45, 85, 0.12);
+    --c-meds: #00C7BE;
+    --c-meds-soft: rgba(0, 199, 190, 0.14);
+    --c-meals: #FF9500;
+    --c-meals-soft: rgba(255, 149, 0, 0.14);
+    --c-notes: #AF52DE;
+    --c-notes-soft: rgba(175, 82, 222, 0.14);
+    --c-team: #5E5CE6;
+    --c-team-soft: rgba(94, 92, 230, 0.12);
+    --c-docs: #0A84FF;
+    --c-docs-soft: rgba(10, 132, 255, 0.12);
+
+    /* Statuts sémantiques */
+    --ok: #34C759;
+    --ok-soft: rgba(52, 199, 89, 0.14);
+    --warn: #FFCC00;
+    --warn-soft: rgba(255, 204, 0, 0.18);
+    --warn-ink: #5C4500;
+    --danger: #FF3B30;
+    --danger-soft: rgba(255, 59, 48, 0.12);
+    --info: #0A84FF;
+    --info-soft: rgba(10, 132, 255, 0.12);
+
+    /* Élévation : cartes 24px sans ombre portée + pilule tabbar Bleu nuit (§2, §5) */
+    --shadow-card: none;
+    --shadow-float: none;
+    --shadow-tabbar: 0 12px 30px rgba(10, 22, 51, 0.35);
+    --shadow-sheet: 0 -8px 32px rgba(10, 22, 51, 0.18);
+    --backdrop-overlay: rgba(10, 22, 51, 0.52);
+    --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
+    --tabbar-bg: rgba(10, 22, 51, 0.94);
+
+    /* Espacements (grille 4/8px) */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-8: 32px;
+    --sp-10: 40px;
+
+    /* Rayons (Cartes à 24px — Proposition B) */
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 24px;
+    --r-card: 24px;
+    --r-sheet: 28px;
+    --r-pill: 999px;
+
+    /* Mouvement */
+    --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --dur-press: 120ms;
+    --dur-appear: 220ms;
+    --dur-sheet: 350ms;
+
+    /* Typographie */
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;
+
+    /* Zones de sécurité (Safe Areas) */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --tabbar-height: 66px;
+    --navbar-height: 52px;
+    --screen-pad: 16px;
+  }
+
+  @media (min-width: 390px) {
+    :root {
+      --screen-pad: 20px;
+    }
+  }
+
+  /* Mode Sombre automatique (Proposition B — §2 de l'additif) */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #060B1A;
+      --surface: #111A33;
+      --surface-1: #111A33;
+      --surface-2: #172342;
+      --surface-3: #1F2E54;
+      --header: #0A1633;
+      --header-2: #11224D;
+      --header-text: #FFFFFF;
+      --header-muted: rgba(255, 255, 255, 0.76);
+      --border: rgba(255, 255, 255, 0.09);
+      --separator: rgba(255, 255, 255, 0.09);
+      --text: #F8FAFC;
+      --text-1: #F8FAFC;
+      --text-2: #94A3B8;
+      --text-3: #64748B;
+
+      --brand: #7D7AFF;
+      --brand-purple: #BF5AF2;
+      --brand-soft: rgba(125, 122, 255, 0.18);
+      --brand-ink: #FFFFFF;
+      --brand-gradient: linear-gradient(45deg, #5E5CE6, #BF5AF2);
+
+      --ok: #30D158;
+      --ok-soft: rgba(48, 209, 88, 0.18);
+      --warn: #FFD60A;
+      --warn-soft: rgba(255, 214, 10, 0.18);
+      --warn-ink: #FFE566;
+      --danger: #FF453A;
+      --danger-soft: rgba(255, 69, 58, 0.18);
+      --info: #0A84FF;
+      --info-soft: rgba(10, 132, 255, 0.18);
+
+      --shadow-card: none;
+      --shadow-float: none;
+      --shadow-tabbar: 0 12px 30px rgba(10, 22, 51, 0.35);
+      --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.65);
+      --backdrop-overlay: rgba(2, 6, 23, 0.72);
+      --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
+      --tabbar-bg: rgba(10, 22, 51, 0.94);
+    }
+  }
+
+  /* Mode Sombre forcé par l'utilisateur */
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #060B1A;
+    --surface: #111A33;
+    --surface-1: #111A33;
+    --surface-2: #172342;
+    --surface-3: #1F2E54;
+    --header: #0A1633;
+    --header-2: #11224D;
+    --header-text: #FFFFFF;
+    --header-muted: rgba(255, 255, 255, 0.76);
+    --border: rgba(255, 255, 255, 0.09);
+    --separator: rgba(255, 255, 255, 0.09);
+    --text: #F8FAFC;
+    --text-1: #F8FAFC;
+    --text-2: #94A3B8;
+    --text-3: #64748B;
+
+    --brand: #7D7AFF;
+    --brand-purple: #BF5AF2;
+    --brand-soft: rgba(125, 122, 255, 0.18);
+    --brand-ink: #FFFFFF;
+    --brand-gradient: linear-gradient(45deg, #5E5CE6, #BF5AF2);
+
+    --ok: #30D158;
+    --ok-soft: rgba(48, 209, 88, 0.18);
+    --warn: #FFD60A;
+    --warn-soft: rgba(255, 214, 10, 0.18);
+    --warn-ink: #FFE566;
+    --danger: #FF453A;
+    --danger-soft: rgba(255, 69, 58, 0.18);
+    --info: #0A84FF;
+    --info-soft: rgba(10, 132, 255, 0.18);
+
+    --shadow-card: none;
+    --shadow-float: none;
+    --shadow-tabbar: 0 12px 30px rgba(10, 22, 51, 0.35);
+    --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.65);
+    --backdrop-overlay: rgba(2, 6, 23, 0.72);
+    --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
+    --tabbar-bg: rgba(10, 22, 51, 0.94);
+  }
+}

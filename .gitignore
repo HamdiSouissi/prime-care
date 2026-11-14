@@ -1,0 +1,21 @@
+# Configuration locale avec secrets
+config/config.php
+.env
+.env.*
+
+# Stockage applicatif (uploads, logs, cache)
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+storage/cache/*
+!storage/cache/.gitkeep
+
+# Fichiers système et éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
