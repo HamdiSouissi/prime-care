@@ -1,6 +1,7 @@
 /**
- * iOS-style Numeric PIN Pad (§3.1)
- * Supports 4–6 digit entry, dot indicators, keyboard input, shake + vibration on error.
+ * Trusted-Device Numeric PIN Pad (C1 & Additif B §9.6)
+ * Submits ONLY the trusted-device `selector` (never a raw user_id), supports switching
+ * between trusted profiles ("Qui êtes-vous ?"), 4–6 digit entry, and password fallback after 5 errors.
  */
 import { triggerHaptic } from './haptics.js';
 import { showToast } from './toast.js';
@@ -12,6 +13,8 @@ export function initPinPad() {
   }
 
   const pinInput = form.querySelector('input[name="pin"]');
+  const selectorInput = form.querySelector('input[name="selector"]');
+  const greetingEl = document.getElementById('pc-pin-greeting');
   const dotsWrap = document.getElementById('pc-pin-dots');
   const dots = dotsWrap ? Array.from(dotsWrap.querySelectorAll('.pc-pin-dot')) : [];
   const maxDigits = 6;
@@ -47,7 +50,7 @@ export function initPinPad() {
     }
     submitting = true;
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    const userId = form.querySelector('input[name="user_id"]')?.value || '';
+    const selector = selectorInput instanceof HTMLInputElement ? selectorInput.value : '';
 
     try {
       const response = await fetch('/api/auth/pin', {
@@ -58,7 +61,7 @@ export function initPinPad() {
           'X-CSRF-Token': csrf,
         },
         body: JSON.stringify({
-          user_id: userId,
+          selector,
           pin: currentPin,
         }),
       });
@@ -66,6 +69,13 @@ export function initPinPad() {
       if (result.ok && result.data?.redirect) {
         triggerHaptic(15);
         window.location.href = result.data.redirect;
+        return;
+      }
+      if (response.status === 429 || result.error?.code === 'RATE_LIMITED') {
+        triggerShakeError(result.error?.message || 'Code PIN bloqué pendant 15 minutes.');
+        window.setTimeout(() => {
+          window.location.href = '/login?mode=password';
+        }, 900);
         return;
       }
       triggerShakeError(result.error?.message || 'Code PIN incorrect.');
@@ -102,6 +112,36 @@ export function initPinPad() {
     updateDots();
   };
 
+  // Profile selector ("Qui êtes-vous ?")
+  document.querySelectorAll('[data-pin-profile-selector]').forEach((card) => {
+    card.addEventListener('click', () => {
+      const sel = card.getAttribute('data-pin-profile-selector') || '';
+      const name = card.getAttribute('data-pin-profile-name') || '';
+      const locked = card.getAttribute('data-pin-profile-locked') === '1';
+
+      if (locked) {
+        showToast('Ce code PIN est bloqué 15 min. Veuillez vous connecter par mot de passe.', 'error');
+        window.location.href = '/login?mode=password';
+        return;
+      }
+
+      document.querySelectorAll('[data-pin-profile-selector]').forEach((el) => {
+        el.classList.toggle('is-selected', el === card);
+      });
+
+      if (selectorInput instanceof HTMLInputElement) {
+        selectorInput.value = sel;
+      }
+      if (greetingEl && name) {
+        greetingEl.textContent = `Bonjour ${name}`;
+      }
+
+      currentPin = '';
+      updateDots();
+      triggerHaptic(10);
+    });
+  });
+
   form.querySelectorAll('[data-pin-digit]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const d = btn.getAttribute('data-pin-digit');
@@ -117,6 +157,10 @@ export function initPinPad() {
   }
 
   document.addEventListener('keydown', (e) => {
+    const activeTag = document.activeElement?.tagName;
+    if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+      return;
+    }
     if (e.key >= '0' && e.key <= '9') {
       appendDigit(e.key);
     } else if (e.key === 'Backspace') {

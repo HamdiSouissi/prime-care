@@ -16,7 +16,8 @@ use Throwable;
 
 /**
  * Handles the authenticated user's profile: personal info, avatar upload, password, PIN,
- * live theme preference (Auto/Light/Dark), and revoking other remembered devices.
+ * trusted device activation for PIN login, live theme preference (Auto/Light/Dark),
+ * and revoking remembered/trusted devices.
  */
 final class ProfileController extends Controller
 {
@@ -24,6 +25,9 @@ final class ProfileController extends Controller
     {
         $this->authorize('profile', 'view');
         $user = Auth::user() ?? [];
+        $userId = (int) ($user['id'] ?? 0);
+
+        $trustedDevice = $userId > 0 ? Auth::currentBrowserTrustedForUser($userId) : null;
 
         return $this->view('profile/index', [
             'pageTitle' => 'Mon profil',
@@ -31,6 +35,9 @@ final class ProfileController extends Controller
             'backUrl' => '/more',
             'backLabel' => 'Plus',
             'user' => $user,
+            'trustedDevice' => $trustedDevice,
+            'deviceTrusted' => $trustedDevice !== null,
+            'authenticatedViaPassword' => Auth::authenticatedViaPassword(),
         ]);
     }
 
@@ -156,6 +163,7 @@ final class ProfileController extends Controller
         $userModel->update((int) $user['id'], [
             'password_hash' => Auth::hashSecret((string) $request->input('password')),
         ]);
+        Auth::revokeAllDevicesForUser((int) $user['id'], false);
         Auth::refreshUser();
         AuditService::record('profile.update_password', 'users', (int) $user['id']);
 
@@ -189,9 +197,67 @@ final class ProfileController extends Controller
             'pin_hash' => Auth::hashSecret((string) $request->input('pin')),
         ]);
         Auth::refreshUser();
-        AuditService::record('profile.update_pin', 'users', (int) $user['id']);
 
+        $enableOnDevice = (bool) $request->input('enable_on_device', false);
+        if ($enableOnDevice && Auth::authenticatedViaPassword()) {
+            $label = trim((string) $request->input('device_label', 'Téléphone mobile'));
+            Auth::issueTrustedDevice((int) $user['id'], $label !== '' ? $label : 'Téléphone mobile');
+            AuditService::record('profile.trust_device', 'users', (int) $user['id'], null, ['device_label' => $label]);
+            Session::flash('toast_success', 'Votre code PIN a été enregistré et activé sur cet appareil.');
+            return Response::redirect('/profile');
+        }
+
+        AuditService::record('profile.update_pin', 'users', (int) $user['id']);
         Session::flash('toast_success', 'Votre code PIN personnel a été enregistré.');
+        return Response::redirect('/profile');
+    }
+
+    public function trustDevice(Request $request): Response
+    {
+        $this->authorize('profile', 'update');
+        $user = Auth::user();
+        if ($user === null) {
+            return Response::redirect('/login');
+        }
+
+        if (!Auth::authenticatedViaPassword()) {
+            Session::flash(
+                'toast_error',
+                'Par sécurité, reconnectez-vous avec votre mot de passe avant d’activer la connexion par PIN sur cet appareil.'
+            );
+            return Response::redirect('/profile');
+        }
+
+        if (empty($user['pin_hash'])) {
+            Session::flash('toast_error', 'Veuillez d’abord définir votre code PIN personnel.');
+            return Response::redirect('/profile');
+        }
+
+        $label = trim((string) $request->input('device_label', 'Téléphone mobile'));
+        Auth::issueTrustedDevice((int) $user['id'], $label !== '' ? $label : 'Téléphone mobile');
+        AuditService::record('profile.trust_device', 'users', (int) $user['id'], null, ['device_label' => $label]);
+
+        Session::flash('toast_success', 'La connexion par code PIN est maintenant activée sur cet appareil (90 jours).');
+        return Response::redirect('/profile');
+    }
+
+    public function revokeTrustedDevice(Request $request): Response
+    {
+        $this->authorize('profile', 'update');
+        $user = Auth::user();
+        if ($user === null) {
+            return Response::redirect('/login');
+        }
+
+        $trusted = Auth::currentBrowserTrustedForUser((int) $user['id']);
+        if ($trusted !== null) {
+            Auth::revokeTrustedDeviceSelector((int) $user['id'], (string) $trusted['selector']);
+            AuditService::record('profile.revoke_trusted_device', 'users', (int) $user['id'], null, [
+                'selector' => $trusted['selector'],
+            ]);
+        }
+
+        Session::flash('toast_success', 'La connexion par code PIN a été désactivée sur cet appareil.');
         return Response::redirect('/profile');
     }
 
@@ -235,10 +301,10 @@ final class ProfileController extends Controller
             return Response::redirect('/login');
         }
 
-        $revoked = Auth::revokeOtherDevices((int) $user['id']);
+        $revoked = Auth::revokeAllDevicesForUser((int) $user['id'], true);
         AuditService::record('profile.revoke_other_devices', 'users', (int) $user['id'], null, ['revoked_count' => $revoked]);
 
-        Session::flash('toast_success', 'Les autres appareils connectés ont été déconnectés.');
+        Session::flash('toast_success', 'Tous les jetons d’appareil et de connexion par PIN ont été révoqués.');
         return Response::redirect('/profile');
     }
 }

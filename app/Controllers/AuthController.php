@@ -16,15 +16,19 @@ use App\Services\AuditService;
 use App\Services\MailService;
 
 /**
- * Handles password login, PIN pad login, password reset flow, and logout.
+ * Handles password login, trusted-device PIN pad login, password reset flow, and logout.
  */
 final class AuthController extends Controller
 {
     public function showLogin(Request $request): Response
     {
+        $trustedProfiles = Auth::trustedProfiles();
+        $forcePasswordMode = $request->query('mode') === 'password';
+
         return $this->view('auth/login', [
             'pageTitle' => t('auth.login.title'),
-            'hasDeviceUser' => Auth::deviceUser() !== null,
+            'trustedProfiles' => $trustedProfiles,
+            'forcePasswordMode' => $forcePasswordMode,
         ], 'layouts/auth');
     }
 
@@ -41,12 +45,12 @@ final class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return $this->backWithErrors('/login', $request->all(), $validator->errors());
+            return $this->backWithErrors('/login?mode=password', $request->all(), $validator->errors());
         }
 
         if (RateLimiter::tooManyAttempts($email, $ip)) {
             return $this->backWithErrors(
-                '/login',
+                '/login?mode=password',
                 ['email' => $email],
                 ['email' => [t('auth.login.failed')]],
                 t('auth.login.locked')
@@ -56,7 +60,7 @@ final class AuthController extends Controller
         if (!Auth::attempt($email, $password, $remember)) {
             RateLimiter::recordAttempt($email, $ip, false);
             return $this->backWithErrors(
-                '/login',
+                '/login?mode=password',
                 ['email' => $email],
                 ['email' => [t('auth.login.failed')]],
                 t('auth.login.failed')
@@ -76,71 +80,56 @@ final class AuthController extends Controller
 
     public function showPin(Request $request): Response
     {
-        $deviceUser = Auth::deviceUser();
-
-        // Allow selecting a remembered user by query param on the device if none stored yet
-        $requestedEmail = (string) $request->query('user', '');
-        if ($deviceUser === null && $requestedEmail !== '') {
-            $userModel = new User();
-            $found = $userModel->findByEmail($requestedEmail);
-            if ($found !== null && (int) ($found['is_active'] ?? 0) === 1) {
-                Session::set('pin_device_user_id', (int) $found['id']);
-                $deviceUser = $found;
-            }
+        $trustedProfiles = Auth::trustedProfiles();
+        if ($trustedProfiles === []) {
+            return Response::redirect('/login');
         }
 
-        if ($deviceUser === null) {
-            // Default to caregiver Fatou Diallo if visiting /login/pin directly for quick testing
-            $userModel = new User();
-            $defaultCaregiver = $userModel->findByEmail('fatou@primecare.test');
-            if ($defaultCaregiver !== null) {
-                Session::set('pin_device_user_id', (int) $defaultCaregiver['id']);
-                $deviceUser = $defaultCaregiver;
-            } else {
-                return Response::redirect('/login');
+        $requestedSelector = strtolower(trim((string) $request->query('selector', '')));
+        $activeProfile = $trustedProfiles[0];
+        foreach ($trustedProfiles as $profile) {
+            if ($profile['selector'] === $requestedSelector) {
+                $activeProfile = $profile;
+                break;
             }
         }
 
         return $this->view('auth/pin', [
-            'pageTitle' => t('auth.pin.greeting', ['name' => (string) $deviceUser['first_name']]),
-            'deviceUser' => $deviceUser,
+            'pageTitle' => t('auth.pin.greeting', ['name' => (string) $activeProfile['first_name']]),
+            'trustedProfiles' => $trustedProfiles,
+            'deviceUser' => $activeProfile,
         ], 'layouts/auth');
     }
 
     public function loginPin(Request $request): Response
     {
-        $deviceUser = Auth::deviceUser();
-        $userId = (int) ($request->input('user_id') ?: ($deviceUser['id'] ?? 0));
+        // Never trust or use user_id from request input; require a valid trusted-device selector
+        $selector = strtolower(trim((string) $request->input('selector', '')));
         $pin = trim((string) $request->input('pin', ''));
         $ip = $request->ip();
 
-        if ($userId <= 0) {
-            if ($request->wantsJson()) {
-                return Response::jsonError('NO_DEVICE_USER', 'Aucun utilisateur associé à cet appareil.', 400);
+        $result = Auth::attemptTrustedPin($selector, $pin, null, $ip);
+
+        if (!$result['ok']) {
+            if ($result['code'] === 'RATE_LIMITED') {
+                if ($request->wantsJson()) {
+                    return Response::jsonError('RATE_LIMITED', $result['message'], 429);
+                }
+                Session::flash('toast_error', $result['message']);
+                return Response::redirect('/login?mode=password');
             }
+
+            if ($request->wantsJson()) {
+                return Response::jsonError('INVALID_PIN', $result['message'], 401);
+            }
+            Session::flash('toast_error', $result['message']);
             return Response::redirect('/login');
         }
 
-        $identifier = 'pin_user_' . $userId;
-        if (RateLimiter::tooManyAttempts($identifier, $ip)) {
-            if ($request->wantsJson()) {
-                return Response::jsonError('RATE_LIMITED', t('auth.login.locked'), 429);
-            }
-            Session::flash('toast_error', t('auth.login.locked'));
-            return Response::redirect('/login/pin');
-        }
-
-        if (!preg_match('/^\d{4,6}$/', $pin) || !Auth::attemptPin($userId, $pin, true)) {
-            RateLimiter::recordAttempt($identifier, $ip, false);
-            if ($request->wantsJson()) {
-                return Response::jsonError('INVALID_PIN', t('auth.pin.invalid'), 401);
-            }
-            Session::flash('toast_error', t('auth.pin.invalid'));
-            return Response::redirect('/login/pin');
-        }
-
-        RateLimiter::recordAttempt($identifier, $ip, true);
-        AuditService::record('auth.login_pin', 'users', Auth::id(), null, ['method' => 'pin']);
+        AuditService::record('auth.login_pin', 'users', Auth::id(), null, [
+            'method' => 'pin',
+            'selector' => $selector,
+        ]);
         Session::flash('show_launch_loader', true);
 
         if ($request->wantsJson()) {
@@ -152,8 +141,7 @@ final class AuthController extends Controller
 
     public function switchUser(Request $request): Response
     {
-        Auth::forgetDeviceUser();
-        return Response::redirect('/login');
+        return Response::redirect('/login?mode=password');
     }
 
     public function showForgot(Request $request): Response
@@ -238,6 +226,7 @@ final class AuthController extends Controller
         $newHash = Auth::hashSecret((string) $request->input('password'));
         $userModel->update((int) $user['id'], ['password_hash' => $newHash]);
         $userModel->markPasswordResetUsed((int) $resetRow['id']);
+        Auth::revokeAllDevicesForUser((int) $user['id'], true);
 
         AuditService::record('auth.password_reset_completed', 'users', (int) $user['id'], null, null, 1, (int) $user['id']);
         Session::flash('toast_success', t('auth.reset.success'));
@@ -251,12 +240,8 @@ final class AuthController extends Controller
             AuditService::record('auth.logout', 'users', $userId);
         }
 
-        Auth::logout(true);
+        Auth::logout();
         Session::flash('toast_info', t('auth.logout.success'));
-
-        if (Auth::deviceUser() !== null) {
-            return Response::redirect('/login/pin');
-        }
 
         return Response::redirect('/login');
     }

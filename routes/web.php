@@ -59,8 +59,12 @@ $router->group([
         $auth->post('/profile/avatar', [ProfileController::class, 'updateAvatar'], 'profile.avatar');
         $auth->post('/profile/password', [ProfileController::class, 'updatePassword'], 'profile.password');
         $auth->post('/profile/pin', [ProfileController::class, 'updatePin'], 'profile.pin');
+        $auth->post('/profile/trust-device', [ProfileController::class, 'trustDevice'], 'profile.trust_device');
+        $auth->post('/profile/trust-device/revoke', [ProfileController::class, 'revokeTrustedDevice'], 'profile.revoke_trusted_device');
+        $auth->post('/profile/revoke-device', [ProfileController::class, 'revokeTrustedDevice'], 'profile.revoke_device_alias');
         $auth->post('/profile/theme', [ProfileController::class, 'updateTheme'], 'profile.theme');
         $auth->post('/profile/devices/revoke', [ProfileController::class, 'revokeDevices'], 'profile.revoke');
+        $auth->post('/profile/revoke-sessions', [ProfileController::class, 'revokeDevices'], 'profile.revoke_sessions_alias');
 
         // Patient file (view: all roles, edit/contacts: admin)
         $auth->get('/patient', [PatientController::class, 'show'], 'patient.show');

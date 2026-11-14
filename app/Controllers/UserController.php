@@ -250,6 +250,10 @@ final class UserController extends Controller
         $newStatus = (int) ($member['is_active'] ?? 1) === 1 ? 0 : 1;
         $userModel->update($memberId, ['is_active' => $newStatus]);
 
+        if ($newStatus === 0) {
+            Auth::revokeAllDevicesForUser($memberId, false);
+        }
+
         AuditService::record(
             $newStatus === 1 ? 'users.activate' : 'users.deactivate',
             'users',

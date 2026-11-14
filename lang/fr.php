@@ -6,6 +6,7 @@ return [
     'app' => [
         'name' => 'Prime Care',
         'slogan' => 'Suivi de soins à domicile',
+        'tagline' => 'Suivi de soins à domicile',
         'by_publisher' => 'by Prime Vision Solutions',
         'credit_prefix' => 'Application créée par',
         'credit_publisher' => 'Prime Vision Solutions',
@@ -33,11 +34,13 @@ return [
             'inactive' => 'Identifiants incorrects.',
         ],
         'pin' => [
+            'who_are_you' => 'Qui êtes-vous ?',
             'greeting' => 'Bonjour :name',
             'subtitle' => 'Saisissez votre code PIN personnel',
-            'switch_user' => 'Changer d’utilisateur',
+            'switch_user' => 'Changer de profil',
             'use_password' => 'Se connecter par mot de passe',
-            'invalid' => 'Code PIN incorrect.',
+            'invalid' => 'Code PIN incorrect ou appareil non reconnu.',
+            'locked' => 'Code PIN bloqué pendant 15 minutes après 5 erreurs. Veuillez vous connecter par mot de passe.',
             'submit' => 'Déverrouiller',
         ],
         'forgot' => [
@@ -83,7 +86,9 @@ return [
     ],
 
     'profile' => [
-        'revoke_devices' => 'Se déconnecter de tous les autres appareils',
+        'enable_pin_device' => 'Activer la connexion par PIN sur cet appareil',
+        'revoke_pin_device' => 'Désactiver le PIN sur cet appareil',
+        'revoke_devices' => 'Déconnecter les autres appareils',
     ],
 
     'validation' => [
