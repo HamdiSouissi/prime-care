@@ -111,3 +111,9 @@ Toutes les captures ont été générées via Chromium headless dans `docs/retou
 
 - Les routes de préfiguration (`/coming-soon/glycemia`, `/coming-soon/medication`, `/coming-soon/meal`, `/coming-soon/journal`, `/today`, `/health`, `/journal`) sont déjà câblées dans la barre d’onglets et la feuille d’action rapide `+` : en Phase 2, elles seront remplacées par leurs contrôleurs métier dédiés (`VitalController`, `MedicationController`, `MealController`, `CareLogController`).
 - Les seuils personnalisés du patient (`target_glycemia_fasting_min`, `target_glycemia_fasting_max`, `target_glycemia_postmeal_max`, `hypo_threshold_g_l`, `hyper_threshold_g_l`) sont déjà stockés dans la table `patients` et dans `settings`, prêts à alimenter le moteur de coloration sémantique (`ok`/`warn`/`danger`) et d’alerte immédiate en cas de glycémie hors cible.
+
+---
+
+**Branche Git** : `arena/e3966115-prime-care` (créée à partir de `main` `e7e5b999ece96bf256c4024c8ee6fd61291cf1aa`)  
+**Statut** : `PHASE 1 TERMINÉE ET POUSSÉE — branche : arena/e3966115-prime-care`
+
