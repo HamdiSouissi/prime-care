@@ -8,8 +8,8 @@ use ErrorException;
 use Throwable;
 
 /**
- * Global error and exception handler rendering styled Prime Care error pages (403, 404, 419, 429, 500)
- * or JSON API error responses, while logging technical details to storage/logs/.
+ * Global error and exception handler rendering styled Prime Care error pages (403, 404, 419, 429, 500),
+ * JSON API error responses, or plain-text CLI errors exiting with code 1.
  */
 final class ErrorHandler
 {
@@ -20,6 +20,7 @@ final class ErrorHandler
     {
         set_error_handler([self::class, 'handleError']);
         set_exception_handler([self::class, 'handleException']);
+        register_shutdown_function([self::class, 'handleShutdown']);
     }
 
     /**
@@ -34,7 +35,7 @@ final class ErrorHandler
     }
 
     /**
-     * Handle uncaught exceptions and send the appropriate HTTP response.
+     * Handle uncaught exceptions and send the appropriate HTTP response (or CLI text + exit 1).
      */
     public static function handleException(Throwable $e, ?Request $request = null): Response
     {
@@ -47,6 +48,21 @@ final class ErrorHandler
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]);
+        }
+
+        // In CLI mode (when invoked as uncaught exception handler without an explicit HTTP Request),
+        // always output plain text to STDERR and exit with non-zero status code 1.
+        if (PHP_SAPI === 'cli' && $request === null) {
+            $text = sprintf(
+                "[ERREUR CLI] %s : %s (%s:%d)\n%s\n",
+                $e::class,
+                $e->getMessage(),
+                $e->getFile(),
+                $e->getLine(),
+                $e->getTraceAsString()
+            );
+            fwrite(STDERR, $text);
+            exit(1);
         }
 
         $req = $request ?? Request::capture();
@@ -74,6 +90,36 @@ final class ErrorHandler
             $resp->send();
         }
         return $resp;
+    }
+
+    /**
+     * Handle fatal errors on shutdown, ensuring CLI scripts exit with status code 1 in plain text.
+     */
+    public static function handleShutdown(): void
+    {
+        $error = error_get_last();
+        if ($error === null) {
+            return;
+        }
+
+        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+        if (!in_array($error['type'], $fatalTypes, true)) {
+            return;
+        }
+
+        Logger::error($error['message'], [
+            'type' => $error['type'],
+            'file' => $error['file'],
+            'line' => $error['line'],
+        ]);
+
+        if (PHP_SAPI === 'cli') {
+            fwrite(
+                STDERR,
+                sprintf("[ERREUR FATALE CLI] %s (%s:%d)\n", $error['message'], $error['file'], $error['line'])
+            );
+            exit(1);
+        }
     }
 
     /**
