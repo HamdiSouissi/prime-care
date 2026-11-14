@@ -8,7 +8,7 @@
 ## 1. Positionnement visuel : « Proposition B — Bleu nuit »
 
 L’interface de **Prime Care** adopte la direction artistique **Proposition B — Bleu nuit** :
-- Une identité médicale rassurante et haut de gamme articulée autour du **Bleu nuit Prime Care (`#0A1633`)**, du **dégradé signature Indigo → Violet (`#5E5CE6 → #BF5AF2`)** et de surfaces épurées à **rayon 24 px sans ombre portée**.
+- Une identité médicale rassurante et haut de gamme articulée autour du **Bleu nuit Prime Care (`#0A1633`)**, du **dégradé signature Indigo → Violet à 45° (`linear-gradient(45deg, #5E5CE6, #BF5AF2)`)** et de surfaces épurées à **rayon 24 px sans ombre portée**.
 - Contrastes francs, hiérarchie immédiate à une main, lisibilité maximale pour l’équipe d’aides-soignantes de jour comme de garde de nuit.
 
 ---
@@ -17,15 +17,15 @@ L’interface de **Prime Care** adopte la direction artistique **Proposition B �
 
 | Token | Mode Clair | Mode Sombre | Rôle |
 |---|---|---|---|
-| `--bg` | `#F4F6FB` | `#070D1F` | Fond général de l’application (gris-bleu très doux en clair, bleu abysse en sombre) |
-| `--surface-1` | `#FFFFFF` | `#0F172A` | Surface primaire des cartes (24 px, sans ombre) |
-| `--surface-2` | `#EEF2F9` | `#162038` | Surface secondaire (champs, pastilles, groupes) |
-| `--surface-3` | `#E2E8F4` | `#1E293B` | Surface tertiaire / états actifs |
-| `--header` | `#0A1633` | `#060C1D` | En-tête Bleu nuit profond Prime Care |
-| `--header-2` | `#11224D` | `#0D1936` | Nuance secondaire de l’en-tête Bleu nuit |
-| `--brand` | `#5E5CE6` | `#6E6CF0` | Indigo Prime Care |
-| `--brand-purple` | `#BF5AF2` | `#C969F7` | Violet signature du dégradé |
-| `--brand-gradient` | `linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%)` | `linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%)` | Dégradé officiel (`#5E5CE6 → #BF5AF2`) |
+| `--bg` | `#F4F7FC` | `#060B1A` | Fond général de l’application |
+| `--surface` / `--surface-1` | `#FFFFFF` | `#111A33` | Surface primaire des cartes (24 px, sans ombre) |
+| `--surface-2` | `#EEF2F9` | `#172342` | Surface secondaire (champs, pastilles, groupes) |
+| `--surface-3` | `#E2E8F4` | `#1F2E54` | Surface tertiaire / états actifs |
+| `--header` | `#0A1633` | `#0A1633` | En-tête Bleu nuit profond Prime Care (identique dans les deux modes) |
+| `--header-2` | `#11224D` | `#11224D` | Nuance secondaire de l’en-tête Bleu nuit |
+| `--brand` | `#5E5CE6` | `#7D7AFF` | Indigo Prime Care |
+| `--brand-purple` | `#BF5AF2` | `#BF5AF2` | Violet signature du dégradé |
+| `--brand-gradient` | `linear-gradient(45deg, #5E5CE6, #BF5AF2)` | `linear-gradient(45deg, #5E5CE6, #BF5AF2)` | Dégradé officiel 45° (`#5E5CE6 → #BF5AF2`) |
 | `--r-card` | `24px` | `24px` | Rayon unique des cartes |
 | `--shadow-card` | `none` | `none` | Aucune ombre portée sur les cartes (bordure fine `--border`) |
 
@@ -48,17 +48,23 @@ Pour respecter une politique CSP stricte sans `unsafe-inline`, la couleur d’av
 
 ---
 
-## 4. En-tête Bleu nuit avec halos sur l’accueil
+## 4. En-tête d’accueil Bleu nuit pleine largeur
 
-- L’écran d’accueil s’ouvre sur un **en-tête Bleu nuit (`var(--header)`)** enrichi de **deux halos lumineux floutés** (`#5E5CE6` en haut à droite, `#BF5AF2` en bas à gauche).
-- Il regroupe le bonjour personnalisé, la date complète en français, le badge de garde et le bandeau d’accès direct à la fiche patient (**Henri Benali · 84 ans**).
+- L’écran d’accueil s’ouvre sur un **bloc pleine largeur en haut de l’écran** (`.pc-home-hero`), qui passe sous la barre d’état (`safe-area-inset-top`).
+- Coins **bas** arrondis à **32 px** (`border-radius: 0 0 32px 32px`), deux halos lumineux (`#5E5CE6` et `#BF5AF2`).
+- Contenu en blanc : monogramme blanc de 30 px avec la date, boutons ronds translucides (urgences et profil), salutation *« Bonjour Fatou »* (sans grand titre « Accueil » au-dessus), puis la carte patient vitrée (**Henri Benali · 84 ans**).
+- `theme-color` à `#0A1633` sur cette page, avec `apple-mobile-web-app-status-bar-style` à `black-translucent`.
+- Les cartes du contenu commencent directement sous l’en-tête.
 
 ---
 
-## 5. Barre d’onglets flottante avec « + » central en dégradé
+## 5. Barre d’onglets pilule Bleu nuit
 
-- La barre de navigation basse (`.pc-tabbar`) est une **capsule flottante** détachée des bords (`left: 12px`, `right: 12px`, `bottom: calc(10px + var(--safe-bottom))`, `border-radius: 24px`).
-- Le bouton d’action rapide central **« + »** (`.pc-tabbar__plus-btn`) utilise le dégradé officiel **`#5E5CE6 → #BF5AF2`** (`var(--brand-gradient)`).
+- Une **pilule bleu nuit** dans les deux modes : fond `rgba(10, 22, 51, 0.94)` + `backdrop-filter: blur(20px)`, repli opaque `#0A1633`, ombre `0 12px 30px rgba(10, 22, 51, 0.35)`.
+- Hauteur **66 px**, rayon **33 px**, marges latérales de **16 px**.
+- **Onglets inactifs** : icône seule, en blanc à 60 %, avec `aria-label`.
+- **Onglet actif** : pastille `rgba(255, 255, 255, 0.14)` contenant l’icône et le libellé en blanc, avec `aria-current="page"`.
+- **Bouton « + »** de **50 px** en dégradé `linear-gradient(45deg, #5E5CE6, #BF5AF2)`, avec l’ombre violette.
 
 ---
 
@@ -84,16 +90,16 @@ Pour respecter une politique CSP stricte sans `unsafe-inline`, la couleur d’av
 
 ## 8. Vitrine `/design` et documentation `docs/DESIGN_SYSTEM.md`
 
-- La page `/design` et le document `docs/DESIGN_SYSTEM.md` présentent la direction artistique **Proposition B — Bleu nuit**, ses tokens, le dégradé `#5E5CE6 → #BF5AF2`, les cartes 24 px sans ombre, l’en-tête Bleu nuit à halos, la barre d’onglets flottante et le loader Bleu nuit avec barre de progression.
+- La page `/design` et le document `docs/DESIGN_SYSTEM.md` présentent la direction artistique **Proposition B — Bleu nuit**, ses tokens exacts, le dégradé 45° `#5E5CE6 → #BF5AF2`, les cartes 24 px sans ombre, l’en-tête Bleu nuit pleine largeur à coins bas 32 px, la barre d’onglets pilule Bleu nuit et le loader Bleu nuit avec barre de progression.
 
 ---
 
 ## 9. Checklist de contrôle de l’Additif B
 
-- [x] B.1 — Tokens CSS « Proposition B — Bleu nuit » appliqués (`--bg: #F4F6FB` / `#070D1F`, `--header: #0A1633`, `--brand-gradient: #5E5CE6 → #BF5AF2`).
+- [x] B.1 — Tokens CSS « Proposition B — Bleu nuit » appliqués (`--bg: #F4F7FC` / `#060B1A`, `--surface` sombre `#111A33`, `--header: #0A1633` dans les deux modes, `--brand-gradient: linear-gradient(45deg, #5E5CE6, #BF5AF2)`).
 - [x] B.2 — Cartes à rayon `24px` sans ombre portée (`box-shadow: none`, bordure fine).
-- [x] B.3 — En-tête Bleu nuit (`--header`) avec halos lumineux sur l’écran d’accueil.
-- [x] B.4 — Barre d’onglets basse flottante avec bouton central « + » en dégradé `#5E5CE6 → #BF5AF2`.
+- [x] B.3 — En-tête Bleu nuit (`--header`) pleine largeur en haut de l’accueil (`border-radius: 0 0 32px 32px`, deux halos, monogramme blanc 30 px + date, boutons ronds translucides, « Bonjour Fatou », carte patient vitrée, sans titre « Accueil » au-dessus, `theme-color: #0A1633`).
+- [x] B.4 — Barre d’onglets pilule Bleu nuit (`height: 66px`, `border-radius: 33px`, `left/right: 16px`, `rgba(10,22,51,.94)`, onglets inactifs icône seule à 60 % avec `aria-label`, onglet actif en pastille `rgba(255,255,255,.14)` avec icône + libellé blanc et `aria-current="page"`, bouton « + » de 50 px en dégradé avec ombre violette).
 - [x] B.5 — Loader de lancement Bleu nuit avec barre de progression et signature « by Prime Vision Solutions ».
 - [x] B.6 — Écran de connexion en deux parties (« Qui êtes-vous ? » profils de confiance + clavier PIN `selector:validator` conforme à C1).
 - [x] B.7 — Page `/design` et `docs/DESIGN_SYSTEM.md` mis à jour selon la Proposition B — Bleu nuit (libellé dégradé `#5E5CE6 → #BF5AF2`).

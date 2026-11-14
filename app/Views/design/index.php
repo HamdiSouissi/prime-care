@@ -45,26 +45,26 @@ declare(strict_types=1);
     <div class="pc-swatch-grid">
       <div class="pc-swatch">
         <span class="pc-swatch__color pc-swatch__color--gradient"></span>
-        <div class="text-footnote font-semibold">Dégradé Prime Care</div>
+        <div class="text-footnote font-semibold">Dégradé Prime Care (45°)</div>
         <div class="text-caption text-muted">#5E5CE6 → #BF5AF2</div>
       </div>
 
       <div class="pc-swatch">
         <span class="pc-swatch__color pc-swatch__color--header"></span>
         <div class="text-footnote font-semibold">Bleu nuit (--header)</div>
-        <div class="text-caption text-muted">#0A1633</div>
+        <div class="text-caption text-muted">#0A1633 (Clair & Sombre)</div>
       </div>
 
       <div class="pc-swatch">
         <span class="pc-swatch__color pc-swatch__color--brand"></span>
         <div class="text-footnote font-semibold">Indigo (--brand)</div>
-        <div class="text-caption text-muted">#5E5CE6</div>
+        <div class="text-caption text-muted">#5E5CE6 / #7D7AFF</div>
       </div>
 
       <div class="pc-swatch">
         <span class="pc-swatch__color pc-swatch__color--purple"></span>
         <div class="text-footnote font-semibold">Violet (--brand-purple)</div>
-        <div class="text-caption text-muted">#BF5AF2</div>
+        <div class="text-caption text-muted">#BF5AF2 · Surface #111A33</div>
       </div>
 
       <div class="pc-swatch">

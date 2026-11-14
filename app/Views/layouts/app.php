@@ -13,6 +13,12 @@ $content = $content ?? '';
 $cspNonce = $cspNonce ?? View::cspNonce();
 /** @var bool $wideLayout */
 $wideLayout = $wideLayout ?? false;
+/** @var bool $hideNavbar */
+$hideNavbar = (bool) ($hideNavbar ?? false);
+/** @var string|null $themeColor */
+$themeColor = isset($themeColor) && is_string($themeColor) ? $themeColor : null;
+/** @var string $statusBarStyle */
+$statusBarStyle = isset($statusBarStyle) && is_string($statusBarStyle) ? $statusBarStyle : 'default';
 
 $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
 ?>
@@ -21,10 +27,14 @@ $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <?php if ($themeColor !== null): ?>
+    <meta name="theme-color" content="<?= e($themeColor) ?>">
+  <?php else: ?>
+    <meta name="theme-color" content="#F4F7FC" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#060B1A" media="(prefers-color-scheme: dark)">
+  <?php endif; ?>
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="<?= e($statusBarStyle) ?>">
   <meta name="apple-mobile-web-app-title" content="Prime Care">
   <meta name="description" content="Suivi de soins à domicile — by Prime Vision Solutions">
   <meta property="og:title" content="<?= e($pageTitle) ?> — Prime Care">
@@ -50,15 +60,19 @@ $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
     <?= View::partial('sidebar', ['activeTab' => $activeTab ?? 'home']) ?>
 
     <div class="pc-shell <?= $wideLayout ? 'pc-shell--wide' : '' ?>">
-      <?= View::partial('navbar', [
-          'pageTitle' => $pageTitle,
-          'backUrl' => $backUrl ?? null,
-          'backLabel' => $backLabel ?? 'Précédent',
-          'showNavbarLogo' => $showNavbarLogo ?? false,
-          'rightActionHtml' => $rightActionHtml ?? null,
-      ]) ?>
+      <?php if (View::hasSection('hero_header')): ?>
+        <?= View::yieldSection('hero_header') ?>
+      <?php elseif (!$hideNavbar): ?>
+        <?= View::partial('navbar', [
+            'pageTitle' => $pageTitle,
+            'backUrl' => $backUrl ?? null,
+            'backLabel' => $backLabel ?? 'Précédent',
+            'showNavbarLogo' => $showNavbarLogo ?? false,
+            'rightActionHtml' => $rightActionHtml ?? null,
+        ]) ?>
+      <?php endif; ?>
 
-      <main class="pc-main">
+      <main class="pc-main <?= View::hasSection('hero_header') ? 'pc-main--after-hero' : '' ?>">
         <?= $content ?>
 
         <footer class="pc-page-footer">

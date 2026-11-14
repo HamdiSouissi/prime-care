@@ -368,6 +368,13 @@ if (!function_exists('french_full_date')) {
     }
 }
 
+if (!function_exists('format_date_long')) {
+    function format_date_long(?string $utcDate = null): string
+    {
+        return french_full_date($utcDate);
+    }
+}
+
 if (!function_exists('calculate_age')) {
     /**
      * Calculate age in years from a YYYY-MM-DD birth date.

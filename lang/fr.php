@@ -59,8 +59,21 @@ return [
             'success' => 'Votre mot de passe a été mis à jour. Vous pouvez vous connecter.',
         ],
         'logout' => [
+            'label' => 'Se déconnecter',
             'success' => 'Vous êtes déconnecté.',
         ],
+    ],
+
+    'home' => [
+        'greeting' => 'Bonjour :name',
+        'shift_arrive' => 'J’arrive',
+        'glycemia_card' => 'Glycémie',
+        'next_med' => 'Prochaine prise',
+        'med_given' => 'Donné',
+        'quick_access' => 'Accès rapides',
+        'emergency_card' => 'Urgences & Protocole Hypo',
+        'patient_card' => 'Fiche patient & Constantes cibles',
+        'team_card' => 'Gestion de l’équipe',
     ],
 
     'patient' => [

@@ -34,7 +34,10 @@ final class HomeController extends Controller
         return $this->view('home/index', [
             'pageTitle' => 'Accueil',
             'activeTab' => 'home',
-            'showNavbarLogo' => true,
+            'isHomePage' => true,
+            'hideNavbar' => true,
+            'themeColor' => '#0A1633',
+            'statusBarStyle' => 'black-translucent',
             'patient' => $patient,
             'contacts' => $contacts,
             'teamCount' => $teamCount,

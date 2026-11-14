@@ -54,6 +54,10 @@ final class Lang
             $current = $current[$segment];
         }
 
+        if (is_array($current) && isset($current['label']) && is_string($current['label'])) {
+            $current = $current['label'];
+        }
+
         if (!is_string($current)) {
             return $key;
         }

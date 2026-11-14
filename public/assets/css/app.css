@@ -292,14 +292,19 @@
   /* ==========================================================================
      3. HOME DASHBOARD HERO BLEU NUIT WITH HALOS (Additif B §9.3)
      ========================================================================== */
+  .pc-main--after-hero {
+    padding-top: 16px;
+  }
+
   .pc-home-hero {
     position: relative;
     overflow: hidden;
+    width: 100%;
     background-color: var(--header);
     color: #FFFFFF;
-    border-radius: 24px;
-    padding: 22px 18px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0 0 32px 32px;
+    padding: calc(var(--safe-top) + 18px) var(--screen-pad) 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: none;
   }
 
@@ -313,24 +318,55 @@
   }
 
   .pc-home-hero::before {
-    width: 220px;
-    height: 220px;
+    width: 240px;
+    height: 240px;
     top: -80px;
     right: -50px;
     background: radial-gradient(circle, rgba(94, 92, 230, 0.52) 0%, transparent 70%);
   }
 
   .pc-home-hero::after {
-    width: 200px;
-    height: 200px;
+    width: 220px;
+    height: 220px;
     bottom: -90px;
     left: -50px;
-    background: radial-gradient(circle, rgba(191, 90, 242, 0.38) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(191, 90, 242, 0.40) 0%, transparent 70%);
   }
 
   .pc-home-hero > * {
     position: relative;
     z-index: 1;
+  }
+
+  .pc-home-hero__topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .pc-home-hero__brand-date {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .pc-home-hero__monogram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    color: #FFFFFF;
+    flex-shrink: 0;
+  }
+
+  .pc-home-hero__monogram svg {
+    width: 30px;
+    height: 30px;
+    display: block;
   }
 
   .pc-home-hero__date {
@@ -340,13 +376,59 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--header-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pc-home-hero__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .pc-home-hero__circle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    overflow: hidden;
+    transition: background-color 150ms, transform 120ms;
+  }
+
+  .pc-home-hero__circle-btn:active {
+    transform: scale(0.94);
+    background-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .pc-home-hero__circle-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .pc-home-hero__greeting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
   .pc-home-hero__greeting {
-    font-size: 25px;
-    line-height: 30px;
+    font-size: 26px;
+    line-height: 32px;
     font-weight: 700;
-    margin-top: 2px;
     color: #FFFFFF;
   }
 
@@ -356,12 +438,13 @@
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    border-radius: 18px;
+    border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
     color: #FFFFFF;
+    text-decoration: none;
   }
 
   .pc-home-patient__avatar {
@@ -378,10 +461,28 @@
     flex-shrink: 0;
   }
 
-  .pc-home-patient__subtitle {
+  .pc-home-patient__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-home-patient__name {
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .pc-home-patient__meta {
+    margin-top: 2px;
     font-size: 13px;
     line-height: 18px;
     color: rgba(255, 255, 255, 0.84);
+  }
+
+  .pc-home-patient__chevron {
+    color: rgba(255, 255, 255, 0.72);
+    flex-shrink: 0;
   }
 
   .pc-module-grid {

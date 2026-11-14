@@ -166,6 +166,16 @@ final class RoutesSmokeTest
         $assert($caregiver200Ok, 'D1 Smoke (caregiver): 200 sur toutes les routes autorisées (/, /patient, /profile, /more, /about...)');
         $assert($caregiver403Ok, 'D1 Smoke (caregiver): 403 sur /users, /users/create, /users/3, /users/3/edit et /design');
 
+        $homeHtml = self::dispatchGet($router, '/')->body();
+        $assert(
+            str_contains($homeHtml, 'name="theme-color" content="#0A1633"')
+            && str_contains($homeHtml, 'name="apple-mobile-web-app-status-bar-style" content="black-translucent"')
+            && str_contains($homeHtml, '<header class="pc-home-hero"')
+            && str_contains($homeHtml, 'Bonjour Fatou')
+            && str_contains($homeHtml, 'aria-current="page"'),
+            'D2 Design B (accueil & tabbar): en-tête pleine largeur #0A1633, black-translucent, Bonjour Fatou et onglet actif aria-current="page"'
+        );
+
         // ---------------------------------------------------------------------
         // 3. Authenticated as Viewer (Dr Laurent Petit — Lecture!2026)
         // ---------------------------------------------------------------------

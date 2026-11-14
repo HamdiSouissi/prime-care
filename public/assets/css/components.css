@@ -335,48 +335,56 @@
   }
 
   /* ==========================================================================
-     3. FLOATING BOTTOM TAB BAR & CENTRAL "+" BUTTON (Additif B §9.4)
+     3. FLOATING BOTTOM TAB BAR & CENTRAL "+" BUTTON (Additif B §5 / D2.2)
      ========================================================================== */
   .pc-tabbar {
     position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(10px + var(--safe-bottom));
-    max-width: 456px;
+    left: 16px;
+    right: 16px;
+    bottom: calc(12px + var(--safe-bottom));
+    max-width: 448px;
+    height: 66px;
     margin: 0 auto;
     z-index: 50;
-    border-radius: 24px;
-    background-color: var(--surface);
-    background: var(--tabbar-bg);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    backdrop-filter: saturate(180%) blur(20px);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-tabbar);
+    border-radius: 33px;
+    background-color: #0A1633;
+    background-color: rgba(10, 22, 51, 0.94);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 30px rgba(10, 22, 51, 0.35);
     user-select: none;
   }
 
   .pc-tabbar__list {
     display: flex;
     align-items: center;
-    justify-content: space-around;
-    height: var(--tabbar-height);
-    padding: 0 6px;
+    justify-content: space-between;
+    height: 66px;
+    padding: 0 8px;
+    gap: 4px;
   }
 
   .pc-tabbar__item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    min-height: 48px;
+    gap: 6px;
+    min-height: 44px;
     min-width: 44px;
-    color: var(--text-2);
-    font-size: 11px;
-    line-height: 14px;
-    font-weight: 500;
-    transition: color 150ms var(--ease-out), transform var(--dur-press) var(--ease-out);
+    padding: 8px 10px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.60);
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out), transform var(--dur-press) var(--ease-out);
+  }
+
+  .pc-tabbar__label {
+    display: none;
   }
 
   .pc-tabbar__item:active {
@@ -384,21 +392,35 @@
   }
 
   .pc-tabbar__item.is-active {
-    color: var(--brand);
-    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.14);
+    color: #FFFFFF;
+    padding: 8px 14px;
+  }
+
+  .pc-tabbar__item.is-active .pc-tabbar__label {
+    display: inline;
+    color: #FFFFFF;
+    white-space: nowrap;
+  }
+
+  .pc-tabbar__plus-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
 
   .pc-tabbar__plus-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 52px;
-    height: 52px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     border: none;
-    background: var(--brand-gradient);
+    background: linear-gradient(45deg, #5E5CE6, #BF5AF2);
     color: #FFFFFF;
-    box-shadow: 0 6px 18px rgba(94, 92, 230, 0.42);
+    box-shadow: 0 8px 20px rgba(191, 90, 242, 0.45);
     cursor: pointer;
     transition: transform var(--dur-press) var(--ease-spring), box-shadow var(--dur-press);
   }
@@ -677,7 +699,8 @@
     margin-bottom: 10px;
   }
 
-  .pc-health-card__module {
+  .pc-health-card__module,
+  .pc-health-card__header {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -686,10 +709,14 @@
     font-weight: 600;
   }
 
-  .pc-health-card__module--vitals { color: var(--c-vitals); }
-  .pc-health-card__module--meds { color: var(--c-meds); }
-  .pc-health-card__module--meals { color: var(--c-meals); }
-  .pc-health-card__module--notes { color: var(--c-notes); }
+  .pc-health-card__module--vitals,
+  .text-vitals { color: var(--c-vitals); }
+  .pc-health-card__module--meds,
+  .text-meds { color: var(--c-meds); }
+  .pc-health-card__module--meals,
+  .text-meals { color: var(--c-meals); }
+  .pc-health-card__module--notes,
+  .text-notes { color: var(--c-notes); }
 
   .pc-health-card__time {
     font-size: 13px;

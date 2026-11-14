@@ -5,8 +5,8 @@
   [data-theme="light"] {
     color-scheme: light;
 
-    /* Proposition B — Bleu nuit (Surfaces & Textes — Mode Clair) */
-    --bg: #F4F6FB;
+    /* Proposition B — Bleu nuit (§2 de l'additif — Mode Clair) */
+    --bg: #F4F7FC;
     --surface: #FFFFFF;
     --surface-1: #FFFFFF;
     --surface-2: #EEF2F9;
@@ -27,7 +27,7 @@
     --brand-purple: #BF5AF2;
     --brand-soft: rgba(94, 92, 230, 0.12);
     --brand-ink: #0A1633;
-    --brand-gradient: linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%);
+    --brand-gradient: linear-gradient(45deg, #5E5CE6, #BF5AF2);
     --accent-cyan: #00C7BE;
 
     /* Couleurs métiers par domaine */
@@ -55,14 +55,14 @@
     --info: #0A84FF;
     --info-soft: rgba(10, 132, 255, 0.12);
 
-    /* Élévation : cartes 24px sans ombre portée (Proposition B) */
+    /* Élévation : cartes 24px sans ombre portée + pilule tabbar Bleu nuit (§2, §5) */
     --shadow-card: none;
     --shadow-float: none;
-    --shadow-tabbar: 0 12px 32px rgba(10, 22, 51, 0.12);
+    --shadow-tabbar: 0 12px 30px rgba(10, 22, 51, 0.35);
     --shadow-sheet: 0 -8px 32px rgba(10, 22, 51, 0.18);
     --backdrop-overlay: rgba(10, 22, 51, 0.52);
     --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
-    --tabbar-bg: rgba(255, 255, 255, 0.92);
+    --tabbar-bg: rgba(10, 22, 51, 0.94);
 
     /* Espacements (grille 4/8px) */
     --sp-1: 4px;
@@ -97,7 +97,7 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
-    --tabbar-height: 68px;
+    --tabbar-height: 66px;
     --navbar-height: 52px;
     --screen-pad: 16px;
   }
@@ -108,17 +108,17 @@
     }
   }
 
-  /* Mode Sombre automatique (Proposition B — Bleu nuit profond) */
+  /* Mode Sombre automatique (Proposition B — §2 de l'additif) */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #070D1F;
-      --surface: #0F172A;
-      --surface-1: #0F172A;
-      --surface-2: #162038;
-      --surface-3: #1E293B;
-      --header: #060C1D;
-      --header-2: #0D1936;
+      --bg: #060B1A;
+      --surface: #111A33;
+      --surface-1: #111A33;
+      --surface-2: #172342;
+      --surface-3: #1F2E54;
+      --header: #0A1633;
+      --header-2: #11224D;
       --header-text: #FFFFFF;
       --header-muted: rgba(255, 255, 255, 0.76);
       --border: rgba(255, 255, 255, 0.09);
@@ -129,42 +129,41 @@
       --text-3: #64748B;
 
       --brand: #7D7AFF;
-      --brand-soft: rgba(125, 122, 255, 0.20);
+      --brand-purple: #BF5AF2;
+      --brand-soft: rgba(125, 122, 255, 0.18);
       --brand-ink: #FFFFFF;
+      --brand-gradient: linear-gradient(45deg, #5E5CE6, #BF5AF2);
 
-      --c-vitals-soft: rgba(255, 45, 85, 0.22);
-      --c-meds-soft: rgba(0, 199, 190, 0.22);
-      --c-meals-soft: rgba(255, 149, 0, 0.22);
-      --c-notes-soft: rgba(175, 82, 222, 0.22);
-      --c-team-soft: rgba(125, 122, 255, 0.20);
-      --c-docs-soft: rgba(10, 132, 255, 0.22);
-
-      --ok-soft: rgba(52, 199, 89, 0.22);
-      --warn-soft: rgba(255, 204, 0, 0.24);
-      --warn-ink: #FFE57F;
-      --danger-soft: rgba(255, 59, 48, 0.22);
-      --info-soft: rgba(10, 132, 255, 0.22);
+      --ok: #30D158;
+      --ok-soft: rgba(48, 209, 88, 0.18);
+      --warn: #FFD60A;
+      --warn-soft: rgba(255, 214, 10, 0.18);
+      --warn-ink: #FFE566;
+      --danger: #FF453A;
+      --danger-soft: rgba(255, 69, 58, 0.18);
+      --info: #0A84FF;
+      --info-soft: rgba(10, 132, 255, 0.18);
 
       --shadow-card: none;
       --shadow-float: none;
-      --shadow-tabbar: 0 12px 32px rgba(0, 0, 0, 0.55);
-      --shadow-sheet: 0 -4px 24px rgba(0, 0, 0, 0.65);
-      --backdrop-overlay: rgba(3, 7, 18, 0.75);
+      --shadow-tabbar: 0 12px 30px rgba(10, 22, 51, 0.35);
+      --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.65);
+      --backdrop-overlay: rgba(2, 6, 23, 0.72);
       --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
-      --tabbar-bg: rgba(15, 23, 42, 0.92);
+      --tabbar-bg: rgba(10, 22, 51, 0.94);
     }
   }
 
-  /* Mode Sombre explicite (Proposition B — Bleu nuit profond) */
+  /* Mode Sombre forcé par l'utilisateur */
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #070D1F;
-    --surface: #0F172A;
-    --surface-1: #0F172A;
-    --surface-2: #162038;
-    --surface-3: #1E293B;
-    --header: #060C1D;
-    --header-2: #0D1936;
+    --bg: #060B1A;
+    --surface: #111A33;
+    --surface-1: #111A33;
+    --surface-2: #172342;
+    --surface-3: #1F2E54;
+    --header: #0A1633;
+    --header-2: #11224D;
     --header-text: #FFFFFF;
     --header-muted: rgba(255, 255, 255, 0.76);
     --border: rgba(255, 255, 255, 0.09);
@@ -175,28 +174,27 @@
     --text-3: #64748B;
 
     --brand: #7D7AFF;
-    --brand-soft: rgba(125, 122, 255, 0.20);
+    --brand-purple: #BF5AF2;
+    --brand-soft: rgba(125, 122, 255, 0.18);
     --brand-ink: #FFFFFF;
+    --brand-gradient: linear-gradient(45deg, #5E5CE6, #BF5AF2);
 
-    --c-vitals-soft: rgba(255, 45, 85, 0.22);
-    --c-meds-soft: rgba(0, 199, 190, 0.22);
-    --c-meals-soft: rgba(255, 149, 0, 0.22);
-    --c-notes-soft: rgba(175, 82, 222, 0.22);
-    --c-team-soft: rgba(125, 122, 255, 0.20);
-    --c-docs-soft: rgba(10, 132, 255, 0.22);
-
-    --ok-soft: rgba(52, 199, 89, 0.22);
-    --warn-soft: rgba(255, 204, 0, 0.24);
-    --warn-ink: #FFE57F;
-    --danger-soft: rgba(255, 59, 48, 0.22);
-    --info-soft: rgba(10, 132, 255, 0.22);
+    --ok: #30D158;
+    --ok-soft: rgba(48, 209, 88, 0.18);
+    --warn: #FFD60A;
+    --warn-soft: rgba(255, 214, 10, 0.18);
+    --warn-ink: #FFE566;
+    --danger: #FF453A;
+    --danger-soft: rgba(255, 69, 58, 0.18);
+    --info: #0A84FF;
+    --info-soft: rgba(10, 132, 255, 0.18);
 
     --shadow-card: none;
     --shadow-float: none;
-    --shadow-tabbar: 0 12px 32px rgba(0, 0, 0, 0.55);
-    --shadow-sheet: 0 -4px 24px rgba(0, 0, 0, 0.65);
-    --backdrop-overlay: rgba(3, 7, 18, 0.75);
+    --shadow-tabbar: 0 12px 30px rgba(10, 22, 51, 0.35);
+    --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.65);
+    --backdrop-overlay: rgba(2, 6, 23, 0.72);
     --glass-bg: color-mix(in srgb, var(--surface) 84%, transparent);
-    --tabbar-bg: rgba(15, 23, 42, 0.92);
+    --tabbar-bg: rgba(10, 22, 51, 0.94);
   }
 }
