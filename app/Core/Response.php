@@ -127,6 +127,11 @@ final class Response
         return $this->statusCode;
     }
 
+    public function status(): int
+    {
+        return $this->statusCode;
+    }
+
     public function body(): string
     {
         return $this->body;

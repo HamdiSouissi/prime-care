@@ -25,7 +25,7 @@ final class AuthMiddleware
                 Session::set('intended_url', $request->path());
             }
 
-            if (Auth::deviceUser() !== null) {
+            if (Auth::trustedProfiles() !== []) {
                 return Response::redirect('/login/pin');
             }
 

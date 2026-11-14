@@ -196,7 +196,7 @@ $age = isset($patient['birth_date']) ? calculate_age((string) $patient['birth_da
     <div class="pc-list-item pc-list-item--no-icon">
       <div class="pc-list-body">
         <div class="pc-list-subtitle">Accès secours (digicode, étage, boîte à clés)</div>
-        <div class="pc-list-title"><?= e((string) ($patient['access_code_notes'] ?? '')) ?></div>
+        <div class="pc-list-title"><?= e((string) ($patient['access_code'] ?? $patient['access_code_notes'] ?? '')) ?></div>
       </div>
     </div>
   </div>
@@ -261,7 +261,7 @@ $age = isset($patient['birth_date']) ? calculate_age((string) $patient['birth_da
 
         <div class="pc-field">
           <label class="pc-label" for="p_access_code_notes">Accès secours (digicode / clés)</label>
-          <input type="text" id="p_access_code_notes" name="access_code_notes" class="pc-input" value="<?= e((string) ($patient['access_code_notes'] ?? '')) ?>">
+          <input type="text" id="p_access_code_notes" name="access_code" class="pc-input" value="<?= e((string) ($patient['access_code'] ?? $patient['access_code_notes'] ?? '')) ?>">
         </div>
 
         <button type="submit" class="pc-btn pc-btn--primary pc-btn--block">

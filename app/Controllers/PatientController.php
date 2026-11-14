@@ -36,6 +36,8 @@ final class PatientController extends Controller
             'patient' => $patient,
             'contacts' => $contacts,
             'canEdit' => Auth::can('patient', 'update'),
+            'canUpdate' => Auth::can('patient', 'update'),
+            'canManageContacts' => Auth::can('patient_contacts', 'create'),
         ]);
     }
 
@@ -54,11 +56,11 @@ final class PatientController extends Controller
             'blood_group' => 'nullable|max:16',
             'reference_weight_kg' => 'nullable|numeric',
             'height_cm' => 'nullable|integer',
-            'target_glycemia_fasting_min' => 'required|numeric',
-            'target_glycemia_fasting_max' => 'required|numeric',
-            'target_glycemia_postmeal_max' => 'required|numeric',
-            'hypo_threshold_g_l' => 'required|numeric',
-            'hyper_threshold_g_l' => 'required|numeric',
+            'target_glycemia_fasting_min' => 'nullable|numeric',
+            'target_glycemia_fasting_max' => 'nullable|numeric',
+            'target_glycemia_postmeal_max' => 'nullable|numeric',
+            'hypo_threshold_g_l' => 'nullable|numeric',
+            'hyper_threshold_g_l' => 'nullable|numeric',
             'hypo_protocol' => 'required|min:10',
         ]);
 
@@ -71,25 +73,31 @@ final class PatientController extends Controller
             );
         }
 
+        $accessCode = (string) ($request->input('access_code') ?? $request->input('access_code_notes') ?? ($before['access_code'] ?? ''));
+
         $updates = [
             'first_name' => (string) $request->input('first_name'),
             'last_name' => (string) $request->input('last_name'),
             'birth_date' => (string) $request->input('birth_date'),
-            'address' => (string) $request->input('address', ''),
-            'access_code' => (string) $request->input('access_code', ''),
-            'ssn_masked' => (string) $request->input('ssn_masked', ''),
+            'address' => (string) $request->input('address', (string) ($before['address'] ?? '')),
+            'access_code' => $accessCode,
+            'ssn_masked' => (string) $request->input('ssn_masked', (string) ($before['ssn_masked'] ?? '')),
             'diabetes_type' => (string) $request->input('diabetes_type'),
-            'blood_group' => (string) $request->input('blood_group', ''),
-            'reference_weight_kg' => $request->input('reference_weight_kg') !== '' ? (float) $request->input('reference_weight_kg') : null,
-            'height_cm' => $request->input('height_cm') !== '' ? (int) $request->input('height_cm') : null,
-            'target_glycemia_fasting_min' => (float) $request->input('target_glycemia_fasting_min'),
-            'target_glycemia_fasting_max' => (float) $request->input('target_glycemia_fasting_max'),
-            'target_glycemia_postmeal_max' => (float) $request->input('target_glycemia_postmeal_max'),
-            'hypo_threshold_g_l' => (float) $request->input('hypo_threshold_g_l'),
-            'hyper_threshold_g_l' => (float) $request->input('hyper_threshold_g_l'),
-            'allergies' => (string) $request->input('allergies', ''),
-            'medical_history' => (string) $request->input('medical_history', ''),
-            'permanent_instructions' => (string) $request->input('permanent_instructions', ''),
+            'blood_group' => (string) $request->input('blood_group', (string) ($before['blood_group'] ?? '')),
+            'reference_weight_kg' => $request->input('reference_weight_kg') !== null && $request->input('reference_weight_kg') !== ''
+                ? (float) $request->input('reference_weight_kg')
+                : ($before['reference_weight_kg'] ?? null),
+            'height_cm' => $request->input('height_cm') !== null && $request->input('height_cm') !== ''
+                ? (int) $request->input('height_cm')
+                : ($before['height_cm'] ?? null),
+            'target_glycemia_fasting_min' => (float) ($request->input('target_glycemia_fasting_min') ?: ($before['target_glycemia_fasting_min'] ?? 0.80)),
+            'target_glycemia_fasting_max' => (float) ($request->input('target_glycemia_fasting_max') ?: ($before['target_glycemia_fasting_max'] ?? 1.30)),
+            'target_glycemia_postmeal_max' => (float) ($request->input('target_glycemia_postmeal_max') ?: ($before['target_glycemia_postmeal_max'] ?? 1.80)),
+            'hypo_threshold_g_l' => (float) ($request->input('hypo_threshold_g_l') ?: ($before['hypo_threshold_g_l'] ?? 0.70)),
+            'hyper_threshold_g_l' => (float) ($request->input('hyper_threshold_g_l') ?: ($before['hyper_threshold_g_l'] ?? 2.50)),
+            'allergies' => (string) $request->input('allergies', (string) ($before['allergies'] ?? '')),
+            'medical_history' => (string) $request->input('medical_history', (string) ($before['medical_history'] ?? '')),
+            'permanent_instructions' => (string) $request->input('permanent_instructions', (string) ($before['permanent_instructions'] ?? '')),
             'hypo_protocol' => (string) $request->input('hypo_protocol'),
         ];
 

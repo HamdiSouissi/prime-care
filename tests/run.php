@@ -89,6 +89,7 @@ function prepareTestDatabase(): void
 
 prepareTestDatabase();
 
+use Tests\Integration\RoutesSmokeTest;
 use Tests\Unit\AuthTest;
 use Tests\Unit\CsrfTest;
 use Tests\Unit\HelperEscapeTest;
@@ -128,6 +129,7 @@ $suites = [
     'RateLimiter Account vs Shared IP (C2)' => [RateLimiterTest::class, 'run'],
     'Policy (RBAC)' => [PolicyTest::class, 'run'],
     'Helpers & Escaping e()' => [HelperEscapeTest::class, 'run'],
+    'HTTP Routes Smoke Test (D1)' => [RoutesSmokeTest::class, 'run'],
 ];
 
 foreach ($suites as $name => $callable) {
