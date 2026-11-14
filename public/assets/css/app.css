@@ -1,0 +1,441 @@
+@layer pages {
+  /* ==========================================================================
+     1. APPLICATION SHELL & DESKTOP SIDEBAR (§6.7, §6.9)
+     ========================================================================== */
+  .pc-app-layout {
+    display: flex;
+    min-height: 100dvh;
+    width: 100%;
+    background-color: var(--bg);
+  }
+
+  .pc-sidebar {
+    display: none;
+  }
+
+  .pc-shell {
+    flex: 1;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg);
+  }
+
+  .pc-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 4px var(--screen-pad) calc(var(--tabbar-height) + var(--safe-bottom) + 20px);
+    gap: 18px;
+    width: 100%;
+  }
+
+  .pc-page-footer {
+    margin-top: auto;
+    padding-top: 12px;
+  }
+
+  @media (min-width: 1024px) {
+    .pc-sidebar {
+      display: flex;
+      flex-direction: column;
+      width: 268px;
+      flex-shrink: 0;
+      background-color: var(--surface);
+      border-right: 0.5px solid var(--separator);
+      padding: 24px 16px 12px;
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+    }
+
+    .pc-sidebar__brand {
+      padding: 0 8px 20px;
+      color: var(--brand-ink);
+      border-bottom: 0.5px solid var(--separator);
+      margin-bottom: 16px;
+    }
+
+    .pc-sidebar__nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .pc-sidebar__link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: var(--r-md);
+      color: var(--text-2);
+      font-size: 15px;
+      font-weight: 500;
+      transition: background-color 150ms, color 150ms;
+    }
+
+    .pc-sidebar__link:hover {
+      background-color: var(--surface-2);
+      color: var(--text);
+    }
+
+    .pc-sidebar__link.is-active {
+      background-color: var(--brand-soft);
+      color: var(--brand);
+      font-weight: 600;
+    }
+
+    .pc-sidebar__footer {
+      border-top: 0.5px solid var(--separator);
+      padding-top: 8px;
+    }
+
+    .pc-shell--wide {
+      max-width: 960px;
+    }
+  }
+
+  /* ==========================================================================
+     2. AUTHENTICATION SCREEN (§3.1, §6.0, §6.2)
+     ========================================================================== */
+  @keyframes pc-gradient-drift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes pc-auth-card-spring {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .pc-auth-screen {
+    min-height: 100dvh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--safe-top) + 24px) var(--screen-pad) calc(var(--safe-bottom) + 16px);
+    background: linear-gradient(45deg, #4B49C8 0%, #5E5CE6 35%, #BF5AF2 75%, #7D7AFF 100%);
+    background-size: 220% 220%;
+    animation: pc-gradient-drift 20s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pc-auth-screen {
+      animation: none !important;
+      background: var(--brand-gradient);
+    }
+  }
+
+  .pc-auth-card {
+    width: 100%;
+    max-width: 400px;
+    background-color: var(--surface);
+    color: var(--text);
+    border-radius: 24px;
+    padding: 28px 22px 24px;
+    box-shadow: 0 20px 50px rgba(10, 22, 51, 0.28);
+    animation: pc-auth-card-spring 420ms var(--ease-spring) both;
+  }
+
+  .pc-auth-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 22px;
+    color: var(--brand-ink);
+  }
+
+  .pc-auth-brand svg {
+    width: 220px;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .pc-auth-slogan {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+
+  .pc-auth-footer {
+    margin-top: 16px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  /* ==========================================================================
+     3. HOME DASHBOARD HERO & GRIDS (§3.2)
+     ========================================================================== */
+  .pc-home-hero {
+    background: var(--brand-gradient);
+    color: #FFFFFF;
+    border-radius: 22px;
+    padding: 20px 18px;
+    box-shadow: 0 10px 28px rgba(94, 92, 230, 0.28);
+  }
+
+  .pc-home-hero__date {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .pc-home-hero__greeting {
+    font-size: 26px;
+    line-height: 32px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .pc-home-patient {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.16);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    color: #FFFFFF;
+  }
+
+  .pc-home-patient__avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .pc-module-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  @media (min-width: 400px) {
+    .pc-module-grid--2col {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* ==========================================================================
+     4. PATIENT HYPOGLYCEMIA PROTOCOL & CONTACTS (§3.5)
+     ========================================================================== */
+  .pc-hypo-card {
+    background-color: var(--danger-soft);
+    border: 1.5px solid rgba(255, 59, 48, 0.35);
+    border-radius: 20px;
+    padding: 18px;
+    color: var(--text);
+  }
+
+  .pc-hypo-card__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--danger);
+    margin-bottom: 10px;
+  }
+
+  .pc-hypo-card__title {
+    font-size: 17px;
+    line-height: 22px;
+    font-weight: 700;
+    color: var(--danger);
+  }
+
+  .pc-hypo-card__body {
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--text);
+    white-space: pre-line;
+    margin-bottom: 14px;
+  }
+
+  .pc-emergency-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .pc-emergency-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background-color: var(--danger);
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(255, 59, 48, 0.28);
+    transition: transform var(--dur-press) var(--ease-out);
+  }
+
+  .pc-emergency-btn:active {
+    transform: scale(0.97);
+  }
+
+  .pc-contact-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .pc-contact-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out);
+  }
+
+  .pc-contact-btn:active {
+    transform: scale(0.93);
+  }
+
+  .pc-contact-btn--call {
+    background-color: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .pc-contact-btn--sms,
+  .pc-contact-btn--msg {
+    background-color: var(--info-soft);
+    color: var(--info);
+  }
+
+  .pc-contact-btn--mail {
+    background-color: var(--brand-soft);
+    color: var(--brand);
+  }
+
+  /* ==========================================================================
+     5. TEAM INSTANT SEARCH & AVATAR STATUS DOT (§3.4)
+     ========================================================================== */
+  .pc-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .pc-search__icon {
+    position: absolute;
+    left: 14px;
+    color: var(--text-3);
+    pointer-events: none;
+  }
+
+  .pc-search input[type="search"] {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px 10px 42px;
+    border-radius: 14px;
+    border: 1px solid var(--separator);
+    background-color: var(--surface);
+    color: var(--text);
+    font-size: 16px;
+    outline: none;
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+
+  .pc-search input[type="search"]:focus {
+    border-color: var(--brand);
+    box-shadow: var(--focus-ring);
+  }
+
+  .pc-avatar {
+    position: relative;
+  }
+
+  .pc-avatar__dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+  }
+
+  /* ==========================================================================
+     6. DESIGN SYSTEM SHOWCASE PAGE (/design)
+     ========================================================================== */
+  .pc-design-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  @media (min-width: 768px) {
+    .pc-design-grid--2col {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .pc-swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .pc-swatch {
+    border-radius: var(--r-md);
+    padding: 12px;
+    border: 0.5px solid var(--separator);
+    background-color: var(--surface-2);
+  }
+
+  .pc-swatch__color {
+    display: block;
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 0.5px solid var(--separator);
+  }
+}
