@@ -2,58 +2,46 @@
 
 declare(strict_types=1);
 
-use App\Core\Config;
-
-$version = (string) Config::get('app.version', '1.0.0-phase1');
+$version = (string) \App\Core\Config::get('app.version', '1.0.0');
 ?>
-<section class="pc-card flex flex-col items-center text-center py-6" style="padding: 32px 20px;">
-  <div class="mb-3" style="color: var(--brand-ink);">
-    <?= brand_svg('icone-transparent', '', 64) ?>
+<!-- Carte identité de marque (C6.3 : uniquement le logo complet, sans doublon monogramme) -->
+<section class="pc-card flex flex-col items-center text-center">
+  <div class="pc-about-logo">
+    <?= brand_svg('prime-care-logo-complet.svg') ?>
   </div>
-
-  <div style="color: var(--brand-ink);">
-    <?= brand_svg('logo-complet', '', 220) ?>
-  </div>
-
-  <p class="text-caption text-muted mt-2" style="letter-spacing: 0.08em;">
-    <?= e(t('app.by_publisher')) ?>
+  <p class="pc-about-tagline"><?= e(t('app.tagline')) ?></p>
+  <span class="pc-badge pc-badge--brand mb-3">Version <?= e($version) ?></span>
+  <p class="text-subhead text-muted">
+    Application mobile de coordination et de suivi médical quotidien à domicile, conçue pour accompagner les aides-soignantes et les proches aidants en toute simplicité.
   </p>
-
-  <span class="pc-badge pc-badge--brand mt-3">Version <?= e($version) ?></span>
-
-  <p class="text-subhead text-muted mt-4" style="max-width: 340px;">
-    Application mobile de coordination et de suivi de soins à domicile 24h/24 pour patient âgé diabétique.
-  </p>
-
-  <div class="mt-5 w-full">
-    <a href="https://primevisionsolutions.fr" target="_blank" rel="noopener" class="pc-btn pc-btn--tinted pc-btn--block">
-      <span>Visiter Prime Vision Solutions</span>
-      <?= icon('external-link', '', 18) ?>
-    </a>
-  </div>
 </section>
 
-<div>
-  <div class="pc-section-header">Sécurité & Confidentialité</div>
+<!-- Éditeur & Conception -->
+<section aria-labelledby="about-publisher-heading">
+  <div class="pc-section-header" id="about-publisher-heading">Éditeur & Conception</div>
   <div class="pc-list-group">
-    <div class="pc-list-item">
-      <span class="pc-list-icon" style="background: var(--ok);">
-        <?= icon('shield', '', 18) ?>
+    <a href="https://primevisionsolutions.fr" target="_blank" rel="noopener" class="pc-list-item">
+      <span class="pc-list-icon pc-list-icon--brand">
+        <?= icon('sparkles', 18) ?>
       </span>
       <div class="pc-list-body">
-        <div class="pc-list-title">Zéro ressource externe (No-CDN)</div>
-        <div class="pc-list-subtitle">Polices, icônes et scripts 100 % auto-hébergés pour protéger les données de santé.</div>
+        <div class="pc-list-title">Prime Vision Solutions</div>
+        <div class="pc-list-subtitle">Conception logicielle, design & développement sur mesure</div>
+        <div class="text-caption text-brand font-semibold mt-1 flex items-center gap-1">
+          <span>primevisionsolutions.fr</span>
+          <?= icon('external-link', 13) ?>
+        </div>
       </div>
-    </div>
+    </a>
 
     <div class="pc-list-item">
-      <span class="pc-list-icon" style="background: var(--brand);">
-        <?= icon('lock', '', 18) ?>
+      <span class="pc-list-icon pc-list-icon--ok">
+        <?= icon('shield', 18) ?>
       </span>
       <div class="pc-list-body">
-        <div class="pc-list-title">Traçabilité médicale intégrale</div>
-        <div class="pc-list-subtitle">Journal d’audit horodaté UTC et conservation légale sans suppression physique.</div>
+        <div class="pc-list-title">Confidentialité & Données de santé</div>
+        <div class="pc-list-subtitle">Aucun traceur publicitaire, aucun CDN tiers, chiffrement des mots de passe Argon2id et journal d’audit intégral.</div>
       </div>
     </div>
   </div>
-</div>
+</section>

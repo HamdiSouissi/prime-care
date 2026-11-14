@@ -1,205 +1,202 @@
 <?php
 
 declare(strict_types=1);
-
-use App\Core\View;
-
 ?>
-<!-- 1. Identité visuelle & Déclinaisons du logo (§6.0) -->
-<section class="pc-card">
-  <div class="flex items-center justify-between mb-3">
-    <h2 class="text-title-2">1. Identité Prime Care & Loader</h2>
-    <button type="button" class="pc-btn pc-btn--primary pc-btn--sm" data-replay-loader>
-      <?= icon('refresh-cw', '', 16) ?>
-      <span>Rejouer le loader</span>
-    </button>
+<?php View::section('navbar_action'); ?>
+  <button type="button" class="pc-btn pc-btn--primary pc-btn--sm" data-replay-loader>
+    <?= icon('sparkles', 15) ?>
+    <span>Loader</span>
+  </button>
+<?php View::endSection(); ?>
+
+<!-- 1.Identité visuelle & Direction artistique Proposition B — Bleu nuit -->
+<section aria-labelledby="ds-brand-heading">
+  <div class="pc-section-header" id="ds-brand-heading">1. Direction artistique « Proposition B — Bleu nuit »</div>
+  <div class="pc-design-grid pc-design-grid--2col">
+    <div class="pc-card pc-logo-showcase-light flex flex-col items-center justify-center gap-2">
+      <?= brand_svg('prime-care-logo-complet.svg') ?>
+      <span class="text-caption pc-logo-caption-light">Logo complet (Clair · #0A1633)</span>
+    </div>
+
+    <div class="pc-card pc-logo-showcase-dark flex flex-col items-center justify-center gap-2">
+      <?= brand_svg('prime-care-logo-complet-blanc.svg') ?>
+      <span class="text-caption pc-logo-caption-dark">Logo complet (Bleu nuit · #0A1633)</span>
+    </div>
   </div>
-  <p class="text-subhead text-muted mb-4">
-    Direction artistique inspirée d’Apple Santé (iOS 17/18). Slogan : « Suivi de soins à domicile » · Éditeur : Prime Vision Solutions.
-  </p>
 
-  <div class="pc-swatch-grid mb-4">
-    <div class="pc-card flex flex-col items-center justify-center gap-2" style="background: #FFFFFF; color: #0A1633;">
-      <?= brand_svg('logo-complet', '', 190) ?>
-      <span class="text-caption" style="color: #636366;">Logo complet (Clair · #0A1633)</span>
-    </div>
-
-    <div class="pc-card flex flex-col items-center justify-center gap-2" style="background: #0A1633; color: #FFFFFF;">
-      <?= brand_svg('logo-complet-blanc', '', 190) ?>
-      <span class="text-caption" style="color: rgba(255,255,255,0.75);">Logo complet (Sombre / Dégradé)</span>
-    </div>
-
+  <div class="pc-design-grid pc-design-grid--2col mt-3">
     <div class="pc-card flex flex-col items-center justify-center gap-2">
-      <?= brand_svg('icone-degrade', '', 56) ?>
-      <span class="text-caption text-muted">Icône dégradé (PWA / Favicon)</span>
+      <img src="/assets/brand/prime-care-icone-degrade.svg" alt="Icône dégradé Prime Care" width="72" height="72">
+      <span class="text-caption text-muted">Icône dégradé PWA (#5E5CE6 → #BF5AF2)</span>
     </div>
 
-    <div class="pc-card flex flex-col items-center justify-center gap-2" style="color: var(--brand-ink);">
-      <div class="flex items-center gap-4">
-        <?= brand_svg('icone-transparent', '', 48) ?>
-        <?= View::partial('loader-mini', ['size' => 36]) ?>
-      </div>
-      <span class="text-caption text-muted">Monogramme PC & Mini-loader</span>
+    <div class="pc-card flex flex-col items-center justify-center gap-2 text-brand-ink">
+      <?= brand_svg('prime-care-icone-transparent.svg', '', 72) ?>
+      <span class="text-caption text-muted">Monogramme PC transparent & Mini-loader</span>
+      <?= View::partial('partials/loader-mini') ?>
     </div>
   </div>
 </section>
 
-<!-- 2. Palette de couleurs & Tokens CSS (§6.2) -->
-<section class="pc-card">
-  <h2 class="text-title-2 mb-3">2. Palette de couleurs & Modules</h2>
+<!-- 2. Palette & Tokens CSS (Proposition B — Bleu nuit) -->
+<section aria-labelledby="ds-colors-heading">
+  <div class="pc-section-header" id="ds-colors-heading">2. Palette & Tokens CSS (Proposition B — Bleu nuit)</div>
+  <div class="pc-card">
+    <div class="pc-swatch-grid">
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--gradient"></span>
+        <div class="text-footnote font-semibold">Dégradé Prime Care</div>
+        <div class="text-caption text-muted">#5E5CE6 → #BF5AF2</div>
+      </div>
 
-  <div class="pc-swatch-grid">
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--brand-gradient);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Dégradé Prime Care</div>
-        <div class="text-caption text-muted">#5E5CE6 → #00C7BE</div>
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--header"></span>
+        <div class="text-footnote font-semibold">Bleu nuit (--header)</div>
+        <div class="text-caption text-muted">#0A1633</div>
+      </div>
+
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--brand"></span>
+        <div class="text-footnote font-semibold">Indigo (--brand)</div>
+        <div class="text-caption text-muted">#5E5CE6</div>
+      </div>
+
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--purple"></span>
+        <div class="text-footnote font-semibold">Violet (--brand-purple)</div>
+        <div class="text-caption text-muted">#BF5AF2</div>
+      </div>
+
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--vitals"></span>
+        <div class="text-footnote font-semibold">Constantes & Glycémie</div>
+        <div class="text-caption text-muted">--c-vitals · #FF2D55</div>
+      </div>
+
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--meds"></span>
+        <div class="text-footnote font-semibold">Médicaments & Insuline</div>
+        <div class="text-caption text-muted">--c-meds · #00C7BE</div>
+      </div>
+
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--meals"></span>
+        <div class="text-footnote font-semibold">Repas & Hydratation</div>
+        <div class="text-caption text-muted">--c-meals · #FF9500</div>
+      </div>
+
+      <div class="pc-swatch">
+        <span class="pc-swatch__color pc-swatch__color--notes"></span>
+        <div class="text-footnote font-semibold">Journal & Soins</div>
+        <div class="text-caption text-muted">--c-notes · #AF52DE</div>
       </div>
     </div>
 
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--brand);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Indigo Santé (--brand)</div>
-        <div class="text-caption text-muted">#5E5CE6 / #7D7AFF</div>
-      </div>
-    </div>
-
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--accent-cyan);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Turquoise (--accent-cyan)</div>
-        <div class="text-caption text-muted">#00C7BE / #5AC8FA</div>
-      </div>
-    </div>
-
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--c-vitals);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Constantes & Glycémie</div>
-        <div class="text-caption text-muted">#FF2D55 (Corail)</div>
-      </div>
-    </div>
-
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--c-meds);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Médicaments & Insuline</div>
-        <div class="text-caption text-muted">#007AFF (Bleu)</div>
-      </div>
-    </div>
-
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--c-meals);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Repas & Hydratation</div>
-        <div class="text-caption text-muted">#FF9500 (Ambre)</div>
-      </div>
-    </div>
-
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--c-notes);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Journal & Soins</div>
-        <div class="text-caption text-muted">#AF52DE (Violet)</div>
-      </div>
-    </div>
-
-    <div class="pc-swatch">
-      <span class="pc-swatch__color" style="background: var(--c-team);"></span>
-      <div>
-        <div class="text-footnote" style="font-weight: 600;">Planning & Équipe</div>
-        <div class="text-caption text-muted">#34C759 (Vert)</div>
+    <div class="mt-4">
+      <div class="text-footnote font-semibold mb-2">Palette fixe d’avatars sans style en ligne (.pc-avatar--c1 à --c8)</div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <?php for ($i = 1; $i <= 8; $i++): ?>
+          <span class="pc-avatar pc-avatar--sm pc-avatar--c<?= $i ?>">C<?= $i ?></span>
+        <?php endfor; ?>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 3. Échelle typographique (§6.3) -->
-<section class="pc-card flex flex-col gap-2">
-  <h2 class="text-title-2 mb-2">3. Échelle typographique (Inter Variable)</h2>
-  <div class="text-display text-tabular">1,12 g/L · Display 40px</div>
-  <div class="text-large-title">Large Title · 32px Bold</div>
-  <div class="text-title-1">Title 1 · 24px Bold</div>
-  <div class="text-title-2">Title 2 · 20px Semibold</div>
-  <div class="text-title-3">Title 3 · 17px Semibold</div>
-  <div class="text-headline">Headline · 16px Semibold</div>
-  <div class="text-body">Body · 16px Regular — Conçu pour la lecture à une main de nuit comme de jour.</div>
-  <div class="text-subhead text-muted">Subhead · 14px Regular (Texte secondaire)</div>
-  <div class="text-footnote text-muted">Footnote · 13px Regular</div>
-  <div class="text-caption text-muted">Caption · 12px Medium</div>
-</section>
-
-<!-- 4. Boutons, Badges & Contrôles (§6.5) -->
-<section class="pc-card flex flex-col gap-4">
-  <h2 class="text-title-2">4. Boutons, Badges & Contrôles</h2>
-
-  <div class="flex flex-col gap-2">
-    <button type="button" class="pc-btn pc-btn--primary pc-btn--block">
-      <?= icon('check', '', 18) ?>
-      <span>Bouton Primaire (Dégradé Prime Care)</span>
-    </button>
-    <button type="button" class="pc-btn pc-btn--tinted pc-btn--block">
-      <?= icon('plus', '', 18) ?>
-      <span>Bouton Tinted (Indigo doux)</span>
-    </button>
-    <button type="button" class="pc-btn pc-btn--secondary pc-btn--block">
-      <span>Bouton Secondaire</span>
-    </button>
-    <button type="button" class="pc-btn pc-btn--danger pc-btn--block">
-      <?= icon('alert-triangle', '', 18) ?>
-      <span>Action Critique / Urgence</span>
-    </button>
-  </div>
-
-  <div class="flex items-center gap-2" style="flex-wrap: wrap;">
-    <span class="pc-badge pc-badge--brand">Indigo Santé</span>
-    <span class="pc-badge pc-badge--ok">Dans la cible</span>
-    <span class="pc-badge pc-badge--warn">À surveiller</span>
-    <span class="pc-badge pc-badge--danger">Alerte critique</span>
-    <span class="pc-badge pc-badge--info">Information</span>
-  </div>
-
-  <div>
-    <div class="pc-label mb-2">Contrôle segmenté (glissement spring)</div>
-    <div class="pc-segmented" data-segmented role="group" aria-label="Démo contrôle segmenté">
-      <button type="button" class="pc-segmented__btn is-active" data-value="jour" aria-pressed="true">Jour</button>
-      <button type="button" class="pc-segmented__btn" data-value="semaine" aria-pressed="false">7 jours</button>
-      <button type="button" class="pc-segmented__btn" data-value="mois" aria-pressed="false">30 jours</button>
+<!-- 3. Échelle typographique -->
+<section aria-labelledby="ds-typo-heading">
+  <div class="pc-section-header" id="ds-typo-heading">3. Échelle typographique (SF Pro / Inter)</div>
+  <div class="pc-card flex flex-col gap-3">
+    <div>
+      <span class="text-caption text-muted">Large Title · 32px / 700</span>
+      <div class="text-large-title">Bonjour Fatou</div>
+    </div>
+    <div>
+      <span class="text-caption text-muted">Title 1 · 28px / 700</span>
+      <div class="text-title-1">Suivi de soins à domicile</div>
+    </div>
+    <div>
+      <span class="text-caption text-muted">Title 2 · 22px / 600</span>
+      <div class="text-title-2">M. Henri Benali · 84 ans</div>
+    </div>
+    <div>
+      <span class="text-caption text-muted">Headline · 17px / 600</span>
+      <div class="text-headline">Protocole d’hypoglycémie (&lt; 0,70 g/L)</div>
+    </div>
+    <div>
+      <span class="text-caption text-muted">Body · 17px / 400</span>
+      <div class="text-body">Donner immédiatement 15 g de glucides rapides (3 morceaux de sucre ou 15 cL de jus d’orange) et recontrôler à 15 minutes.</div>
+    </div>
+    <div>
+      <span class="text-caption text-muted">Metric Tabular · 32px / 700 (tabular-nums)</span>
+      <div class="pc-health-card__value">1,12<span class="pc-health-card__unit">g/L</span></div>
     </div>
   </div>
+</section>
 
-  <div class="flex items-center justify-between">
-    <span class="text-body">Interrupteur style iOS (Switch)</span>
-    <label class="pc-switch" aria-label="Démo interrupteur">
-      <input type="checkbox" checked>
-      <span class="pc-switch__track"><span class="pc-switch__thumb"></span></span>
-    </label>
-  </div>
+<!-- 4. Boutons, Badges & États -->
+<section aria-labelledby="ds-buttons-heading">
+  <div class="pc-section-header" id="ds-buttons-heading">4. Boutons & Badges (Zone tactile ≥ 44×44 px)</div>
+  <div class="pc-card flex flex-col gap-3">
+    <div class="pc-module-grid pc-module-grid--2col">
+      <button type="button" class="pc-btn pc-btn--primary">Action primaire</button>
+      <button type="button" class="pc-btn pc-btn--tinted">Action teintée</button>
+      <button type="button" class="pc-btn pc-btn--secondary">Action secondaire</button>
+      <button type="button" class="pc-btn pc-btn--danger">Urgence / Danger</button>
+    </div>
 
-  <div class="flex items-center gap-2">
-    <button type="button" class="pc-btn pc-btn--tinted pc-btn--sm" data-sheet-open="demo-design-sheet">
-      Ouvrir une feuille modale
-    </button>
+    <div class="flex items-center gap-2 flex-wrap pt-2">
+      <span class="pc-badge pc-badge--brand">Marque Prime Care</span>
+      <span class="pc-badge pc-badge--ok">Normal (Cible)</span>
+      <span class="pc-badge pc-badge--warn">Vigilance</span>
+      <span class="pc-badge pc-badge--danger">Alerte critique</span>
+      <span class="pc-badge pc-badge--info">Information</span>
+    </div>
   </div>
 </section>
 
-<!-- Feuille modale de démonstration -->
-<div id="demo-design-sheet" class="pc-sheet" role="dialog" aria-modal="true" aria-labelledby="demo-sheet-title" aria-hidden="true">
-  <div class="pc-sheet__backdrop" data-sheet-close></div>
-  <div class="pc-sheet__panel">
-    <div class="pc-sheet__handle"></div>
-    <div class="pc-sheet__header">
-      <h2 id="demo-sheet-title" class="pc-sheet__title">Feuille modale iOS (Bottom Sheet)</h2>
-      <button type="button" class="pc-navbar__btn" data-sheet-close aria-label="Fermer">
-        <?= icon('x', '', 20) ?>
+<!-- 5. Contrôles interactifs -->
+<section aria-labelledby="ds-controls-heading">
+  <div class="pc-section-header" id="ds-controls-heading">5. Contrôles tactiles & Feuilles modales</div>
+  <div class="pc-card flex flex-col gap-4">
+    <div>
+      <div class="pc-label mb-2">Segmented Control (Thème en direct)</div>
+      <div class="pc-segmented" data-theme-segmented>
+        <button type="button" class="pc-segmented__btn is-active" data-theme-value="auto">Auto</button>
+        <button type="button" class="pc-segmented__btn" data-theme-value="light">Clair</button>
+        <button type="button" class="pc-segmented__btn" data-theme-value="dark">Sombre</button>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-headline">Stepper numérique (+ / −)</div>
+        <div class="text-footnote text-muted">Unités d’insuline rapide</div>
+      </div>
+      <div class="pc-stepper" data-stepper data-min="0" data-max="40" data-step="1">
+        <button type="button" class="pc-stepper__btn" data-stepper-dec aria-label="Diminuer">−</button>
+        <span class="pc-stepper__val" data-stepper-val>6</span>
+        <button type="button" class="pc-stepper__btn" data-stepper-inc aria-label="Augmenter">+</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="pc-label mb-2">Chips de sélection</div>
+      <div class="pc-chips">
+        <button type="button" class="pc-chip is-selected" data-chip-toggle>À jeun</button>
+        <button type="button" class="pc-chip" data-chip-toggle>Avant repas</button>
+        <button type="button" class="pc-chip" data-chip-toggle>Post-prandial (2h)</button>
+        <button type="button" class="pc-chip" data-chip-toggle>Coucher</button>
+      </div>
+    </div>
+
+    <div class="pc-module-grid pc-module-grid--2col pt-2">
+      <button type="button" class="pc-btn pc-btn--tinted" data-sheet-open="quick-add-sheet">
+        Ouvrir Bottom Sheet (+)
+      </button>
+      <button type="button" class="pc-btn pc-btn--secondary" data-replay-loader>
+        Rejouer le Loader PC
       </button>
     </div>
-    <p class="text-subhead text-muted mb-4">
-      Supporte le glissement vertical au doigt (swipe-to-close), le piège de focus clavier et le fond flouté (glassmorphism).
-    </p>
-    <button type="button" class="pc-btn pc-btn--primary pc-btn--block" data-sheet-close>
-      Fermer la feuille
-    </button>
   </div>
-</div>
+</section>

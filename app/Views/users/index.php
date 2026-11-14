@@ -2,93 +2,99 @@
 
 declare(strict_types=1);
 
-use App\Core\View;
+$users = is_array($users ?? null) ? $users : [];
 
-/** @var array<int, array<string, mixed>> $users */
-/** @var string $search */
-/** @var array<string, string>|null $generatedPassword */
+$grouped = [
+    'admin' => [],
+    'coordinator' => [],
+    'caregiver' => [],
+    'viewer' => [],
+];
 
-View::section('navbar_right');
+foreach ($users as $u) {
+    $r = (string) ($u['role'] ?? 'caregiver');
+    $grouped[$r][] = $u;
+}
+
+$groupLabels = [
+    'admin' => 'Responsable (Admin)',
+    'coordinator' => 'Référente & Coordination',
+    'caregiver' => 'Aides-soignantes',
+    'viewer' => 'Consultation (Famille & Médecins)',
+];
 ?>
-<a href="/users/create" class="pc-btn pc-btn--primary pc-btn--sm" aria-label="Créer un membre">
-  <?= icon('user-plus', '', 16) ?>
-  <span>Ajouter</span>
-</a>
+<?php View::section('navbar_action'); ?>
+  <a href="/users/create" class="pc-btn pc-btn--primary pc-btn--sm" aria-label="Ajouter un membre">
+    <?= icon('user-plus', 18) ?>
+    <span>Ajouter</span>
+  </a>
 <?php View::endSection(); ?>
 
-<!-- Recherche instantanée -->
+<!-- Barre de recherche instantanée -->
 <div class="pc-search">
-  <?= icon('search', 'pc-search__icon', 18) ?>
+  <span class="pc-search__icon"><?= icon('search', 18) ?></span>
   <input
     type="search"
+    id="team-search-input"
     placeholder="<?= e(t('team.search_placeholder')) ?>"
-    value="<?= e($search) ?>"
-    data-instant-search="#team-list"
     aria-label="<?= e(t('team.search_placeholder')) ?>"
   >
 </div>
 
-<!-- Liste groupée de l'équipe -->
-<div id="team-list" class="flex flex-col gap-3">
-  <?php
-  $grouped = [
-      'caregiver' => 'Aides-soignantes à domicile',
-      'coordinator' => 'Coordination & Planning',
-      'admin' => 'Famille & Administration',
-      'viewer' => 'Médecin & Lecture seule',
-  ];
-  ?>
-  <?php foreach ($grouped as $roleKey => $groupTitle) : ?>
-    <?php
-    $members = array_values(array_filter(
-        $users,
-        static fn(array $u): bool => ($u['role'] ?? '') === $roleKey
-    ));
-    if ($members === []) {
-        continue;
-    }
-    ?>
-    <div>
-      <div class="pc-section-header"><?= e($groupTitle) ?> (<?= count($members) ?>)</div>
-      <div class="pc-list-group">
-        <?php foreach ($members as $member) : ?>
-          <?php
-          $fullName = trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? ''));
-          $searchText = $fullName . ' ' . ($member['email'] ?? '') . ' ' . ($member['phone'] ?? '') . ' ' . t('roles.' . $roleKey);
-          $isActive = (int) ($member['is_active'] ?? 1) === 1;
-          ?>
-          <a href="/users/<?= (int) $member['id'] ?>" class="pc-list-item" data-search-item="<?= e($searchText) ?>">
-            <div class="pc-avatar" style="background-color: <?= e($member['color_hex'] ?? '#5E5CE6') ?>;">
-              <?php if (!empty($member['avatar_path'])) : ?>
-                <img src="/media/<?= e($member['avatar_path']) ?>" alt="<?= e($fullName) ?>">
-              <?php else : ?>
-                <?= e(initials((string) ($member['first_name'] ?? ''), (string) ($member['last_name'] ?? ''))) ?>
-              <?php endif; ?>
-              <span class="pc-avatar__dot" style="background-color: <?= $isActive ? 'var(--ok)' : 'var(--text-3)' ?>;"></span>
-            </div>
-
-            <div class="pc-list-body">
-              <div class="pc-list-title flex items-center gap-2">
-                <span><?= e($fullName) ?></span>
-                <?php if (!$isActive) : ?>
-                  <span class="pc-badge pc-badge--danger">Inactif</span>
-                <?php endif; ?>
-              </div>
-              <div class="pc-list-subtitle">
-                <?= e($member['email'] ?? '') ?>
-                <?php if (!empty($member['contract_type'])) : ?>
-                  · <?= e((string) $member['contract_type']) ?>
-                <?php endif; ?>
-              </div>
-            </div>
-
-            <span class="pc-list-meta">
-              <span class="pc-badge pc-badge--brand"><?= e(t('roles.' . $roleKey)) ?></span>
-              <?= icon('chevron-right', 'pc-list-chevron', 18) ?>
-            </span>
-          </a>
-        <?php endforeach; ?>
-      </div>
+<!-- Liste groupée par rôle (C5 : classes d'avatar .pc-avatar--c1..c8, C6.1 : badge sous le nom + e-mail tronqué) -->
+<?php foreach ($grouped as $roleKey => $members): ?>
+  <?php if (empty($members)) { continue; } ?>
+  <section class="team-role-group" data-role-group="<?= e($roleKey) ?>">
+    <div class="pc-section-header">
+      <?= e($groupLabels[$roleKey] ?? $roleKey) ?> (<?= count($members) ?>)
     </div>
-  <?php endforeach; ?>
-</div>
+
+    <div class="pc-list-group">
+      <?php foreach ($members as $member): ?>
+        <?php
+        $memberId = (int) ($member['id'] ?? 1);
+        $fullName = trim(($member['first_name'] ?? '') . ' ' . ($member['last_name'] ?? ''));
+        $isActive = (int) ($member['is_active'] ?? 1) === 1;
+        $roleLabel = t('roles.' . ($member['role'] ?? 'caregiver'));
+        $searchHaystack = mb_strtolower($fullName . ' ' . ($member['email'] ?? '') . ' ' . ($member['phone'] ?? '') . ' ' . $roleLabel);
+        ?>
+        <a
+          href="/users/<?= $memberId ?>"
+          class="pc-list-item"
+          data-team-item
+          data-search-text="<?= e($searchHaystack) ?>"
+        >
+          <div class="pc-avatar <?= e(avatar_color_class($memberId)) ?>">
+            <?php if (!empty($member['avatar_path'])): ?>
+              <img src="/media/<?= e((string) $member['avatar_path']) ?>" alt="<?= e($fullName) ?>">
+            <?php else: ?>
+              <?= e(initials((string) ($member['first_name'] ?? ''), (string) ($member['last_name'] ?? ''))) ?>
+            <?php endif; ?>
+            <span
+              class="pc-avatar__dot <?= $isActive ? 'pc-avatar__dot--active' : 'pc-avatar__dot--inactive' ?>"
+              title="<?= $isActive ? e(t('team.active')) : e(t('team.inactive')) ?>"
+            ></span>
+          </div>
+
+          <div class="pc-list-body">
+            <div class="pc-list-title"><?= e($fullName) ?></div>
+            <div class="pc-list-subtitle pc-list-subtitle--truncate">
+              <?= e((string) ($member['email'] ?? '')) ?>
+              <?php if (!empty($member['phone'])): ?>
+                · <?= e((string) $member['phone']) ?>
+              <?php endif; ?>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap mt-1">
+              <span class="pc-badge pc-badge--brand"><?= e($roleLabel) ?></span>
+              <?php if (!$isActive): ?>
+                <span class="pc-badge pc-badge--danger">Inactif</span>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <span class="pc-list-chevron"><?= icon('chevron-right', 18) ?></span>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+<?php endforeach; ?>
