@@ -51,17 +51,26 @@ furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 ```
 
 ---
 
-## 4. Bibliothèques prévues pour les phases ultérieures
-- **PHPMailer** (Phase 3 — LGPL-2.1) : envoi SMTP d'alertes et notifications.
+## 4. PHPMailer (`public/assets/vendor/phpmailer/`)
+- **Version** : 6.9.2 (3 fichiers autonomes sans Composer : `PHPMailer.php`, `SMTP.php`, `Exception.php`)
+- **Licence** : GNU Lesser General Public License v2.1 (LGPL-2.1)
+- **Auteurs** : Marcus Bointon, Jim Jagielski, Brent R. Matzelle & The PHPMailer Contributors
+- **Usage** : Envoi d'e-mails HTML transactionnels et d'alertes médicales via SMTP (avec doublage automatique dans `storage/logs/mail.log` en environnement de développement).
+
+```text
+PHPMailer is distributed under the GNU Lesser General Public License v2.1 (LGPL-2.1).
+Copyright (c) 2012-2024, Marcus Bointon, Jim Jagielski, Andy Prevost.
+Copyright (c) 2001-2003, Brent R. Matzelle.
+```
+
+---
+
+## 5. jsQR (`public/assets/vendor/jsQR.min.js`)
+- **Version** : 1.4.0
+- **Licence** : Apache-2.0 / MIT-compatible Open Source License
+- **Auteur** : Cosmo Wolfe
+- **Usage** : Décodage local en JavaScript du QR code de pointage du domicile (en repli de l'API native `BarcodeDetector` lorsque celle-ci n'est pas disponible sur le navigateur).

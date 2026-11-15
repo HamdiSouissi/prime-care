@@ -105,7 +105,24 @@ Pour respecter une politique CSP stricte sans `unsafe-inline`, la couleur d’av
    - Sélecteur tactile de portion mangée (`Rien 0 %`, `1/4 · 25 %`, `Moitié · 50 %`, `3/4 · 75 %`, `Tout · 100 %`) avec jauge visuelle à 4 segments.
    - Grille de deux emplacements photo côte à côte (**Avant le repas** / **Après le repas**) avec aperçu miniature et barre de progression de compression.
 5. **Vitrine `/design` et documentation `docs/DESIGN_SYSTEM.md`** :
-   - Présentent l’ensemble des tokens et composants des Phases 1 et 2.
+   - Présentent l’ensemble des tokens et composants des Phases 1, 2 et 3.
+
+---
+
+## 8 bis. Phase 3 — Composants d’équipe, pointage, alertes et mode hors ligne « Bleu nuit »
+
+1. **Bouton glissant de pointage (`.pc-slide-punch`) & Alternative accessible** :
+   - Rail horizontal haut contraste (hauteur `56px`, rayon `28px`) en haut de l’accueil aide-soignante :
+     - **Arrivée** : teinte émeraude (`--ok`) avec curseur tactile draggable (`pointerdown` / `pointermove` / `pointerup`) et libellé *« Glisser pour arriver »* ;
+     - **Départ** : teinte ambre (`--warn`) avec libellé *« Glisser pour partir »*.
+   - **Alternative accessible obligatoire** (clavier `Entrée` / `Espace` et lecteur d’écran) : bouton explicite *« Pointer mon arrivée / départ »* ouvrant une bottom sheet de confirmation (*« Confirmer mon arrivée à 07h58 »*).
+2. **Grille de planning d’équipe & créneau non couvert** :
+   - Cartes et cellules à rayon `24px` sans ombre, pastilles d’initiales `.pc-avatar--c1` à `.pc-avatar--c8` sans style en ligne, et motif rouge hachuré (`.pc-shift--uncovered`) avec icône + mention *« Non couvert »* ou badge ambre *« À remplacer »* en cas d’absence.
+3. **Cloche du centre d’alertes & Cartes d’alertes par gravité** :
+   - Bouton rond translucide dans l’en-tête Bleu nuit avec pastille rouge (`.pc-alert-badge`) indiquant le nombre d’alertes ouvertes (`new` + `seen`).
+   - Cartes d’alertes différenciées par gravité (icône + bordure + badge texte `Critique` / `Attention` / `Information`, jamais par la couleur seule).
+4. **Bandeau hors ligne & Badge de synchronisation IndexedDB** :
+   - Bandeau non intrusif (`.pc-offline-banner`) indiquant *« Hors ligne — données du … »* et badge d’attente *« N saisie(s) en attente »* avec bouton *« Synchroniser maintenant »*.
 
 ---
 

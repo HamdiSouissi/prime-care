@@ -10,6 +10,8 @@ storage/logs/*
 !storage/logs/.gitkeep
 storage/cache/*
 !storage/cache/.gitkeep
+storage/keys/*
+!storage/keys/.gitkeep
 
 # Fichiers système et éditeurs
 .DS_Store
