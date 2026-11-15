@@ -37,31 +37,34 @@ cp config/config.example.php config/config.php
 # 2. (Optionnel) Régénérer les icônes PWA PNG et splash screens iOS à partir des PNG de marque
 php bin/make-icons.php
 
-# 3. Exécuter les migrations (001 à 006) et injecter les 14 jours de données de démonstration (Phases 1 & 2)
+# 3. Générer les clés ECDSA prime256v1 VAPID pour Web Push (dans storage/keys/vapid.json, hors Git)
+php bin/make-vapid.php
+
+# 4. Exécuter les migrations (001 à 010) et injecter les 14 jours de données de démonstration (Phases 1, 2 & 3)
 php bin/migrate.php --fresh --seed
 
-# 4. Générer les occurrences de prises et mesures attendues sur 48h (idempotent)
-php cron/run.php schedule:generate
+# 5. Exécuter l'ensemble des tâches planifiées (prises 48h, scan des 7 règles d'alerte, envoi Web Push/e-mail, purge)
+php cron/run.php
 
-# 5. Vérifier l'état des migrations
+# 6. Vérifier l'état des migrations
 php bin/migrate.php --status
 
-# 6. Lancer la suite de tests automatisés
+# 7. Lancer la suite de tests automatisés (Phases 1, 2 & 3)
 php tests/run.php
 
-# 7. Démarrer le serveur de développement local
+# 8. Démarrer le serveur de développement local
 PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8080 -t public public/index.php
 ```
 
 ### Tâche planifiée (Crontab de production)
 
-Pour générer automatiquement les prises de médicaments (`medication_intakes`) et mesures attendues (`measure_expectations`) sur les prochaines 48 heures (avec verrou fichier anti-concurrence dans `storage/cache/cron.lock`) :
+Pour exécuter toutes les 5 minutes les 5 tâches périodiques (`schedule:generate`, `alerts:scan`, `notifications:send`, `sessions:clean`, `logs:clean`) avec verrou fichier anti-concurrence (`flock` dans `storage/cache/cron.lock`) et enregistrement du timestamp de dernier passage :
 
 ```cron
-*/5 * * * * php /chemin/vers/prime-care/cron/run.php schedule:generate >> /chemin/vers/prime-care/storage/logs/cron.log 2>&1
+*/5 * * * * php /chemin/vers/prime-care/cron/run.php >> /chemin/vers/prime-care/storage/logs/cron.log 2>&1
 ```
 
-> En complément, l'ouverture de l'écran **Accueil (`/`)** ou **Aujourd'hui (`/today`)** déclenche automatiquement un filet de sécurité idempotent si le cron n'a pas tourné récemment.
+> En complément, l'ouverture de l'écran **Accueil (`/`)** ou **Aujourd'hui (`/today`)** déclenche automatiquement un filet de sécurité idempotent si le cron n'a pas tourné depuis plus de 10 minutes.
 
 ### Tester l’installation mobile PWA en HTTPS (iOS & Android)
 

@@ -13,6 +13,7 @@ use App\Core\Config;
 use App\Core\Database;
 use Database\Seeds\Phase1Seeder;
 use Database\Seeds\Phase2Seeder;
+use Database\Seeds\Phase3Seeder;
 
 $args = $argv ?? [];
 $isFresh = in_array('--fresh', $args, true);
@@ -107,5 +108,6 @@ if ($doSeed) {
     echo "Insertion des données de démonstration (--seed)...\n";
     Phase1Seeder::run();
     Phase2Seeder::run();
+    Phase3Seeder::run();
     echo "Seed terminé avec succès.\n";
 }

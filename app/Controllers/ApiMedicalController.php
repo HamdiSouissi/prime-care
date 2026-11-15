@@ -9,8 +9,9 @@ use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Uploader;
+use App\Services\AlertService;
+use App\Services\AttendanceService;
 use App\Services\AuditService;
-use App\Services\EditWindowService;
 use App\Services\HandoverService;
 use App\Services\IntakeService;
 use App\Services\MealService;
@@ -18,11 +19,13 @@ use App\Services\Policy;
 use App\Services\ScheduleService;
 use App\Services\ThresholdService;
 use App\Services\TimelineService;
+use DateTimeImmutable;
+use DateTimeZone;
 use PDO;
 use Throwable;
 
 /**
- * JSON API controller for Phase 2 fast medical actions without full page reload:
+ * JSON API controller for Phase 2 & Phase 3 fast medical actions and offline synchronization:
  * - POST /api/measures
  * - POST /api/intakes/{id}/give
  * - POST /api/intakes/{id}/skip
@@ -32,9 +35,92 @@ use Throwable;
  * - POST /api/notes/{id}/read
  * - POST /api/care-checks
  * - GET  /api/timeline
+ *
+ * Supports idempotent `client_uuid` (returns 200 with existing record if already synchronized)
+ * and enforces the `require_clocked_in` setting ("Pointez votre arrivée pour saisir" -> 403).
  */
 final class ApiMedicalController extends Controller
 {
+    private function checkClockInRequirement(): ?Response
+    {
+        if (!AttendanceService::canUserWriteMedical(Auth::user())) {
+            return Response::jsonError('CLOCK_IN_REQUIRED', 'Pointez votre arrivée pour saisir', 403);
+        }
+        return null;
+    }
+
+    private function extractClientUuid(Request $request): ?string
+    {
+        $raw = trim((string) $request->input('client_uuid', ''));
+        if ($raw === '') {
+            return null;
+        }
+        return substr($raw, 0, 36);
+    }
+
+    /**
+     * Valide et convertit `client_recorded_at` (ISO 8601 UTC complet) en horodatage UTC `Y-m-d H:i:s` :
+     * - Si absent : retourne l'heure serveur ($fallbackUtc) ;
+     * - Si dans le futur (> 2 min après l'heure serveur) : ramené à l'heure serveur ;
+     * - Si plus ancien que 72 h : refusé en HTTP 422 `OFFLINE_TOO_OLD`.
+     *
+     * @return array{ok: bool, utc: string, is_client_time: bool, response?: Response}
+     */
+    private function resolveClientTimestamp(Request $request, ?string $fallbackUtc = null): array
+    {
+        $serverNowUtc = $fallbackUtc ?? gmdate('Y-m-d H:i:s');
+        $raw = trim((string) ($request->input('client_recorded_at', '') ?: $request->input('recorded_at', '')));
+        if ($raw === '') {
+            return [
+                'ok' => true,
+                'utc' => $serverNowUtc,
+                'is_client_time' => false,
+            ];
+        }
+
+        try {
+            $utcTz = new DateTimeZone('UTC');
+            $dt = (new DateTimeImmutable($raw, $utcTz))->setTimezone($utcTz);
+            $serverDt = new DateTimeImmutable($serverNowUtc, $utcTz);
+            $diffSec = $dt->getTimestamp() - $serverDt->getTimestamp();
+
+            // Valeur de plus de 72 h dans le passé -> refusée (422 OFFLINE_TOO_OLD)
+            if ($diffSec < -(72 * 3600)) {
+                return [
+                    'ok' => false,
+                    'utc' => $serverNowUtc,
+                    'is_client_time' => true,
+                    'response' => Response::jsonError(
+                        'OFFLINE_TOO_OLD',
+                        'Saisie hors ligne trop ancienne (> 72 h).',
+                        422
+                    ),
+                ];
+            }
+
+            // Valeur dans le futur (> 2 min) -> ramenée à l'heure serveur
+            if ($diffSec > 120) {
+                return [
+                    'ok' => true,
+                    'utc' => $serverNowUtc,
+                    'is_client_time' => true,
+                ];
+            }
+
+            return [
+                'ok' => true,
+                'utc' => $dt->format('Y-m-d H:i:s'),
+                'is_client_time' => true,
+            ];
+        } catch (Throwable) {
+            return [
+                'ok' => true,
+                'utc' => $serverNowUtc,
+                'is_client_time' => false,
+            ];
+        }
+    }
+
     /**
      * POST /api/measures
      */
@@ -46,8 +132,48 @@ final class ApiMedicalController extends Controller
         if (!Policy::allows($role, 'vitals', 'create')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour enregistrer une mesure.', 403);
         }
+        if ($clockResp = $this->checkClockInRequirement()) {
+            return $clockResp;
+        }
 
         $pdo = Database::connection();
+        $clientUuid = $this->extractClientUuid($request);
+
+        // Idempotence hors ligne : si client_uuid existe déjà, retourner 200 avec l'enregistrement existant
+        if ($clientUuid !== null) {
+            $dupStmt = $pdo->prepare(
+                'SELECT m.*, mt.code AS type_code, mt.label AS type_label
+                 FROM `measures` m
+                 INNER JOIN `measure_types` mt ON mt.id = m.measure_type_id
+                 WHERE m.client_uuid = :cuuid AND m.deleted_at IS NULL
+                 LIMIT 1'
+            );
+            $dupStmt->execute(['cuuid' => $clientUuid]);
+            $existing = $dupStmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                return Response::jsonSuccess([
+                    'id' => (int) $existing['id'],
+                    'client_uuid' => $clientUuid,
+                    'measure_type_id' => (int) $existing['measure_type_id'],
+                    'type_code' => (string) $existing['type_code'],
+                    'type_label' => (string) $existing['type_label'],
+                    'value' => (float) $existing['value'],
+                    'value2' => $existing['value2'] !== null ? (float) $existing['value2'] : null,
+                    'unit' => (string) $existing['unit_recorded'],
+                    'context' => (string) $existing['context'],
+                    'measured_at' => (string) $existing['measured_at'],
+                    'alert_level' => (string) $existing['alert_level'],
+                    'threshold_level' => (string) $existing['threshold_level'],
+                    'idempotent' => true,
+                ], 200);
+            }
+        }
+
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
         $typeId = (int) $request->input('measure_type_id', 0);
         $typeCode = trim((string) $request->input('type_code', ''));
 
@@ -64,7 +190,11 @@ final class ApiMedicalController extends Controller
             return Response::jsonError('INVALID_TYPE', 'Type de mesure introuvable.', 422);
         }
 
-        $rawValue = str_replace(',', '.', trim((string) $request->input('value', '')));
+        $rawValue = str_replace(',', '.', trim((string) (
+            $request->input('value', '') !== ''
+                ? $request->input('value', '')
+                : ($request->input('primary_value', '') !== '' ? $request->input('primary_value', '') : $request->input('value_primary', ''))
+        )));
         if ($rawValue === '' || !is_numeric($rawValue)) {
             return Response::jsonError('VALIDATION_ERROR', 'Veuillez saisir une valeur numérique valide.', 422);
         }
@@ -75,7 +205,11 @@ final class ApiMedicalController extends Controller
             $value = ThresholdService::mgDlToG($value);
         }
 
-        $rawVal2 = str_replace(',', '.', trim((string) $request->input('value2', '')));
+        $rawVal2 = str_replace(',', '.', trim((string) (
+            $request->input('value2', '') !== ''
+                ? $request->input('value2', '')
+                : ($request->input('secondary_value', '') !== '' ? $request->input('secondary_value', '') : $request->input('value_secondary', ''))
+        )));
         $value2 = ($rawVal2 !== '' && is_numeric($rawVal2)) ? (float) $rawVal2 : null;
 
         $rawVal3 = str_replace(',', '.', trim((string) $request->input('value3', '')));
@@ -85,7 +219,6 @@ final class ApiMedicalController extends Controller
             return Response::jsonError('VALIDATION_ERROR', 'Veuillez saisir la tension systolique et diastolique.', 422);
         }
 
-        // Plausibility check
         $plausibility = ThresholdService::checkPlausibility($measureType, $value, $value2);
         $confirmed = in_array((string) $request->input('out_of_bounds_confirmed', '0'), ['1', 'true', 'yes'], true);
         if (!$plausibility['plausible'] && !$confirmed) {
@@ -99,16 +232,16 @@ final class ApiMedicalController extends Controller
 
         $context = trim((string) $request->input('context', 'routine')) ?: 'routine';
 
-        // Determine measured_at UTC
         $localDate = trim((string) $request->input('measured_date', ''));
         $localTime = trim((string) $request->input('measured_time', ''));
-        if ($localDate !== '' && $localTime !== '') {
+        if ($tsRes['is_client_time']) {
+            $measuredAtUtc = $tsRes['utc'];
+        } elseif ($localDate !== '' && $localTime !== '') {
             $measuredAtUtc = ScheduleService::localParisToUtc($localDate, $localTime);
         } else {
-            $measuredAtUtc = gmdate('Y-m-d H:i:s');
+            $measuredAtUtc = $tsRes['utc'];
         }
 
-        // Load patient thresholds for glycemia
         $patStmt = $pdo->query('SELECT * FROM `patients` WHERE `id` = 1 LIMIT 1');
         $patient = $patStmt !== false ? ($patStmt->fetch(PDO::FETCH_ASSOC) ?: null) : null;
 
@@ -132,15 +265,16 @@ final class ApiMedicalController extends Controller
 
         $ins = $pdo->prepare(
             'INSERT INTO `measures`
-             (`patient_id`, `measure_type_id`, `value`, `value2`, `value3`, `unit_recorded`, `context`, `measured_at`,
+             (`patient_id`, `client_uuid`, `measure_type_id`, `value`, `value2`, `value3`, `unit_recorded`, `context`, `measured_at`,
               `comment`, `photo_path`, `photo_thumb_path`, `alert_level`, `threshold_level`, `out_of_bounds_confirmed`,
               `recorded_by`, `created_at`, `updated_at`, `created_by`)
              VALUES
-             (1, :type_id, :val1, :val2, :val3, :unit, :context, :measured_at,
+             (1, :cuuid, :type_id, :val1, :val2, :val3, :unit, :context, :measured_at,
               :comment, :photo, :thumb, :alert, :tlevel, :oob,
               :by, :created_at, :updated_at, :created_by)'
         );
         $ins->execute([
+            'cuuid' => $clientUuid,
             'type_id' => (int) $measureType['id'],
             'val1' => $value,
             'val2' => $value2,
@@ -165,6 +299,8 @@ final class ApiMedicalController extends Controller
 
         $afterData = [
             'id' => $measureId,
+            'patient_id' => 1,
+            'client_uuid' => $clientUuid,
             'measure_type_id' => (int) $measureType['id'],
             'type_code' => (string) $measureType['code'],
             'type_label' => (string) $measureType['label'],
@@ -172,6 +308,7 @@ final class ApiMedicalController extends Controller
             'value2' => $value2,
             'value3' => $value3,
             'unit' => (string) $measureType['unit'],
+            'unit_recorded' => (string) $measureType['unit'],
             'context' => $context,
             'measured_at' => $measuredAtUtc,
             'time_local' => ScheduleService::utcToLocalParis($measuredAtUtc, 'H:i'),
@@ -180,11 +317,14 @@ final class ApiMedicalController extends Controller
             'status_label' => $eval['label'],
             'status_icon' => $eval['icon'],
             'show_hypo_protocol' => $eval['show_hypo_protocol'],
+            'recorded_by' => $userId,
         ];
 
+        $expectationId = (int) $request->input('expectation_id', 0);
         AuditService::record('measure.create', 'measure', $measureId, null, $afterData, 1, $userId);
+        AlertService::onMeasureRecorded($afterData, $measureType, $expectationId > 0 ? $expectationId : null);
 
-        return Response::jsonSuccess($afterData, 201);
+        return Response::jsonSuccess(array_merge($afterData, ['measure' => $afterData]), 201);
     }
 
     /**
@@ -198,8 +338,16 @@ final class ApiMedicalController extends Controller
         if (!Policy::allows($role, 'medications', 'validate_intake')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour valider une prise.', 403);
         }
+        if ($clockResp = $this->checkClockInRequirement()) {
+            return $clockResp;
+        }
 
-        $res = IntakeService::giveIntake((int) $id, $userId, $request->all());
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
+        $res = IntakeService::giveIntake((int) $id, $userId, $request->all(), $tsRes['utc']);
         if (!$res['ok']) {
             return Response::jsonError(
                 (string) ($res['code'] ?? 'INTAKE_ERROR'),
@@ -222,11 +370,20 @@ final class ApiMedicalController extends Controller
         if (!Policy::allows($role, 'medications', 'validate_intake')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour modifier une prise.', 403);
         }
+        if ($clockResp = $this->checkClockInRequirement()) {
+            return $clockResp;
+        }
+
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
 
         $reason = (string) $request->input('reason', '');
         $comment = (string) $request->input('comment', '');
+        $clientUuid = $this->extractClientUuid($request);
 
-        $res = IntakeService::skipIntake((int) $id, $userId, $reason, $comment);
+        $res = IntakeService::skipIntake((int) $id, $userId, $reason, $comment, $tsRes['utc'], $clientUuid);
         if (!$res['ok']) {
             return Response::jsonError(
                 (string) ($res['code'] ?? 'SKIP_ERROR'),
@@ -249,13 +406,21 @@ final class ApiMedicalController extends Controller
         if (!Policy::allows($role, 'medications', 'validate_intake')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour enregistrer une prise.', 403);
         }
+        if ($clockResp = $this->checkClockInRequirement()) {
+            return $clockResp;
+        }
+
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
 
         $prescriptionId = (int) $request->input('prescription_id', 0);
         if ($prescriptionId <= 0) {
             return Response::jsonError('VALIDATION_ERROR', 'Veuillez sélectionner un médicament « si besoin ».', 422);
         }
 
-        $res = IntakeService::giveAsNeeded($prescriptionId, $userId, $request->all());
+        $res = IntakeService::giveAsNeeded($prescriptionId, $userId, $request->all(), $tsRes['utc']);
         if (!$res['ok']) {
             return Response::jsonError(
                 (string) ($res['code'] ?? 'AS_NEEDED_ERROR'),
@@ -265,7 +430,7 @@ final class ApiMedicalController extends Controller
             );
         }
 
-        return Response::jsonSuccess($res['data'] ?? ['message' => $res['message']], 201);
+        return Response::jsonSuccess($res['data'] ?? ['message' => $res['message']], $res['http_status']);
     }
 
     /**
@@ -278,6 +443,29 @@ final class ApiMedicalController extends Controller
 
         if (!Policy::allows($role, 'meals', 'create')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour enregistrer un repas.', 403);
+        }
+        if ($clockResp = $this->checkClockInRequirement()) {
+            return $clockResp;
+        }
+
+        $pdo = Database::connection();
+        $clientUuid = $this->extractClientUuid($request);
+
+        if ($clientUuid !== null) {
+            $dupStmt = $pdo->prepare('SELECT * FROM `meals` WHERE `client_uuid` = :cuuid AND `deleted_at` IS NULL LIMIT 1');
+            $dupStmt->execute(['cuuid' => $clientUuid]);
+            $existing = $dupStmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                return Response::jsonSuccess([
+                    'id' => (int) $existing['id'],
+                    'client_uuid' => $clientUuid,
+                    'meal_type' => (string) $existing['meal_type'],
+                    'eaten_at' => (string) $existing['eaten_at'],
+                    'description' => (string) $existing['description'],
+                    'portion_eaten' => (int) $existing['portion_eaten'],
+                    'idempotent' => true,
+                ], 200);
+            }
         }
 
         $filesByKind = [];
@@ -296,12 +484,20 @@ final class ApiMedicalController extends Controller
             $description = 'Repas photographié';
         }
 
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
         $localDate = trim((string) $request->input('meal_date', ''));
         $localTime = trim((string) $request->input('meal_time', ''));
-        if ($localDate !== '' && $localTime !== '') {
+        if ($tsRes['is_client_time']) {
+            $eatenAtUtc = $tsRes['utc'];
+            $localTime = ScheduleService::utcToLocalParis($eatenAtUtc, 'H:i');
+        } elseif ($localDate !== '' && $localTime !== '') {
             $eatenAtUtc = ScheduleService::localParisToUtc($localDate, $localTime);
         } else {
-            $eatenAtUtc = gmdate('Y-m-d H:i:s');
+            $eatenAtUtc = $tsRes['utc'];
             $localTime = ScheduleService::utcToLocalParis($eatenAtUtc, 'H:i');
         }
 
@@ -322,17 +518,17 @@ final class ApiMedicalController extends Controller
         $drinkMl = ($drinkMlRaw !== '' && is_numeric($drinkMlRaw)) ? max(0, (int) $drinkMlRaw) : null;
         $comment = trim((string) $request->input('comment', '')) ?: null;
 
-        $pdo = Database::connection();
         $nowUtc = gmdate('Y-m-d H:i:s');
 
         $ins = $pdo->prepare(
             'INSERT INTO `meals`
-             (`patient_id`, `meal_type`, `eaten_at`, `description`, `portion_eaten`, `carbs_g`, `drink_type`, `drink_ml`,
+             (`patient_id`, `client_uuid`, `meal_type`, `eaten_at`, `description`, `portion_eaten`, `carbs_g`, `drink_type`, `drink_ml`,
               `comment`, `recorded_by`, `created_at`, `updated_at`, `created_by`)
              VALUES
-             (1, :type, :eaten_at, :desc, :portion, :carbs, :drink, :ml, :comment, :by, :created_at, :updated_at, :created_by)'
+             (1, :cuuid, :type, :eaten_at, :desc, :portion, :carbs, :drink, :ml, :comment, :by, :created_at, :updated_at, :created_by)'
         );
         $ins->execute([
+            'cuuid' => $clientUuid,
             'type' => $mealType,
             'eaten_at' => $eatenAtUtc,
             'desc' => $description,
@@ -361,6 +557,7 @@ final class ApiMedicalController extends Controller
         $linked = MealService::findLinkedGlycemias($eatenAtUtc, 1);
         $afterData = [
             'id' => $mealId,
+            'client_uuid' => $clientUuid,
             'meal_type' => $mealType,
             'meal_type_label' => MealService::MEAL_TYPES[$mealType] ?? 'Repas',
             'eaten_at' => $eatenAtUtc,
@@ -388,6 +585,31 @@ final class ApiMedicalController extends Controller
 
         if (!Policy::allows($role, 'notes', 'create')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour rédiger une note.', 403);
+        }
+        if ($clockResp = $this->checkClockInRequirement()) {
+            return $clockResp;
+        }
+
+        $pdo = Database::connection();
+        $clientUuid = $this->extractClientUuid($request);
+
+        if ($clientUuid !== null) {
+            $dupStmt = $pdo->prepare('SELECT * FROM `notes` WHERE `client_uuid` = :cuuid AND `deleted_at` IS NULL LIMIT 1');
+            $dupStmt->execute(['cuuid' => $clientUuid]);
+            $existing = $dupStmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                return Response::jsonSuccess([
+                    'id' => (int) $existing['id'],
+                    'client_uuid' => $clientUuid,
+                    'category' => (string) $existing['category'],
+                    'priority' => (string) $existing['priority'],
+                    'title' => $existing['title'],
+                    'content' => (string) $existing['content'],
+                    'is_handover' => (bool) $existing['is_handover'],
+                    'created_at' => (string) $existing['created_at'],
+                    'idempotent' => true,
+                ], 200);
+            }
         }
 
         $content = trim((string) $request->input('content', ''));
@@ -428,17 +650,21 @@ final class ApiMedicalController extends Controller
             $summaryJson = json_encode($summaryArr, JSON_UNESCAPED_UNICODE);
         }
 
-        $pdo = Database::connection();
-        $nowUtc = gmdate('Y-m-d H:i:s');
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+        $nowUtc = $tsRes['utc'];
 
         $ins = $pdo->prepare(
             'INSERT INTO `notes`
-             (`patient_id`, `category`, `priority`, `title`, `content`, `photo_path`, `photo_thumb_path`,
+             (`patient_id`, `client_uuid`, `category`, `priority`, `title`, `content`, `photo_path`, `photo_thumb_path`,
               `is_handover`, `handover_summary`, `recorded_by`, `created_at`, `updated_at`, `created_by`)
              VALUES
-             (1, :cat, :prio, :title, :content, :photo, :thumb, :handover, :summary, :by, :created_at, :updated_at, :created_by)'
+             (1, :cuuid, :cat, :prio, :title, :content, :photo, :thumb, :handover, :summary, :by, :created_at, :updated_at, :created_by)'
         );
         $ins->execute([
+            'cuuid' => $clientUuid,
             'cat' => $category,
             'prio' => $priority,
             'title' => $title,
@@ -456,6 +682,7 @@ final class ApiMedicalController extends Controller
 
         $afterData = [
             'id' => $noteId,
+            'client_uuid' => $clientUuid,
             'category' => $category,
             'priority' => $priority,
             'title' => $title,
@@ -503,9 +730,37 @@ final class ApiMedicalController extends Controller
         if (!Policy::allows($role, 'notes', 'create')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour cocher un soin.', 403);
         }
+        if ($clockResp = $this->checkClockInRequirement()) {
+            return $clockResp;
+        }
+
+        $pdo = Database::connection();
+        $clientUuid = $this->extractClientUuid($request);
+
+        if ($clientUuid !== null) {
+            $dupStmt = $pdo->prepare(
+                'SELECT cc.*, ci.label
+                 FROM `care_checks` cc
+                 INNER JOIN `care_items` ci ON ci.id = cc.care_item_id
+                 WHERE cc.client_uuid = :cuuid AND cc.deleted_at IS NULL
+                 LIMIT 1'
+            );
+            $dupStmt->execute(['cuuid' => $clientUuid]);
+            $existing = $dupStmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                return Response::jsonSuccess([
+                    'id' => (int) $existing['id'],
+                    'client_uuid' => $clientUuid,
+                    'care_item_id' => (int) $existing['care_item_id'],
+                    'label' => (string) $existing['label'],
+                    'checked_at' => (string) $existing['checked_at'],
+                    'time_local' => ScheduleService::utcToLocalParis((string) $existing['checked_at'], 'H:i'),
+                    'idempotent' => true,
+                ], 200);
+            }
+        }
 
         $careItemId = (int) $request->input('care_item_id', 0);
-        $pdo = Database::connection();
 
         $stmt = $pdo->prepare('SELECT * FROM `care_items` WHERE `id` = :id AND `deleted_at` IS NULL LIMIT 1');
         $stmt->execute(['id' => $careItemId]);
@@ -515,15 +770,20 @@ final class ApiMedicalController extends Controller
             return Response::jsonError('INVALID_CARE_ITEM', 'Soin rapide introuvable.', 422);
         }
 
-        $nowUtc = gmdate('Y-m-d H:i:s');
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+        $nowUtc = $tsRes['utc'];
         $comment = trim((string) $request->input('comment', '')) ?: null;
 
         $ins = $pdo->prepare(
             'INSERT INTO `care_checks`
-             (`patient_id`, `care_item_id`, `checked_at`, `comment`, `performed_by`, `created_at`, `updated_at`, `created_by`)
-             VALUES (1, :item_id, :checked_at, :comment, :by, :created_at, :updated_at, :created_by)'
+             (`patient_id`, `client_uuid`, `care_item_id`, `checked_at`, `comment`, `performed_by`, `created_at`, `updated_at`, `created_by`)
+             VALUES (1, :cuuid, :item_id, :checked_at, :comment, :by, :created_at, :updated_at, :created_by)'
         );
         $ins->execute([
+            'cuuid' => $clientUuid,
             'item_id' => $careItemId,
             'checked_at' => $nowUtc,
             'comment' => $comment,
@@ -536,9 +796,11 @@ final class ApiMedicalController extends Controller
 
         $afterData = [
             'id' => $checkId,
+            'client_uuid' => $clientUuid,
             'care_item_id' => $careItemId,
             'label' => (string) $item['label'],
             'checked_at' => $nowUtc,
+            'done_at' => $nowUtc,
             'time_local' => ScheduleService::utcToLocalParis($nowUtc, 'H:i'),
         ];
 
@@ -570,5 +832,24 @@ final class ApiMedicalController extends Controller
 
         $feed = TimelineService::getDailyFeed($date, $type, $page, 25, 1, $userId);
         return Response::jsonSuccess($feed);
+    }
+
+    /**
+     * GET /api/offline/bootstrap
+     * Retourne les données essentielles du jour pour le cache IndexedDB hors ligne.
+     */
+    public function offlineBootstrap(Request $request): Response
+    {
+        $userId = Auth::id() ?? 0;
+        $todayParis = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'Y-m-d');
+        $clockState = AttendanceService::getUserClockState($userId, 1);
+        $openAlertsCount = AlertService::countOpen(1);
+
+        return Response::jsonSuccess([
+            'date_paris' => $todayParis,
+            'synced_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
+            'clock_state' => $clockState,
+            'open_alerts_count' => $openAlertsCount,
+        ]);
     }
 }

@@ -143,6 +143,9 @@ final class MealController extends Controller
     {
         $api = new ApiMedicalController();
         $res = $api->storeMeal($request);
+        if ($res->status() === 403) {
+            return $res;
+        }
         $decoded = json_decode($res->body(), true) ?: [];
 
         if (!($decoded['ok'] ?? false)) {

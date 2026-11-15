@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Services\AlertService;
+
 $user = is_array($user ?? null) ? $user : (auth() ?? []);
 $theme = (string) ($user['theme'] ?? 'auto');
 $role = (string) ($user['role'] ?? 'caregiver');
 $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
+$openAlertsCount = AlertService::countOpenAlerts(1);
 ?>
 <!-- En-tête utilisateur -->
 <a href="/profile" class="pc-card flex items-center gap-4">
@@ -25,6 +28,69 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
   </div>
   <span class="pc-list-chevron"><?= icon('chevron-right', '', 20) ?></span>
 </a>
+
+<!-- Équipe, Pointage & Alertes (Phase 3) -->
+<section aria-labelledby="more-team-heading">
+  <div class="pc-section-header" id="more-team-heading">Équipe, pointage &amp; alertes</div>
+  <div class="pc-list-group">
+    <a href="/planning" class="pc-list-item">
+      <span class="pc-list-icon pc-list-icon--team">
+        <?= icon('calendar-check', '', 18) ?>
+      </span>
+      <div class="pc-list-body">
+        <div class="pc-list-title"><?= $role === 'caregiver' ? 'Mon planning de gardes' : 'Planning d’équipe &amp; Couverture' ?></div>
+        <div class="pc-list-subtitle">
+          <?= $role === 'caregiver'
+              ? 'Consultation de vos prochains créneaux de jour et de nuit'
+              : 'Vue semaine/mois, duplication, remplacements et absences' ?>
+        </div>
+      </div>
+      <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+    </a>
+
+    <?php if ($role !== 'viewer'): ?>
+      <a href="/attendance" class="pc-list-item">
+        <span class="pc-list-icon pc-list-icon--ok">
+          <?= icon('clock', '', 18) ?>
+        </span>
+        <div class="pc-list-body">
+          <div class="pc-list-title"><?= in_array($role, ['admin', 'coordinator'], true) ? 'Contrôle des pointages (E17)' : 'Mon pointage &amp; Déclarations' ?></div>
+          <div class="pc-list-subtitle">
+            <?= in_array($role, ['admin', 'coordinator'], true)
+                ? 'Grille hebdomadaire, retards et pointages en attente de validation'
+                : 'Arrivée/départ, QR code du domicile et déclaration d’oubli' ?>
+          </div>
+        </div>
+        <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+      </a>
+
+      <a href="/attendance/hours" class="pc-list-item">
+        <span class="pc-list-icon pc-list-icon--brand">
+          <?= icon('file-spreadsheet', '', 18) ?>
+        </span>
+        <div class="pc-list-body">
+          <div class="pc-list-title">Récapitulatif mensuel des heures (E18)</div>
+          <div class="pc-list-subtitle">Heures normales, nuit (21h–6h), dimanche, jours fériés &amp; export CSV</div>
+        </div>
+        <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+      </a>
+    <?php endif; ?>
+
+    <a href="/alerts" class="pc-list-item">
+      <span class="pc-list-icon pc-list-icon--vitals">
+        <?= icon('bell', '', 18) ?>
+      </span>
+      <div class="pc-list-body">
+        <div class="pc-list-title">Centre d’alertes &amp; Notifications</div>
+        <div class="pc-list-subtitle">Alertes critiques, retards, escalades 15 min et historique</div>
+      </div>
+      <?php if ($openAlertsCount > 0): ?>
+        <span class="pc-badge pc-badge--danger"><?= $openAlertsCount ?> ouverte<?= $openAlertsCount > 1 ? 's' : '' ?></span>
+      <?php endif; ?>
+      <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+    </a>
+  </div>
+</section>
 
 <!-- Modules médicaux Phase 2 -->
 <section aria-labelledby="more-medical-heading">
@@ -118,8 +184,8 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
         <?= icon('user', '', 18) ?>
       </span>
       <div class="pc-list-body">
-        <div class="pc-list-title">Mon profil &amp; Sécurité</div>
-        <div class="pc-list-subtitle">Photo, code PIN sur cet appareil, mot de passe, thème</div>
+        <div class="pc-list-title">Mon profil, PIN &amp; Préférences d’alertes</div>
+        <div class="pc-list-subtitle">Photo, code PIN, Web Push VAPID, heures calmes, thème</div>
       </div>
       <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
     </a>
@@ -169,8 +235,8 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
           <?= icon('settings', '', 18) ?>
         </span>
         <div class="pc-list-body">
-          <div class="pc-list-title">Réglages médicaux</div>
-          <div class="pc-list-subtitle">Fenêtre de prise, unité de glycémie, soins rapides, favoris</div>
+          <div class="pc-list-title">Réglages médicaux &amp; Pointage</div>
+          <div class="pc-list-subtitle">Vérification GPS / QR code du domicile, soins rapides, favoris</div>
         </div>
         <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
       </a>
@@ -250,7 +316,7 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
 </section>
 
 <!-- Déconnexion -->
-<form method="POST" action="/logout" class="mt-2">
+<form method="POST" action="/logout" class="mt-2" data-logout-form>
   <?= csrf_field() ?>
   <button type="submit" class="pc-btn pc-btn--danger-soft pc-btn--block">
     <?= icon('log-out', '', 18) ?>

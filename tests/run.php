@@ -8,6 +8,7 @@ use App\Core\Config;
 use App\Core\Database;
 use Database\Seeds\Phase1Seeder;
 use Database\Seeds\Phase2Seeder;
+use Database\Seeds\Phase3Seeder;
 
 // C4: Force testing environment so tests NEVER touch the main database
 Config::set('app.env', 'testing');
@@ -29,7 +30,7 @@ spl_autoload_register(static function (string $class): void {
 });
 
 /**
- * Prepare the isolated test database (--fresh + migrations 001..006 + Phase1 & Phase2 seeders).
+ * Prepare the isolated test database (--fresh + migrations 001..010 + Phase1, Phase2 & Phase3 seeders).
  */
 function prepareTestDatabase(): void
 {
@@ -87,6 +88,7 @@ function prepareTestDatabase(): void
 
     Phase1Seeder::run();
     Phase2Seeder::run();
+    Phase3Seeder::run();
 }
 
 prepareTestDatabase();
@@ -97,6 +99,7 @@ use Tests\Unit\CsrfTest;
 use Tests\Unit\EditWindowHandoverMealTest;
 use Tests\Unit\HelperEscapeTest;
 use Tests\Unit\IntakeAndInsulinTest;
+use Tests\Unit\Phase3Test;
 use Tests\Unit\PolicyTest;
 use Tests\Unit\RateLimiterTest;
 use Tests\Unit\RouterTest;
@@ -120,7 +123,7 @@ $assert = static function (bool $condition, string $label) use (&$passed, &$fail
 $activeDb = (string) Database::connection()->query('SELECT DATABASE()')->fetchColumn();
 
 echo "=====================================================\n";
-echo " Prime Care — Suite de tests automatisés (Phases 1 & 2)\n";
+echo " Prime Care — Suite de tests automatisés (Phases 1, 2 & 3)\n";
 echo " Environnement : " . Config::get('app.env') . " (Base : {$activeDb})\n";
 echo "=====================================================\n\n";
 
@@ -139,7 +142,8 @@ $suites = [
     'ScheduleService (DST Europe/Paris -> UTC & Idempotence 48h)' => [ScheduleServiceTest::class, 'run'],
     'IntakeService & InsulinService (Statuts, Anti-double-prise 409, Grille responsable)' => [IntakeAndInsulinTest::class, 'run'],
     'EditWindowService, MealService, HandoverService & QrCodeService' => [EditWindowHandoverMealTest::class, 'run'],
-    'HTTP Routes & API Smoke Test (D1 + Phase 2)' => [RoutesSmokeTest::class, 'run'],
+    'Phase 3 — Planning, Pointage, Heures (DST/Fériés), Alertes & Web Push VAPID' => [Phase3Test::class, 'run'],
+    'HTTP Routes & API Smoke Test (D1 + Phase 2 + Phase 3)' => [RoutesSmokeTest::class, 'run'],
 ];
 
 foreach ($suites as $name => $callable) {

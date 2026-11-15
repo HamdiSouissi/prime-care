@@ -68,3 +68,8 @@
   2. **Clavier PIN (`.pc-pin-pad`)** : saisie 4–6 chiffres soumettant uniquement le `selector` du profil.
 - **En-tête d’accueil Bleu nuit pleine largeur (`.pc-home-hero`)** : bloc pleine largeur en haut d’écran (`border-radius: 0 0 32px 32px`), monogramme blanc 30 px + date, boutons ronds translucides, salutation et carte patient vitrée (`.pc-home-patient`).
 - **Barre d’onglets pilule Bleu nuit (`.pc-tabbar`)** : pilule `66px` / `33px` (`left/right: 16px`, `rgba(10,22,51,.94)`), onglets inactifs icône seule à 60 %, onglet actif en pastille `rgba(255,255,255,.14)` avec icône + libellé blanc (`aria-current="page"`), et bouton central `+` de `50px` en dégradé avec ombre violette.
+- **Composants Phase 3 (§8 bis de l’additif)** :
+  - **Bouton glissant de pointage (`.pc-slide-punch`)** : rail tactile émeraude (*« Glisser pour arriver »*) ou ambre (*« Glisser pour partir »*) doublé d’une feuille de confirmation accessible au clavier (`Entrée`/`Espace`).
+  - **Cartes de planning (`.pc-shift-card`, `.pc-shift-card--uncovered`)** : créneaux colorés par aide-soignante (`.pc-avatar--c1`..`c8`), créneaux non couverts en motif hachuré rouge avec badge **« Non couvert »**, et absences signalées **« À remplacer »**.
+  - **Centre d’alertes (`.pc-alert-card`, `.pc-alert-badge`)** : cloche d’en-tête avec pastille rouge des alertes ouvertes (`new` + `seen`), cartes bordées selon la gravité (`critical`, `warning`, `info`) avec icône + texte et choix rapides de résolution.
+  - **Bandeau hors ligne & file d’attente IndexedDB (`.pc-offline-banner`, `.pc-offline-queue-bar`)** : bandeau ambre *« Hors ligne — données de HHhMM »* et barre de synchronisation des saisies médicales en attente (`client_uuid`).

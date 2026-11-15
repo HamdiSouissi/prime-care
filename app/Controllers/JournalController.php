@@ -78,6 +78,9 @@ final class JournalController extends Controller
     {
         $api = new ApiMedicalController();
         $res = $api->storeNote($request);
+        if ($res->status() === 403) {
+            return $res;
+        }
         $decoded = json_decode($res->body(), true) ?: [];
 
         if (!($decoded['ok'] ?? false)) {
@@ -107,6 +110,9 @@ final class JournalController extends Controller
     {
         $api = new ApiMedicalController();
         $res = $api->storeCareCheck($request);
+        if ($res->status() === 403) {
+            return $res;
+        }
         $decoded = json_decode($res->body(), true) ?: [];
 
         if (!($decoded['ok'] ?? false)) {

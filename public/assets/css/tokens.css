@@ -46,13 +46,17 @@
 
     /* Statuts sémantiques */
     --ok: #34C759;
+    --c-ok: var(--ok);
     --ok-soft: rgba(52, 199, 89, 0.14);
     --warn: #FFCC00;
+    --c-warn: #D97706;
     --warn-soft: rgba(255, 204, 0, 0.18);
     --warn-ink: #5C4500;
     --danger: #FF3B30;
+    --c-danger: var(--danger);
     --danger-soft: rgba(255, 59, 48, 0.12);
     --info: #0A84FF;
+    --c-info: var(--info);
     --info-soft: rgba(10, 132, 255, 0.12);
 
     /* Élévation : cartes 24px sans ombre portée + pilule tabbar Bleu nuit (§2, §5) */

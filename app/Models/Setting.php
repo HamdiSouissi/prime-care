@@ -82,4 +82,14 @@ final class Setting extends Model
             ]);
         }
     }
+
+    public static function get(string $key, mixed $default = null, int $patientId = 1): mixed
+    {
+        return self::getValue($key, $default, $patientId);
+    }
+
+    public static function set(string $key, mixed $value, int $actorId = 1, int $patientId = 1): void
+    {
+        self::setValue($key, $value, $patientId);
+    }
 }

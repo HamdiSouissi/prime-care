@@ -11,8 +11,10 @@ require_once dirname(__DIR__) . '/app/Helpers/bootstrap.php';
 
 use Database\Seeds\Phase1Seeder;
 use Database\Seeds\Phase2Seeder;
+use Database\Seeds\Phase3Seeder;
 
-echo "Insertion des données de démonstration (Phases 1 & 2)...\n";
+echo "Insertion des données de démonstration (Phases 1, 2 & 3)...\n";
 Phase1Seeder::run();
 Phase2Seeder::run();
+Phase3Seeder::run();
 echo "Seed terminé avec succès.\n";

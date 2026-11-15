@@ -12,6 +12,7 @@ spl_autoload_register(static function (string $class) use ($rootDir): void {
     $prefixes = [
         'App\\' => $rootDir . '/app/',
         'Database\\Seeds\\' => $rootDir . '/database/seeds/',
+        'PHPMailer\\PHPMailer\\' => $rootDir . '/public/assets/vendor/phpmailer/',
     ];
 
     foreach ($prefixes as $prefix => $baseDir) {

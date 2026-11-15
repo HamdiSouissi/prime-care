@@ -30,8 +30,9 @@ final class HomeController extends Controller
     {
         $this->authorize('dashboard', 'view');
 
-        // Idempotent schedule generation safety net
+        // Idempotent schedule generation & periodic alerts safety net (debounced to 5 min)
         ScheduleService::generateUpcoming48h();
+        \App\Services\CronService::runFallbackIfNeeded(1);
 
         $userId = Auth::id() ?? 0;
         $role = Auth::role() ?? 'viewer';
@@ -54,6 +55,9 @@ final class HomeController extends Controller
         $observance = IntakeService::getObservanceSummary(1);
         $adminMetrics = ShiftTimelineService::getAdminKeyMetrics(1);
         $rotation = InsulinService::getRotationSuggestion(1);
+        $clockState = \App\Services\AttendanceService::getUserClockState($userId, 1);
+        $nextShift = \App\Services\PlanningService::getNextOrCurrentShiftForUser($userId, 1);
+        $openAlertsCount = \App\Services\AlertService::countOpenAlerts(1);
 
         return $this->view('home/index', [
             'pageTitle' => 'Accueil',
@@ -73,6 +77,9 @@ final class HomeController extends Controller
             'observance' => $observance,
             'adminMetrics' => $adminMetrics,
             'rotation' => $rotation,
+            'clockState' => $clockState,
+            'nextShift' => $nextShift,
+            'openAlertsCount' => $openAlertsCount,
         ]);
     }
 

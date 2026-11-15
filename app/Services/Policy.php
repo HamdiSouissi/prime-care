@@ -77,8 +77,8 @@ final class Policy
             'validate' => ['admin', 'coordinator'],
         ],
         'alerts' => [
-            'view' => ['admin', 'coordinator', 'caregiver'],
-            'acknowledge' => ['admin', 'coordinator'],
+            'view' => ['admin', 'coordinator', 'caregiver', 'viewer'],
+            'acknowledge' => ['admin', 'coordinator', 'caregiver'],
             'configure' => ['admin'],
         ],
         'documents' => [

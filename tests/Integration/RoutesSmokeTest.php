@@ -6,15 +6,17 @@ namespace Tests\Integration;
 
 use App\Core\Auth;
 use App\Core\Csrf;
+use App\Core\Database;
 use App\Core\ErrorHandler;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Core\Session;
+use App\Models\Setting;
 use Throwable;
 
 /**
- * HTTP Smoke Test (D1 + Phase 2): Dispatches every GET route and Phase 2 JSON API endpoint
+ * HTTP Smoke Test (D1 + Phase 2 + Phase 3): Dispatches every GET route and JSON API endpoint
  * through the real Router and Middlewares across 4 authentication states:
  * unauthenticated, caregiver, viewer, and admin.
  */
@@ -45,7 +47,7 @@ final class RoutesSmokeTest
                 'REQUEST_METHOD' => 'GET',
                 'REQUEST_URI' => $path,
                 'REMOTE_ADDR' => '127.0.0.1',
-                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.1',
+                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.3',
             ]
         );
 
@@ -72,7 +74,7 @@ final class RoutesSmokeTest
                 'REMOTE_ADDR' => '127.0.0.1',
                 'HTTP_ACCEPT' => 'application/json',
                 'HTTP_X_CSRF_TOKEN' => $csrf,
-                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.1',
+                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.3',
             ]
         );
 
@@ -101,6 +103,11 @@ final class RoutesSmokeTest
             '/meals',
             '/meals/1',
             '/journal',
+            '/planning',
+            '/planning?view=month',
+            '/attendance',
+            '/attendance/hours',
+            '/alerts',
             '/coming-soon/timeclock',
             '/profile',
             '/patient',
@@ -111,6 +118,7 @@ final class RoutesSmokeTest
             '/admin/treatments',
             '/admin/measures',
             '/settings',
+            '/settings/attendance/qr-print',
             '/design',
         ];
 
@@ -128,11 +136,15 @@ final class RoutesSmokeTest
             '/meals',
             '/meals/1',
             '/journal',
+            '/planning',
+            '/planning?view=month',
+            '/alerts',
             '/coming-soon/timeclock',
             '/profile',
             '/patient',
             '/api/health',
             '/api/timeline',
+            '/api/alerts',
         ];
 
         $adminOnlyRoutes = [
@@ -143,6 +155,7 @@ final class RoutesSmokeTest
             '/admin/treatments',
             '/admin/measures',
             '/settings',
+            '/settings/attendance/qr-print',
             '/design',
         ];
 
@@ -196,7 +209,7 @@ final class RoutesSmokeTest
         $caregiver403Ok = true;
         $zero500Caregiver = true;
 
-        foreach ($publicCareRoutes as $uri) {
+        foreach (array_merge($publicCareRoutes, ['/attendance', '/attendance/hours']) as $uri) {
             $resp = self::dispatchGet($router, $uri);
             if ($resp->status() >= 500) {
                 $zero500Caregiver = false;
@@ -206,7 +219,7 @@ final class RoutesSmokeTest
             }
         }
 
-        foreach ($adminOnlyRoutes as $uri) {
+        foreach (array_merge($adminOnlyRoutes, ['/attendance/export-csv']) as $uri) {
             $resp = self::dispatchGet($router, $uri);
             if ($resp->status() >= 500) {
                 $zero500Caregiver = false;
@@ -216,12 +229,11 @@ final class RoutesSmokeTest
             }
         }
 
-        $assert($zero500Caregiver, 'D1 Smoke (caregiver): 0 réponse 500 sur toutes les routes GET (Phase 1 + Phase 2)');
-        $assert($caregiver200Ok, 'D1 Smoke (caregiver): 200 sur toutes les routes autorisées (/, /today, /health, /treatments, /meals, /journal, /install...)');
-        $assert($caregiver403Ok, 'D1 Smoke (caregiver): 403 sur /users, /admin/treatments, /admin/measures, /settings et /design');
+        $assert($zero500Caregiver, 'D1 Smoke (caregiver): 0 réponse 500 sur toutes les routes GET (Phases 1, 2 & 3)');
+        $assert($caregiver200Ok, 'D1 Smoke (caregiver): 200 sur toutes les routes autorisées (/, /today, /planning, /attendance, /alerts...)');
+        $assert($caregiver403Ok, 'D1 Smoke (caregiver): 403 sur /users, /admin/treatments, /admin/measures, /settings, /attendance/export-csv et /design');
 
-        // Verify Caregiver JSON API endpoints (POST /api/measures, POST /api/notes, POST /api/care-checks)
-        // E2 API: POST /api/measures sans en-tête CSRF retourne 419 + format d'erreur JSON vérifié
+        // Verify Caregiver JSON API endpoints + CSRF + Offline client_uuid idempotency
         $noCsrfReq = new Request(
             [],
             ['type_code' => 'glycemia', 'value' => '1.14', 'context' => 'fasting'],
@@ -231,7 +243,7 @@ final class RoutesSmokeTest
                 'REQUEST_URI' => '/api/measures',
                 'REMOTE_ADDR' => '127.0.0.1',
                 'HTTP_ACCEPT' => 'application/json',
-                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.1',
+                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.3',
             ]
         );
         try {
@@ -247,27 +259,90 @@ final class RoutesSmokeTest
             'E2 API JSON: POST /api/measures sans en-tête CSRF retourne 419 au format JSON {ok: false, error: {code, message}}'
         );
 
+        // Offline client_uuid idempotency test on /api/measures, /api/notes, /api/meals, /api/care-checks
+        $measureUuid = '11111111-2222-4333-8444-555555555501';
         $apiMeasureResp = self::dispatchJsonPost($router, '/api/measures', [
             'type_code' => 'glycemia',
             'value' => '1.14',
             'context' => 'fasting',
             'comment' => 'Test API glycémie',
+            'client_uuid' => $measureUuid,
         ]);
         $assert($apiMeasureResp->status() === 201, 'API JSON (caregiver): POST /api/measures retourne 201 Created');
 
+        // Second call with the exact same client_uuid must return 200 OK and NOT insert a second row
+        $apiMeasureReplay = self::dispatchJsonPost($router, '/api/measures', [
+            'type_code' => 'glycemia',
+            'value' => '1.14',
+            'context' => 'fasting',
+            'comment' => 'Test API glycémie',
+            'client_uuid' => $measureUuid,
+        ]);
+        $pdo = Database::connection();
+        $uuidCountStmt = $pdo->prepare('SELECT COUNT(*) FROM measures WHERE client_uuid = :u');
+        $uuidCountStmt->execute(['u' => $measureUuid]);
+        $measureUuidCount = (int) $uuidCountStmt->fetchColumn();
+        $assert(
+            $apiMeasureReplay->status() === 200 && $measureUuidCount === 1,
+            'Phase 3 Mode hors ligne: rejouer le même client_uuid sur POST /api/measures retourne 200 et ne crée qu’un seul enregistrement'
+        );
+
+        $noteUuid = '11111111-2222-4333-8444-555555555502';
         $apiNoteResp = self::dispatchJsonPost($router, '/api/notes', [
             'category' => 'general',
             'content' => 'Note de test smoke API',
             'is_important' => 0,
             'is_handover' => 1,
+            'client_uuid' => $noteUuid,
         ]);
-        $assert($apiNoteResp->status() === 201, 'API JSON (caregiver): POST /api/notes (transmission) retourne 201 Created');
+        $apiNoteReplay = self::dispatchJsonPost($router, '/api/notes', [
+            'category' => 'general',
+            'content' => 'Note de test smoke API',
+            'is_important' => 0,
+            'is_handover' => 1,
+            'client_uuid' => $noteUuid,
+        ]);
+        $assert(
+            $apiNoteResp->status() === 201 && $apiNoteReplay->status() === 200,
+            'API JSON (caregiver): POST /api/notes retourne 201 Created puis 200 sur rejeu idempotent client_uuid'
+        );
 
+        $careUuid = '11111111-2222-4333-8444-555555555503';
         $apiCareResp = self::dispatchJsonPost($router, '/api/care-checks', [
             'care_item_id' => 1,
             'comment' => 'Soin rapide validé',
+            'client_uuid' => $careUuid,
         ]);
-        $assert($apiCareResp->status() === 201, 'API JSON (caregiver): POST /api/care-checks retourne 201 Created');
+        $apiCareReplay = self::dispatchJsonPost($router, '/api/care-checks', [
+            'care_item_id' => 1,
+            'comment' => 'Soin rapide validé',
+            'client_uuid' => $careUuid,
+        ]);
+        $assert(
+            $apiCareResp->status() === 201 && $apiCareReplay->status() === 200,
+            'API JSON (caregiver): POST /api/care-checks retourne 201 Created puis 200 sur rejeu idempotent client_uuid'
+        );
+
+        // Test HTTP 403 on POST /api/measures when require_clocked_in=1 and caregiver is clocked out
+        self::dispatchJsonPost($router, '/api/attendance/punch', [
+            'type' => 'out',
+            'method' => 'slide',
+            'latitude' => 48.79036,
+            'longitude' => 2.45557,
+        ]);
+        \App\Services\AttendanceService::updateSettings(['require_clocked_in' => true], 1);
+        $blockedWhenClockedOut = self::dispatchJsonPost($router, '/api/measures', [
+            'type_code' => 'glycemia',
+            'value' => '1.10',
+            'context' => 'fasting',
+        ]);
+        $blockedJson = json_decode($blockedWhenClockedOut->body(), true) ?: [];
+        \App\Services\AttendanceService::updateSettings(['require_clocked_in' => false], 1);
+        $assert(
+            $blockedWhenClockedOut->status() === 403
+            && ($blockedJson['error']['message'] ?? '') === 'Pointez votre arrivée pour saisir',
+            'Phase 3 Pointage: POST /api/measures retourne HTTP 403 « Pointez votre arrivée pour saisir » quand require_clocked_in est actif et l’aide-soignante est hors poste'
+        );
 
         $homeHtml = self::dispatchGet($router, '/')->body();
         $assert(
@@ -275,8 +350,9 @@ final class RoutesSmokeTest
             && str_contains($homeHtml, 'name="apple-mobile-web-app-status-bar-style" content="black-translucent"')
             && str_contains($homeHtml, '<header class="pc-home-hero"')
             && str_contains($homeHtml, 'Bonjour Fatou')
+            && str_contains($homeHtml, 'data-slide-punch')
             && str_contains($homeHtml, 'aria-current="page"'),
-            'D2 Design B (accueil & tabbar): en-tête pleine largeur #0A1633, black-translucent, Bonjour Fatou et onglet actif aria-current="page"'
+            'D2 Design B + E05 (accueil & tabbar): en-tête pleine largeur #0A1633, bouton glissant de pointage, Bonjour Fatou et onglet actif aria-current="page"'
         );
 
         // ---------------------------------------------------------------------
@@ -298,7 +374,7 @@ final class RoutesSmokeTest
             }
         }
 
-        foreach ($adminOnlyRoutes as $uri) {
+        foreach (array_merge($adminOnlyRoutes, ['/attendance', '/attendance/hours', '/attendance/export-csv']) as $uri) {
             $resp = self::dispatchGet($router, $uri);
             if ($resp->status() >= 500) {
                 $zero500Viewer = false;
@@ -316,8 +392,8 @@ final class RoutesSmokeTest
         $assert($viewerWriteMeasure->status() === 403, 'API JSON (viewer): POST /api/measures est bloqué en 403');
 
         $assert($zero500Viewer, 'D1 Smoke (viewer): 0 réponse 500 sur toutes les routes GET');
-        $assert($viewer200Ok, 'D1 Smoke (viewer): 200 sur toutes les routes de consultation');
-        $assert($viewer403Ok, 'D1 Smoke (viewer): 403 sur les routes d’administration');
+        $assert($viewer200Ok, 'D1 Smoke (viewer): 200 sur toutes les routes de consultation (dont /planning et /alerts)');
+        $assert($viewer403Ok, 'D1 Smoke (viewer): 403 sur les routes d’administration et de pointage');
 
         // ---------------------------------------------------------------------
         // 4. Authenticated as Admin (Karim Benali — Admin!2026)
@@ -326,8 +402,9 @@ final class RoutesSmokeTest
         Auth::attempt('admin@primecare.test', 'Admin!2026');
         $admin200All = true;
         $zero500Admin = true;
+        $zeroInlineStyle = true;
 
-        foreach (array_merge($publicCareRoutes, $adminOnlyRoutes) as $uri) {
+        foreach (array_merge($publicCareRoutes, $adminOnlyRoutes, ['/attendance', '/attendance/hours', '/attendance/export-csv']) as $uri) {
             $resp = self::dispatchGet($router, $uri);
             if ($resp->status() >= 500) {
                 $zero500Admin = false;
@@ -335,10 +412,16 @@ final class RoutesSmokeTest
             if ($resp->status() !== 200) {
                 $admin200All = false;
             }
+            if (!str_starts_with($uri, '/api/') && !str_starts_with($uri, '/attendance/export-csv')) {
+                if (preg_match('/\sstyle\s*=/i', $resp->body())) {
+                    $zeroInlineStyle = false;
+                }
+            }
         }
 
         $assert($zero500Admin, 'D1 Smoke (admin): 0 réponse 500 sur toutes les routes GET');
-        $assert($admin200All, 'D1 Smoke (admin): 200 partout sur les 26 routes authentifiées (dont /admin/treatments, /admin/measures et /settings)');
+        $assert($admin200All, 'D1 Smoke (admin): 200 partout sur les 34 routes authentifiées (dont /planning, /attendance, /attendance/hours, /alerts, /settings/attendance/qr-print)');
+        $assert($zeroInlineStyle, 'C5 CSP stricte: 0 attribut style= en ligne dans le HTML généré sur l’ensemble des vues Phases 1, 2 & 3');
 
         Auth::logout();
         Session::destroy();

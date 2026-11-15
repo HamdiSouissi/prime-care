@@ -1865,4 +1865,728 @@
   .pc-admin-headline--critical .pc-admin-headline__title {
     color: var(--c-danger);
   }
+
+  /* ==========================================================================
+     PHASE 3 — POINTAGE (E05, E17, E18), PLANNING (E16), ALERTES & HORS LIGNE
+     ========================================================================== */
+
+  /* Cloche & Badge d'alertes dans l'en-tête */
+  .pc-navbar__bell,
+  .pc-home-hero__circle-btn--bell {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .pc-home-hero__circle-btn--bell {
+    color: #FFFFFF;
+  }
+
+  .pc-alert-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background-color: var(--danger);
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 2px solid var(--bg);
+  }
+
+  .pc-home-hero .pc-alert-badge {
+    border-color: var(--header);
+  }
+
+  .pc-alert-badge--inline {
+    position: static;
+    margin-left: auto;
+    border: none;
+  }
+
+  /* Bandeau Mode Hors Ligne & File d'attente IndexedDB */
+  .pc-offline-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 16px;
+    background-color: rgba(255, 149, 0, 0.14);
+    border-bottom: 1px solid rgba(255, 149, 0, 0.35);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .pc-offline-banner__main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pc-offline-queue-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 16px;
+    background-color: rgba(43, 127, 255, 0.12);
+    border-bottom: 1px solid rgba(43, 127, 255, 0.3);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .pc-offline-queue-bar__info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--brand);
+  }
+
+  /* Carte de pointage & Bouton glissant (E05) */
+  .pc-gdpr-notice {
+    padding: 10px 12px;
+    border-radius: var(--r-md);
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+
+  .pc-slide-punch,
+  .pc-slider-punch {
+    position: relative;
+    container-type: inline-size;
+    height: 56px;
+    border-radius: 999px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    user-select: none;
+    touch-action: pan-y;
+    overflow: hidden;
+    background: linear-gradient(45deg, #5E5CE6, #BF5AF2);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 20px rgba(94, 92, 230, 0.28);
+    transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .pc-slide-punch--done,
+  .pc-slide-punch--completed {
+    background: linear-gradient(45deg, #28B446, #34C759);
+    border-color: rgba(52, 199, 89, 0.5);
+    box-shadow: 0 8px 20px rgba(52, 199, 89, 0.28);
+  }
+
+  .pc-slide-punch__track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    padding: 0 48px;
+    text-align: center;
+  }
+
+  .pc-slide-punch__label {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #FFFFFF;
+    text-shadow: 0 1px 2px rgba(6, 11, 26, 0.18);
+  }
+
+  .pc-slide-punch__thumb {
+    position: relative;
+    z-index: 2;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    border: none;
+    background-color: #FFFFFF;
+    color: #5E5CE6;
+    box-shadow: 0 4px 12px rgba(6, 11, 26, 0.22);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
+  }
+
+  .pc-slide-punch__icon-arrow,
+  .pc-slide-punch__icon-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.22s ease, opacity 0.2s ease;
+  }
+
+  .pc-slide-punch__icon-check {
+    position: absolute;
+    opacity: 0;
+    transform: scale(0.4) rotate(-25deg);
+    color: #34C759;
+  }
+
+  .pc-slide-punch--done .pc-slide-punch__thumb,
+  .pc-slide-punch--completed .pc-slide-punch__thumb {
+    color: #34C759;
+  }
+
+  .pc-slide-punch--done .pc-slide-punch__icon-arrow,
+  .pc-slide-punch--completed .pc-slide-punch__icon-arrow {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  .pc-slide-punch--done .pc-slide-punch__icon-check,
+  .pc-slide-punch--completed .pc-slide-punch__icon-check {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+
+  .pc-slide-punch--step-1 .pc-slide-punch__thumb { transform: translateX(52px); }
+  .pc-slide-punch--step-2 .pc-slide-punch__thumb { transform: translateX(120px); }
+  .pc-slide-punch--step-3 .pc-slide-punch__thumb { transform: translateX(190px); }
+  .pc-slide-punch--done .pc-slide-punch__thumb,
+  .pc-slide-punch--completed .pc-slide-punch__thumb { transform: translateX(calc(100cqw - 56px)); }
+
+  @supports not (transform: translateX(100cqw)) {
+    .pc-slide-punch--done .pc-slide-punch__thumb,
+    .pc-slide-punch--completed .pc-slide-punch__thumb {
+      transform: translateX(252px);
+    }
+  }
+
+  .pc-punch-card__links {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .pc-punch-card__shift-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Scanner QR Code caméra */
+  .pc-qr-scanner-box {
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background-color: #060B1A;
+    color: #FFFFFF;
+    text-align: center;
+    padding: 12px;
+  }
+
+  .pc-qr-video {
+    width: 100%;
+    max-height: 240px;
+    border-radius: 12px;
+    background-color: #000000;
+    object-fit: cover;
+  }
+
+  .pc-qr-scanner-status {
+    font-size: 12px;
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* Planning d'équipe (E16) */
+  .pc-planning-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .pc-planning-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background-color: var(--surface-2);
+  }
+
+  .pc-planning-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .pc-planning-day--today {
+    border-color: var(--brand);
+  }
+
+  .pc-shift-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+  }
+
+  .pc-shift-card__main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  /* Créneau non couvert : hachuré rouge + mention « Non couvert » */
+  .pc-shift-card--uncovered {
+    border-color: rgba(255, 59, 48, 0.55);
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 59, 48, 0.07),
+      rgba(255, 59, 48, 0.07) 10px,
+      rgba(255, 59, 48, 0.15) 10px,
+      rgba(255, 59, 48, 0.15) 20px
+    );
+  }
+
+  .pc-shift-card--warn {
+    border-color: rgba(255, 149, 0, 0.55);
+    background-color: rgba(255, 149, 0, 0.08);
+  }
+
+  /* Vue Mois du planning */
+  .pc-month-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  @media (min-width: 640px) {
+    .pc-month-grid {
+      grid-template-columns: repeat(7, 1fr);
+    }
+  }
+
+  .pc-month-cell {
+    min-height: 92px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pc-month-cell--today {
+    border-color: var(--brand);
+  }
+
+  .pc-month-cell__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pc-month-cell__day {
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .pc-month-cell__add {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .pc-month-cell__shifts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pc-shift-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background-color: rgba(43, 127, 255, 0.14);
+    color: var(--text);
+  }
+
+  .pc-shift-pill--uncovered {
+    background-color: rgba(255, 59, 48, 0.18);
+    color: var(--c-danger);
+  }
+
+  .pc-shift-pill--warn {
+    background-color: rgba(255, 149, 0, 0.2);
+    color: var(--c-warn);
+  }
+
+  /* Contrôle des pointages (E17) & Heures (E18) */
+  .pc-pending-att-card {
+    padding: 14px;
+    border-radius: var(--r-md);
+    border: 1px solid rgba(255, 149, 0, 0.45);
+    background-color: rgba(255, 149, 0, 0.06);
+  }
+
+  .pc-pending-att-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .pc-att-user-block {
+    padding: 14px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+  }
+
+  .pc-att-user-block__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+
+  .pc-att-week-days {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pc-att-day-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .pc-att-day-row:last-child {
+    border-bottom: none;
+  }
+
+  .pc-att-day-row__content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pc-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Récapitulatif mensuel des heures : cartes sous 600 px, tableau >= 600 px (G4) */
+  .pc-hours-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pc-hours-table-desktop {
+    display: none;
+  }
+
+  @media (min-width: 600px) {
+    .pc-hours-cards {
+      display: none;
+    }
+
+    .pc-hours-table-desktop {
+      display: block;
+    }
+  }
+
+  .pc-hours-card {
+    padding: 14px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+  }
+
+  .pc-hours-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .pc-hours-card__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pc-hours-card__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 13px;
+  }
+
+  .pc-hours-card__row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .pc-hours-card__label {
+    color: var(--text-2);
+    font-weight: 500;
+  }
+
+  .pc-hours-card__value {
+    color: var(--text);
+    text-align: right;
+  }
+
+  .pc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .pc-table th,
+  .pc-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .pc-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-2);
+    text-align: left;
+  }
+
+  /* Centre d'alertes (§3.8) */
+  .pc-alert-card--critical {
+    border-left: 4px solid var(--c-danger);
+  }
+
+  .pc-alert-card--warning {
+    border-left: 4px solid var(--c-warn);
+  }
+
+  .pc-alert-card--info {
+    border-left: 4px solid var(--brand);
+  }
+
+  .pc-alert-card--handled {
+    opacity: 0.85;
+  }
+
+  .pc-alert-card__resolution {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background-color: var(--surface-2);
+  }
+
+  /* Réglages QR & Feuille d'impression A4 */
+  .pc-qr-settings-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+  }
+
+  .pc-qr-settings-box__svg {
+    width: 140px;
+    height: 140px;
+    padding: 8px;
+    border-radius: 12px;
+    background-color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pc-qr-settings-box__svg svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .pc-qr-print-sheet {
+    max-width: 680px;
+    margin: 24px auto;
+    padding: 16px;
+  }
+
+  .pc-qr-print-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .pc-qr-print-card {
+    background-color: #FFFFFF;
+    color: #0A1633;
+    border: 2px solid #0A1633;
+    border-radius: 24px;
+    padding: 36px 28px;
+    text-align: center;
+  }
+
+  .pc-qr-print-frame {
+    width: 240px;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    margin: 24px auto;
+    padding: 16px;
+    border-radius: 18px;
+    border: 2px dashed #2B7FFF;
+    background-color: #FFFFFF;
+    box-sizing: border-box;
+  }
+
+  .pc-qr-print-frame svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .pc-qr-print-fallback {
+    margin: 20px auto;
+    padding: 12px;
+    border-radius: 12px;
+    background-color: #F4F6FB;
+  }
+
+  /* Préférences de notifications dans le profil */
+  .pc-notif-prefs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pc-notif-pref-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background-color: var(--surface-2);
+  }
+
+  /* Bannière de notification système Web Push reçue dans Chromium */
+  .pc-push-system-banner {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background-color: #0A1633;
+    color: #FFFFFF;
+    border: 1px solid rgba(94, 92, 230, 0.55);
+    box-shadow: 0 16px 36px rgba(6, 11, 26, 0.45);
+  }
+
+  .pc-push-system-banner__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(45deg, #5E5CE6, #BF5AF2);
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 800;
+    font-size: 15px;
+  }
+
+  .pc-push-system-banner__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-push-system-banner__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.72);
+    margin-bottom: 2px;
+  }
+
+  .pc-push-system-banner__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .pc-push-system-banner__text {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.88);
+    margin-top: 2px;
+    line-height: 1.35;
+  }
 }

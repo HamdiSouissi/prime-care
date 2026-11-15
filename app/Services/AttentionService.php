@@ -5,37 +5,24 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Database;
-use DateTimeImmutable;
-use DateTimeZone;
 use PDO;
 
 /**
- * Computes real-time "points d'attention" displayed to the administrator and on-duty caregiver:
- * - Unresolved critical measurement (not followed by an 'ok' measurement of the same type)
- * - Medication intake late by > 30 minutes
- * - Expected measurement late
- * - Unread urgent handover or note
+ * AttentionService (unifié Phase 3) :
+ * S'appuie sur les alertes ouvertes en base (`alerts` au statut `new` ou `seen`) comme source unique de vérité,
+ * complétées par les transmissions de fin de poste non lues par l'utilisateur courant.
  */
 final class AttentionService
 {
     /**
-     * Get the current list of attention items and headline summary.
+     * Get the current list of attention items and headline summary from open `alerts`.
      *
      * @return array{
      *   count: int,
      *   headline: string,
      *   status_level: string,
      *   status_icon: string,
-     *   items: array<int, array{
-     *     type: string,
-     *     severity: string,
-     *     icon: string,
-     *     title: string,
-     *     subtitle: string,
-     *     time_local: string,
-     *     action_url: string,
-     *     action_label: string
-     *   }>
+     *   items: array<int, array<string, mixed>>
      * }
      */
     public static function getCurrentAttentionPoints(
@@ -44,133 +31,63 @@ final class AttentionService
         ?string $referenceUtc = null
     ): array {
         $pdo = Database::connection();
-        $utcTz = new DateTimeZone('UTC');
-        $refDt = $referenceUtc !== null
-            ? new DateTimeImmutable($referenceUtc, $utcTz)
-            : new DateTimeImmutable('now', $utcTz);
 
-        $nowUtc = $refDt->format('Y-m-d H:i:s');
-        $last12hUtc = $refDt->modify('-12 hours')->format('Y-m-d H:i:s');
-        $lateCutoffUtc = $refDt->modify('-30 minutes')->format('Y-m-d H:i:s');
-        $todayStartUtc = ScheduleService::localParisToUtc(
-            ScheduleService::utcToLocalParis($nowUtc, 'Y-m-d'),
-            '00:00'
-        );
+        // Synchronise les alertes périodiques ouvertes pour garantir la fraîcheur
+        AlertService::scanPeriodicAlerts($patientId, $referenceUtc);
 
+        $openAlerts = AlertService::listAlerts('open', $patientId, 10);
         $items = [];
 
-        // 1. Critical measurement in the last 12h not followed by a normal ('ok') measurement of the same type
-        $critStmt = $pdo->prepare(
-            'SELECT m.*, mt.code, mt.label AS type_label, mt.unit
-             FROM `measures` m
-             INNER JOIN `measure_types` mt ON mt.id = m.measure_type_id
-             WHERE m.patient_id = :pid
-               AND m.alert_level = \'critical\'
-               AND m.measured_at BETWEEN :from_utc AND :to_utc
-               AND m.deleted_at IS NULL
-               AND NOT EXISTS (
-                   SELECT 1 FROM `measures` m2
-                   WHERE m2.patient_id = m.patient_id
-                     AND m2.measure_type_id = m.measure_type_id
-                     AND m2.measured_at > m.measured_at
-                     AND m2.alert_level = \'ok\'
-                     AND m2.deleted_at IS NULL
-               )
-             ORDER BY m.measured_at DESC
-             LIMIT 3'
-        );
-        $critStmt->execute(['pid' => $patientId, 'from_utc' => $last12hUtc, 'to_utc' => $nowUtc]);
-        foreach ($critStmt->fetchAll(PDO::FETCH_ASSOC) as $cRow) {
-            $valStr = str_replace('.', ',', (string) $cRow['value']) . ' ' . (string) $cRow['unit'];
+        foreach ($openAlerts as $al) {
+            $level = (string) ($al['level'] ?? 'warning');
+            $type = (string) ($al['type'] ?? 'vital_out_of_range');
+            $severity = match ($level) {
+                'critical' => 'critical',
+                'warning' => 'warn',
+                default => 'info',
+            };
+            $icon = match ($type) {
+                'vital_critical', 'vital_out_of_range' => 'heart-pulse',
+                'intake_late' => 'pill',
+                'measure_late' => 'activity',
+                'attendance_missing', 'attendance_pending' => 'clock',
+                'shift_uncovered' => 'calendar-days',
+                default => 'alert-triangle',
+            };
+            $actionLabel = match ($type) {
+                'vital_critical', 'vital_out_of_range' => 'Contrôler',
+                'intake_late' => 'Valider',
+                'measure_late' => 'Saisir',
+                'shift_uncovered' => 'Affecter',
+                default => 'Voir',
+            };
+
             $items[] = [
-                'type' => 'critical_measure',
-                'severity' => 'critical',
-                'icon' => 'alert-octagon',
-                'title' => sprintf('%s critique non recontrôlée (%s)', (string) $cRow['type_label'], $valStr),
-                'subtitle' => 'Aucun contrôle revenu dans la cible depuis cette mesure.',
-                'time_local' => ScheduleService::utcToLocalParis((string) $cRow['measured_at'], 'H:i'),
-                'action_url' => '/health/' . urlencode((string) $cRow['code']),
-                'action_label' => 'Contrôler',
+                'alert_id' => (int) $al['id'],
+                'type' => $type,
+                'severity' => $severity,
+                'icon' => $icon,
+                'title' => (string) $al['title'],
+                'subtitle' => mb_strimwidth((string) $al['message'], 0, 95, '…'),
+                'time_local' => ScheduleService::utcToLocalParis((string) $al['created_at'], 'H:i'),
+                'action_url' => (string) ($al['target_url'] ?: '/alerts'),
+                'action_label' => $actionLabel,
             ];
         }
 
-        // 2. Medication intakes late by > 30 minutes today
-        $lateIntakeStmt = $pdo->prepare(
-            'SELECT mi.id, mi.scheduled_at, p.dose, p.unit, m.name AS medication_name
-             FROM `medication_intakes` mi
-             INNER JOIN `prescriptions` p ON p.id = mi.prescription_id
-             INNER JOIN `medications` m ON m.id = p.medication_id
-             WHERE mi.patient_id = :pid
-               AND mi.status = \'pending\'
-               AND mi.scheduled_at BETWEEN :today_start AND :late_cutoff
-               AND mi.deleted_at IS NULL
-             ORDER BY mi.scheduled_at ASC
-             LIMIT 4'
-        );
-        $lateIntakeStmt->execute([
-            'pid' => $patientId,
-            'today_start' => $todayStartUtc,
-            'late_cutoff' => $lateCutoffUtc,
-        ]);
-        foreach ($lateIntakeStmt->fetchAll(PDO::FETCH_ASSOC) as $li) {
-            $schedLocal = ScheduleService::utcToLocalParis((string) $li['scheduled_at'], 'H:i');
-            $items[] = [
-                'type' => 'late_intake',
-                'severity' => 'critical',
-                'icon' => 'pill',
-                'title' => sprintf('Prise en retard : %s (%s %s)', (string) $li['medication_name'], str_replace('.', ',', (string) $li['dose']), (string) $li['unit']),
-                'subtitle' => sprintf('Prévue à %s (retard > 30 min)', $schedLocal),
-                'time_local' => $schedLocal,
-                'action_url' => '/today',
-                'action_label' => 'Valider',
-            ];
-        }
-
-        // 3. Expected measurements missing/late today
-        $lateExpStmt = $pdo->prepare(
-            'SELECT me.id, me.scheduled_at, mt.code, mt.label AS type_label, ms.label AS schedule_label
-             FROM `measure_expectations` me
-             INNER JOIN `measure_types` mt ON mt.id = me.measure_type_id
-             INNER JOIN `measure_schedules` ms ON ms.id = me.measure_schedule_id
-             WHERE me.patient_id = :pid
-               AND me.measure_id IS NULL
-               AND me.scheduled_at BETWEEN :today_start AND :late_cutoff
-               AND me.deleted_at IS NULL
-             ORDER BY me.scheduled_at ASC
-             LIMIT 3'
-        );
-        $lateExpStmt->execute([
-            'pid' => $patientId,
-            'today_start' => $todayStartUtc,
-            'late_cutoff' => $lateCutoffUtc,
-        ]);
-        foreach ($lateExpStmt->fetchAll(PDO::FETCH_ASSOC) as $le) {
-            $schedLocal = ScheduleService::utcToLocalParis((string) $le['scheduled_at'], 'H:i');
-            $items[] = [
-                'type' => 'late_measure',
-                'severity' => 'warn',
-                'icon' => 'activity',
-                'title' => sprintf('Mesure attendue manquante : %s', (string) $le['type_label']),
-                'subtitle' => sprintf('%s prévue à %s', (string) ($le['schedule_label'] ?: $le['type_label']), $schedLocal),
-                'time_local' => $schedLocal,
-                'action_url' => '/health/' . urlencode((string) $le['code']),
-                'action_label' => 'Saisir',
-            ];
-        }
-
-        // 4. Unread urgent note or handover (deduplicated per author & kind)
+        // Compléter avec les transmissions urgentes/récentes non lues par l'utilisateur connecté
         if ($userId !== null && $userId > 0) {
             $unreadStmt = $pdo->prepare(
-                'SELECT n.id, n.title, n.content, n.is_handover, n.priority, n.created_at, n.recorded_by, u.first_name
-                 FROM `notes` n
-                 INNER JOIN `users` u ON u.id = n.recorded_by
-                 LEFT JOIN `note_reads` nr ON nr.note_id = n.id AND nr.user_id = :uid
+                "SELECT n.id, n.title, n.content, n.is_handover, n.priority, n.created_at, n.recorded_by, u.first_name
+                 FROM notes n
+                 INNER JOIN users u ON u.id = n.recorded_by
+                 LEFT JOIN note_reads nr ON nr.note_id = n.id AND nr.user_id = :uid
                  WHERE n.patient_id = :pid
                    AND n.deleted_at IS NULL
                    AND n.recorded_by != :uid2
                    AND nr.id IS NULL
-                   AND (n.is_handover = 1 OR n.priority = \'urgent\')
-                 ORDER BY n.created_at DESC'
+                   AND (n.is_handover = 1 OR n.priority = 'urgent')
+                 ORDER BY n.created_at DESC"
             );
             $unreadStmt->execute(['uid' => $userId, 'pid' => $patientId, 'uid2' => $userId]);
             $groupedUnread = [];
@@ -195,15 +112,9 @@ final class AttentionService
 
             foreach ($groupedUnread as $grp) {
                 $nCnt = $grp['count'];
-                if ($grp['is_handover']) {
-                    $title = $nCnt > 1
-                        ? sprintf('%d transmissions non lues de %s', $nCnt, $grp['first_name'])
-                        : sprintf('Transmission non lue de %s', $grp['first_name']);
-                } else {
-                    $title = $nCnt > 1
-                        ? sprintf('%d notes urgentes non lues de %s', $nCnt, $grp['first_name'])
-                        : sprintf('Note urgente non lue de %s', $grp['first_name']);
-                }
+                $title = $grp['is_handover']
+                    ? ($nCnt > 1 ? sprintf('%d transmissions non lues de %s', $nCnt, $grp['first_name']) : sprintf('Transmission non lue de %s', $grp['first_name']))
+                    : ($nCnt > 1 ? sprintf('%d notes urgentes non lues de %s', $nCnt, $grp['first_name']) : sprintf('Note urgente non lue de %s', $grp['first_name']));
 
                 $items[] = [
                     'type' => 'unread_handover',
@@ -221,7 +132,7 @@ final class AttentionService
         $count = count($items);
         $hasCritical = false;
         foreach ($items as &$it) {
-            $it['link'] = $it['action_url'] ?? '/today';
+            $it['link'] = $it['action_url'] ?? '/alerts';
             $it['time'] = $it['time_local'] ?? '';
             if ($it['severity'] === 'critical') {
                 $hasCritical = true;
@@ -236,11 +147,11 @@ final class AttentionService
         } elseif ($count === 1) {
             $headline = '1 point d’attention';
             $statusLevel = $hasCritical ? 'critical' : 'warn';
-            $statusIcon = $hasCritical ? 'alert-octagon' : 'alert-triangle';
+            $statusIcon = $hasCritical ? 'shield-alert' : 'alert-triangle';
         } else {
             $headline = sprintf('%d points d’attention', $count);
             $statusLevel = $hasCritical ? 'critical' : 'warn';
-            $statusIcon = $hasCritical ? 'alert-octagon' : 'alert-triangle';
+            $statusIcon = $hasCritical ? 'shield-alert' : 'alert-triangle';
         }
 
         return [

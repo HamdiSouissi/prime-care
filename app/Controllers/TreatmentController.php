@@ -155,6 +155,9 @@ final class TreatmentController extends Controller
     public function give(Request $request, string $id): Response
     {
         $this->authorize('medications', 'validate_intake');
+        if (!\App\Services\AttendanceService::canUserWriteMedical(Auth::user())) {
+            return Response::jsonError('CLOCK_IN_REQUIRED', 'Pointez votre arrivée pour saisir', 403);
+        }
         $res = IntakeService::giveIntake((int) $id, Auth::id() ?? 0, $request->all());
         Session::flash($res['ok'] ? 'success' : 'error', $res['message']);
         return $this->redirect((string) $request->input('redirect_to', '/today'));
@@ -166,6 +169,9 @@ final class TreatmentController extends Controller
     public function skip(Request $request, string $id): Response
     {
         $this->authorize('medications', 'validate_intake');
+        if (!\App\Services\AttendanceService::canUserWriteMedical(Auth::user())) {
+            return Response::jsonError('CLOCK_IN_REQUIRED', 'Pointez votre arrivée pour saisir', 403);
+        }
         $res = IntakeService::skipIntake(
             (int) $id,
             Auth::id() ?? 0,
@@ -182,6 +188,9 @@ final class TreatmentController extends Controller
     public function giveAsNeeded(Request $request): Response
     {
         $this->authorize('medications', 'validate_intake');
+        if (!\App\Services\AttendanceService::canUserWriteMedical(Auth::user())) {
+            return Response::jsonError('CLOCK_IN_REQUIRED', 'Pointez votre arrivée pour saisir', 403);
+        }
         $rxId = (int) $request->input('prescription_id', 0);
         $res = IntakeService::giveAsNeeded($rxId, Auth::id() ?? 0, $request->all());
         Session::flash($res['ok'] ? 'success' : 'error', $res['message']);

@@ -179,6 +179,26 @@ final class IntakeService
             $expectedVersion = isset($payload['version']) && $payload['version'] !== ''
                 ? (int) $payload['version']
                 : null;
+            $clientUuid = isset($payload['client_uuid']) && trim((string) $payload['client_uuid']) !== ''
+                ? substr(trim((string) $payload['client_uuid']), 0, 36)
+                : null;
+
+            // Idempotence hors ligne : si le même client_uuid a déjà validé cette prise, retourner 200
+            if ($clientUuid !== null && ($row['client_uuid'] ?? null) === $clientUuid && $row['status'] === 'given') {
+                return [
+                    'ok' => true,
+                    'http_status' => 200,
+                    'message' => 'Prise déjà synchronisée (idempotente).',
+                    'data' => [
+                        'id' => $intakeId,
+                        'status' => 'given',
+                        'client_uuid' => $clientUuid,
+                        'given_at' => $row['given_at'],
+                        'given_dose' => (float) $row['given_dose'],
+                        'medication_name' => $row['medication_name'],
+                    ],
+                ];
+            }
 
             if ($row['status'] !== 'pending' || ($expectedVersion !== null && (int) $row['version'] !== $expectedVersion)) {
                 $giverName = trim((string) ($row['giver_first_name'] ?? 'un membre de l’équipe'));
@@ -292,6 +312,7 @@ final class IntakeService
             $upd = $pdo->prepare(
                 'UPDATE `medication_intakes`
                  SET `status` = \'given\',
+                     `client_uuid` = COALESCE(`client_uuid`, :client_uuid),
                      `given_at` = :given_at,
                      `given_dose` = :given_dose,
                      `injection_site` = :injection_site,
@@ -305,6 +326,7 @@ final class IntakeService
                    AND `version` = :current_version'
             );
             $upd->execute([
+                'client_uuid' => $clientUuid,
                 'given_at' => $effectiveNowUtc,
                 'given_dose' => $givenDose,
                 'injection_site' => $injectionSite,
@@ -347,6 +369,10 @@ final class IntakeService
                 $userId
             );
 
+            if (class_exists(AlertService::class)) {
+                AlertService::onIntakeHandled($intakeId, (int) $row['patient_id']);
+            }
+
             return [
                 'ok' => true,
                 'http_status' => 200,
@@ -376,7 +402,8 @@ final class IntakeService
         int $userId,
         string $reason,
         ?string $comment = null,
-        ?string $nowUtc = null
+        ?string $nowUtc = null,
+        ?string $clientUuid = null
     ): array {
         $cleanReason = trim($reason);
         if ($cleanReason === '') {
@@ -390,7 +417,7 @@ final class IntakeService
 
         $effectiveNowUtc = $nowUtc ?? gmdate('Y-m-d H:i:s');
 
-        return Database::transaction(static function (PDO $pdo) use ($intakeId, $userId, $cleanReason, $comment, $effectiveNowUtc): array {
+        return Database::transaction(static function (PDO $pdo) use ($intakeId, $userId, $cleanReason, $comment, $effectiveNowUtc, $clientUuid): array {
             $stmt = $pdo->prepare(
                 'SELECT mi.*, m.name AS medication_name, u.first_name AS giver_first_name
                  FROM `medication_intakes` mi
@@ -409,6 +436,22 @@ final class IntakeService
                     'http_status' => 404,
                     'code' => 'INTAKE_NOT_FOUND',
                     'message' => 'Prise introuvable.',
+                ];
+            }
+
+            if ($clientUuid !== null && ($row['client_uuid'] ?? null) === $clientUuid && $row['status'] === 'skipped') {
+                return [
+                    'ok' => true,
+                    'http_status' => 200,
+                    'message' => 'Prise « Non donné » déjà synchronisée (idempotente).',
+                    'data' => [
+                        'id' => $intakeId,
+                        'status' => 'skipped',
+                        'client_uuid' => $clientUuid,
+                        'given_at' => $row['given_at'],
+                        'reason' => $row['reason'],
+                        'medication_name' => $row['medication_name'],
+                    ],
                 ];
             }
 
@@ -432,6 +475,7 @@ final class IntakeService
             $upd = $pdo->prepare(
                 'UPDATE `medication_intakes`
                  SET `status` = \'skipped\',
+                     `client_uuid` = COALESCE(`client_uuid`, :client_uuid),
                      `given_at` = :given_at,
                      `reason` = :reason,
                      `comment` = :comment,
@@ -443,6 +487,7 @@ final class IntakeService
                    AND `version` = :current_version'
             );
             $upd->execute([
+                'client_uuid' => $clientUuid,
                 'given_at' => $effectiveNowUtc,
                 'reason' => $reasonLabel,
                 'comment' => $comment !== null && trim($comment) !== '' ? trim($comment) : null,
@@ -479,6 +524,10 @@ final class IntakeService
                 (int) $row['patient_id'],
                 $userId
             );
+
+            if (class_exists(AlertService::class)) {
+                AlertService::onIntakeHandled($intakeId, (int) $row['patient_id']);
+            }
 
             return [
                 'ok' => true,
@@ -585,16 +634,43 @@ final class IntakeService
             $comment = isset($payload['comment']) && trim((string) $payload['comment']) !== ''
                 ? trim((string) $payload['comment'])
                 : null;
+            $clientUuid = isset($payload['client_uuid']) && trim((string) $payload['client_uuid']) !== ''
+                ? substr(trim((string) $payload['client_uuid']), 0, 36)
+                : null;
+
+            if ($clientUuid !== null) {
+                $dupStmt = $pdo->prepare('SELECT * FROM `medication_intakes` WHERE `client_uuid` = :cuuid AND `deleted_at` IS NULL LIMIT 1');
+                $dupStmt->execute(['cuuid' => $clientUuid]);
+                $dupRow = $dupStmt->fetch(PDO::FETCH_ASSOC);
+                if ($dupRow) {
+                    return [
+                        'ok' => true,
+                        'http_status' => 200,
+                        'message' => 'Prise « si besoin » déjà synchronisée (idempotente).',
+                        'data' => [
+                            'id' => (int) $dupRow['id'],
+                            'client_uuid' => $clientUuid,
+                            'prescription_id' => (int) $dupRow['prescription_id'],
+                            'status' => (string) $dupRow['status'],
+                            'given_at' => (string) $dupRow['given_at'],
+                            'given_dose' => (float) $dupRow['given_dose'],
+                            'reason' => (string) $dupRow['reason'],
+                            'idempotent' => true,
+                        ],
+                    ];
+                }
+            }
 
             $ins = $pdo->prepare(
                 'INSERT INTO `medication_intakes`
-                 (`patient_id`, `prescription_id`, `prescription_time_id`, `scheduled_at`, `status`,
+                 (`patient_id`, `client_uuid`, `prescription_id`, `prescription_time_id`, `scheduled_at`, `status`,
                   `given_at`, `given_dose`, `reason`, `comment`, `given_by`, `version`,
                   `created_at`, `updated_at`, `created_by`)
-                 VALUES (:pid, :rx_id, NULL, :sched_at, \'given\', :given_at, :dose, :reason, :comment, :by, 1, :created_at, :updated_at, :created_by)'
+                 VALUES (:pid, :cuuid, :rx_id, NULL, :sched_at, \'given\', :given_at, :dose, :reason, :comment, :by, 1, :created_at, :updated_at, :created_by)'
             );
             $ins->execute([
                 'pid' => (int) $rx['patient_id'],
+                'cuuid' => $clientUuid,
                 'rx_id' => $prescriptionId,
                 'sched_at' => $effectiveNowUtc,
                 'given_at' => $effectiveNowUtc,

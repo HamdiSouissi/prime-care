@@ -289,7 +289,7 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
       </button>
     </div>
 
-    <form method="POST" action="/treatments/intakes/0/give" id="form-insulin-give" class="pc-stack">
+    <form method="POST" action="/treatments/intakes/0/give" id="form-insulin-give" data-api-form="/api/intakes/0/give" class="pc-stack">
       <?= csrf_field() ?>
       <input type="hidden" name="intake_id" id="insulin-intake-id" value="">
 
@@ -390,7 +390,7 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
       </button>
     </div>
 
-    <form method="POST" action="/treatments/intakes/0/skip" id="form-intake-skip" class="pc-stack">
+    <form method="POST" action="/treatments/intakes/0/skip" id="form-intake-skip" data-api-form="/api/intakes/0/skip" class="pc-stack">
       <?= csrf_field() ?>
       <input type="hidden" name="intake_id" id="skip-intake-id" value="">
 
@@ -435,7 +435,7 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
       </a>
 
       <?php if ($asNeededList !== []): ?>
-        <form method="POST" action="/treatments/as-needed" data-api-form="/api/intakes/as-needed" class="pc-stack">
+        <form method="POST" action="/treatments/as-needed" id="form-as-needed" data-api-form="/api/intakes/as-needed" class="pc-stack">
           <?= csrf_field() ?>
           <div class="pc-field">
             <label class="pc-label" for="as-needed-rx-select">Médicament « Si besoin »</label>
@@ -568,9 +568,13 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
         </div>
       </div>
 
-      <button type="submit" class="pc-btn pc-btn--primary pc-btn--lg pc-btn--block">
+      <p class="text-caption text-warn is-hidden" id="meal-offline-photo-hint" role="status">
+        Photo : réseau nécessaire
+      </p>
+
+      <button type="submit" id="meal-submit-btn" class="pc-btn pc-btn--primary pc-btn--lg pc-btn--block">
         <?= icon('check', '', 20) ?>
-        <span>Enregistrer le repas</span>
+        <span id="meal-submit-btn-label">Enregistrer le repas</span>
       </button>
     </form>
   </div>

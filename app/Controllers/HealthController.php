@@ -400,6 +400,9 @@ final class HealthController extends Controller
     {
         $api = new ApiMedicalController();
         $res = $api->storeMeasure($request);
+        if ($res->status() === 403) {
+            return $res;
+        }
         $decoded = json_decode($res->body(), true) ?: [];
 
         if (!($decoded['ok'] ?? false)) {
