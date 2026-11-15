@@ -2291,6 +2291,75 @@
     overflow-x: auto;
   }
 
+  /* Récapitulatif mensuel des heures : cartes sous 600 px, tableau >= 600 px (G4) */
+  .pc-hours-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pc-hours-table-desktop {
+    display: none;
+  }
+
+  @media (min-width: 600px) {
+    .pc-hours-cards {
+      display: none;
+    }
+
+    .pc-hours-table-desktop {
+      display: block;
+    }
+  }
+
+  .pc-hours-card {
+    padding: 14px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface-2);
+  }
+
+  .pc-hours-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .pc-hours-card__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pc-hours-card__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 13px;
+  }
+
+  .pc-hours-card__row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .pc-hours-card__label {
+    color: var(--text-2);
+    font-weight: 500;
+  }
+
+  .pc-hours-card__value {
+    color: var(--text);
+    text-align: right;
+  }
+
   .pc-table {
     width: 100%;
     border-collapse: collapse;
