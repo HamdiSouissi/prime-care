@@ -65,7 +65,7 @@ $canHandle = !empty($canHandle);
 
   <div class="flex items-center justify-between text-caption text-muted">
     <span>Triées par niveau de gravité puis par date (escalade automatique après 15 min pour les alertes critiques).</span>
-    <a href="/profile#notifications-section" class="font-semibold text-brand">Mes préférences &rarr;</a>
+    <a href="/profile#notifications-section" class="font-semibold text-brand">Mes préférences &rsaquo;</a>
   </div>
 </section>
 

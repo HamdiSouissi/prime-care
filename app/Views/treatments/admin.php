@@ -59,7 +59,7 @@ $prescriptions = is_array($prescriptions ?? null) ? $prescriptions : [];
           <?php if ((string) $rx['dose_mode'] === 'tableau'): ?>
             <div class="pc-card pc-card--subtle mt-1">
               <div class="text-footnote font-semibold mb-2">
-                Éditeur du tableau de correction d’insuline du responsable (g/L &rarr; UI)
+                Éditeur du tableau de correction d’insuline du responsable (g/L &rsaquo; UI)
               </div>
               <div class="pc-stack gap-2">
                 <?php foreach ($corrRows as $cRow): ?>

@@ -294,7 +294,7 @@ $homeApexConfig = [
           <?= icon('calendar-days', '', 14) ?>
           <span>Mon prochain créneau : <?= e(format_date_fr((string) $nextShift['local_date'])) ?> · <?= e((string) $nextShift['local_start_time']) ?>–<?= e((string) $nextShift['local_end_time']) ?></span>
         </div>
-        <a href="/planning" class="text-caption font-semibold text-brand">Voir mon planning &rarr;</a>
+        <a href="/planning" class="text-caption font-semibold text-brand">Voir mon planning &rsaquo;</a>
       </div>
     <?php endif; ?>
   </section>
@@ -755,7 +755,7 @@ $homeApexConfig = [
             24h/24
             <span class="pc-metric-unit">garde continue</span>
           </div>
-          <div class="text-caption text-muted">Planning, pointages &amp; heures &rarr;</div>
+          <div class="text-caption text-muted">Planning, pointages &amp; heures &rsaquo;</div>
         </div>
       </a>
     </div>
@@ -789,7 +789,7 @@ $homeApexConfig = [
     <div class="pc-section-header mb-0" id="shift-timeline-heading">
       Chronologie du jour · <?= (int) $counts['done'] ?>/<?= (int) $counts['total'] ?> réalisés
     </div>
-    <a href="/today" class="text-footnote font-semibold text-brand">Tout voir &rarr;</a>
+    <a href="/today" class="text-footnote font-semibold text-brand">Tout voir &rsaquo;</a>
   </div>
 
   <!-- Barre de progression du poste -->

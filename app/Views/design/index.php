@@ -220,7 +220,7 @@ declare(strict_types=1);
       <div class="pc-shift-card__main">
         <span class="pc-list-icon pc-list-icon--vitals"><?= icon('alert-triangle', '', 18) ?></span>
         <div>
-          <div class="text-subhead font-bold">Garde de nuit 20:00 &rarr; 08:00</div>
+          <div class="text-subhead font-bold">Garde de nuit 20:00 &rsaquo; 08:00</div>
           <div class="text-caption text-muted">Aucune aide-soignante affectée</div>
         </div>
       </div>

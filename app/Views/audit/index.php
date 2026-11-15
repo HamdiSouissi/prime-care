@@ -201,9 +201,9 @@ $exportQuery = http_build_query([
         <span class="text-footnote text-muted">Page <?= $page ?> sur <?= $pages ?></span>
 
         <?php if ($page < $pages): ?>
-          <a href="/audit?<?= e($nextQuery) ?>" class="pc-btn pc-btn--secondary pc-btn--sm">Suivant &rarr;</a>
+          <a href="/audit?<?= e($nextQuery) ?>" class="pc-btn pc-btn--secondary pc-btn--sm">Suivant &rsaquo;</a>
         <?php else: ?>
-          <span class="pc-btn pc-btn--ghost pc-btn--sm" aria-disabled="true">Suivant &rarr;</span>
+          <span class="pc-btn pc-btn--ghost pc-btn--sm" aria-disabled="true">Suivant &rsaquo;</span>
         <?php endif; ?>
       </nav>
     <?php endif; ?>

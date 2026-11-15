@@ -248,7 +248,7 @@ $replacementNeededCount = isset($replacementNeededCount) ? (int) $replacementNee
                     </div>
 
                     <div class="text-caption text-muted mt-1">
-                      <strong class="font-mono"><?= e((string) $s['local_start_time']) ?> &rarr; <?= e((string) $s['local_end_time']) ?><?= $spansNextDay ? ' (+1j)' : '' ?></strong>
+                      <strong class="font-mono"><?= e((string) $s['local_start_time']) ?> &rsaquo; <?= e((string) $s['local_end_time']) ?><?= $spansNextDay ? ' (+1j)' : '' ?></strong>
                       · <?= number_format((float) ($s['duration_hours'] ?? 12), 1, ',', '') ?> h
                       <?php if (!empty($s['template_label'])): ?>
                         · <?= e((string) $s['template_label']) ?>
