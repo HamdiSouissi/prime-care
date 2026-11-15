@@ -48,6 +48,11 @@ $toYmd = (string) ($period['to_ymd'] ?? date('Y-m-d'));
   </p>
 </section>
 
+<div id="pc-export-feedback" class="pc-banner pc-banner--ok mb-3" role="status" aria-live="polite" hidden>
+  <?= icon('check-circle', '', 18) ?>
+  <span id="pc-export-feedback-text">Export CSV généré et téléchargé avec succès (UTF-8 avec BOM, séparateur ;).</span>
+</div>
+
 <!-- Liste des exports CSV disponibles selon le rôle (§3) -->
 <section aria-labelledby="exports-list-heading">
   <h2 class="pc-section-header" id="exports-list-heading">
@@ -57,7 +62,7 @@ $toYmd = (string) ($period['to_ymd'] ?? date('Y-m-d'));
   <div class="pc-stack gap-2">
     <?php foreach ($availableExports as $typeKey => $meta): ?>
       <?php
-      $downloadUrl = '/reports/exports/' . urlencode((string) $typeKey)
+      $downloadUrl = route('reports.export_csv', ['type' => (string) $typeKey])
           . '?period=custom&from=' . urlencode($fromYmd) . '&to=' . urlencode($toYmd);
       ?>
       <article class="pc-card flex items-center justify-between gap-3 flex-wrap">
@@ -71,7 +76,7 @@ $toYmd = (string) ($period['to_ymd'] ?? date('Y-m-d'));
           </div>
         </div>
 
-        <a href="<?= e($downloadUrl) ?>" class="pc-btn pc-btn--primary pc-btn--sm">
+        <a href="<?= e($downloadUrl) ?>" class="pc-btn pc-btn--primary pc-btn--sm" data-export-csv="<?= e((string) $meta['label']) ?>" data-export-type="<?= e((string) $typeKey) ?>">
           <?= icon('download', '', 15) ?>
           <span>Exporter CSV</span>
         </a>

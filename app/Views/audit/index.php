@@ -42,7 +42,7 @@ $exportQuery = http_build_query([
       <div class="text-caption text-muted">Traçabilité médico-légale immuable · Lecture seule</div>
       <div class="font-semibold"><?= $total ?> entrée<?= $total > 1 ? 's' : '' ?> enregistrée<?= $total > 1 ? 's' : '' ?></div>
     </div>
-    <a href="/reports/export/audit?<?= e($exportQuery) ?>" class="pc-btn pc-btn--secondary pc-btn--sm">
+    <a href="<?= e(route('reports.export_csv', ['type' => 'audit']) . ($exportQuery !== '' ? '?' . $exportQuery : '')) ?>" class="pc-btn pc-btn--secondary pc-btn--sm">
       <?= icon('download', 16) ?>
       <span>Exporter CSV</span>
     </a>

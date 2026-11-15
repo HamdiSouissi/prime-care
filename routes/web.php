@@ -136,7 +136,7 @@ $router->group([
         // E23 — Rapports & Exports CSV (Phase 4 §2 & §3)
         $auth->get('/reports', [ReportController::class, 'index'], 'reports.index');
         $auth->get('/reports/exports', [ReportController::class, 'exports'], 'reports.exports');
-        $auth->get('/reports/export/{type:[a-z_]+}', [ReportController::class, 'exportCsv'], 'reports.export_csv');
+        $auth->get('/reports/export/{type:[a-z_]+}', [ReportController::class, 'downloadExport'], 'reports.export_csv');
 
         // Profile (all roles)
         $auth->get('/profile', [ProfileController::class, 'show'], 'profile.show');

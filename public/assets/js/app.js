@@ -205,6 +205,20 @@ function initPhase4() {
       }
     });
   });
+
+  // 4. CSV export download feedback banner ([data-export-csv])
+  document.querySelectorAll('[data-export-csv]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const label = btn.getAttribute('data-export-csv') || 'CSV';
+      const type = btn.getAttribute('data-export-type') || '';
+      const banner = document.getElementById('pc-export-feedback');
+      const textEl = document.getElementById('pc-export-feedback-text');
+      if (banner && textEl) {
+        textEl.textContent = `Export CSV « ${label} » (${type}) téléchargé avec succès — UTF-8 avec BOM, séparateur « ; », tracé dans le journal d’audit.`;
+        banner.hidden = false;
+      }
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
