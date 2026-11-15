@@ -20,11 +20,15 @@ $qrSvg = (string) ($qrSvg ?? '');
   <p class="text-subhead text-white-80">
     Une fois installée sur l’écran d’accueil de votre téléphone, Prime Care s’ouvre comme une application native avec son splash screen Bleu nuit, sans barre d’adresse du navigateur.
   </p>
-  <div class="mt-3 flex items-center gap-2">
+  <div class="mt-3 flex items-center gap-2 flex-wrap">
     <span class="pc-badge pc-badge--hero" id="pwa-standalone-status">Mode : Navigateur web</span>
     <button type="button" class="pc-btn pc-btn--primary pc-btn--sm is-hidden" id="pwa-native-install-btn">
       <?= icon('download', '', 16) ?>
       <span>Installer maintenant</span>
+    </button>
+    <button type="button" class="pc-btn pc-btn--tinted pc-btn--sm" data-sheet-open="sheet-ios-install">
+      <?= icon('smartphone', '', 16) ?>
+      <span>Guide iPhone (3 étapes)</span>
     </button>
   </div>
 </section>

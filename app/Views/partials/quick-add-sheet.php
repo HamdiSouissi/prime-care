@@ -651,9 +651,35 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
         </label>
 
         <label class="pc-checkbox-row">
-          <input type="checkbox" name="is_handover" value="1">
+          <input type="checkbox" name="is_handover" id="note-is-handover-check" value="1">
           <span><strong>Transmission de fin de poste</strong> (joint automatiquement le résumé du poste et affiche le bandeau à la relève)</span>
         </label>
+      </div>
+
+      <?php
+      $shiftAutoSummary = [];
+      try {
+          $shiftAutoSummary = \App\Services\HandoverService::buildShiftSummary(null, 1);
+      } catch (\Throwable) {
+          $shiftAutoSummary = [];
+      }
+      ?>
+      <div class="pc-card pc-card--subtle" id="handover-auto-summary-preview">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-caption font-semibold uppercase text-brand">Récapitulatif automatique du poste</span>
+          <span class="text-caption font-mono text-muted">
+            <?= e((string) ($shiftAutoSummary['from_local'] ?? '08:00')) ?> &rarr; <?= e((string) ($shiftAutoSummary['to_local'] ?? date('H:i'))) ?>
+          </span>
+        </div>
+        <div class="text-footnote font-semibold">
+          <?= e((string) ($shiftAutoSummary['summary_text'] ?? 'Mesures, prises, repas et soins du poste agrégés automatiquement')) ?>
+        </div>
+        <div class="pc-handover-banner__chips mt-2">
+          <span class="pc-chip"><?= (int) ($shiftAutoSummary['measures_total'] ?? 0) ?> mesure(s)</span>
+          <span class="pc-chip"><?= (int) ($shiftAutoSummary['intakes_given'] ?? 0) ?> prise(s) donnée(s)</span>
+          <span class="pc-chip"><?= (int) ($shiftAutoSummary['meals_count'] ?? 0) ?> repas (<?= (int) ($shiftAutoSummary['avg_portion_pct'] ?? 100) ?> %)</span>
+          <span class="pc-chip"><?= (int) ($shiftAutoSummary['care_checks_count'] ?? 0) ?> soin(s)</span>
+        </div>
       </div>
 
       <button type="submit" class="pc-btn pc-btn--primary pc-btn--lg pc-btn--block">
@@ -661,5 +687,52 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
         <span>Publier dans le journal</span>
       </button>
     </form>
+  </div>
+</div>
+
+<!-- 8. Guide d'installation iPhone en 3 étapes (§4 bis.2) -->
+<div class="pc-sheet-backdrop" id="sheet-ios-install" role="dialog" aria-modal="true" aria-labelledby="sheet-ios-install-title">
+  <div class="pc-sheet">
+    <div class="pc-sheet__handle" aria-hidden="true"></div>
+    <div class="pc-sheet__header">
+      <div>
+        <h2 class="pc-sheet__title" id="sheet-ios-install-title">Installer sur iPhone (Safari)</h2>
+        <p class="text-caption text-muted">Plein écran autonome en 3 étapes rapides</p>
+      </div>
+      <button type="button" class="pc-btn pc-btn--ghost pc-btn--icon" data-sheet-close aria-label="Fermer">
+        <?= icon('x', '', 22) ?>
+      </button>
+    </div>
+
+    <div class="pc-stack gap-3">
+      <ol class="pc-install-steps">
+        <li>
+          <span class="pc-install-steps__num">1</span>
+          <div>
+            <strong>Ouvrir Prime Care dans Safari</strong>
+            <p class="text-footnote text-muted">Assurez-vous d’utiliser le navigateur Safari sur iPhone ou iPad (iOS 16.4+).</p>
+          </div>
+        </li>
+        <li>
+          <span class="pc-install-steps__num">2</span>
+          <div>
+            <strong>Appuyer sur le bouton « Partager »</strong>
+            <p class="text-footnote text-muted">Touchez l’icône carrée avec une flèche vers le haut dans la barre inférieure de Safari.</p>
+          </div>
+        </li>
+        <li>
+          <span class="pc-install-steps__num">3</span>
+          <div>
+            <strong>Choisir « Sur l’écran d’accueil » puis « Ajouter »</strong>
+            <p class="text-footnote text-muted">Lancez ensuite Prime Care depuis votre écran d’accueil pour profiter du plein écran sans barre navigateur.</p>
+          </div>
+        </li>
+      </ol>
+
+      <button type="button" class="pc-btn pc-btn--primary pc-btn--block" data-sheet-close>
+        <?= icon('check', '', 18) ?>
+        <span>J’ai compris</span>
+      </button>
+    </div>
   </div>
 </div>
