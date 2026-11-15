@@ -163,15 +163,28 @@ L'assistant :
 
 ---
 
-## 7. Tâches planifiées (`crontab`) & Sauvegardes chiffrées
+## 7. Tâches planifiées (`crontab`), Chiffrement (`age` / OpenSSL) & Copie distante (`BACKUP_REMOTE`)
 
-Éditez la crontab de l'utilisateur `www-data` (`crontab -u www-data -e`) :
+Créez d'abord le fichier d'environnement hors du dépôt `/etc/prime-care/backup.env` (`chmod 600`, propriétaire `www-data:www-data`) :
+```bash
+# /etc/prime-care/backup.env
+# Si le binaire `age` est présent sur le serveur et AGE_RECIPIENT renseigné, bin/backup.sh chiffre avec `age` ;
+# sinon il utilise automatiquement `openssl enc -aes-256-cbc -pbkdf2`.
+AGE_RECIPIENT="age1..."
+AGE_IDENTITY="/etc/prime-care/age.key"
+PRIME_CARE_BACKUP_KEY="VotreCleDeChiffrementHDSLongueEtSecrete"
+
+# Cible rsync ou sftp:// pour la copie automatique de l'archive chiffrée vers un second emplacement HDS
+BACKUP_REMOTE="backup-hds@second-site-hds.exemple.fr:/var/backups/prime-care"
+```
+
+Éditez ensuite la crontab de l'utilisateur `www-data` (`crontab -u www-data -e`) :
 ```cron
 # Exécution toutes les minutes du moteur de planification, d'alertes, d'envoi Web Push/SMTP et de purge RGPD
 * * * * * /usr/bin/php /var/www/prime-care/cron/run.php >> /var/www/prime-care/storage/logs/cron.log 2>&1
 
-# Sauvegarde quotidienne chiffrée AES-256 à 03h15 (rotation automatique à 30 jours)
-15 3 * * * PRIME_CARE_BACKUP_KEY="VotreCleDeChiffrementHDSLongueEtSecrete" /var/www/prime-care/bin/backup.sh >> /var/www/prime-care/storage/logs/backup.log 2>&1
+# Sauvegarde quotidienne chiffrée à 03h15 avec copie distante BACKUP_REMOTE et rotation locale à 30 jours
+15 3 * * * /var/www/prime-care/bin/backup.sh >> /var/www/prime-care/storage/logs/backup.log 2>&1
 ```
 
 ---

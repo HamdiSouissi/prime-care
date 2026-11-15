@@ -1,10 +1,23 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Prime Care v1.0.0 — Script de restauration d'une sauvegarde chiffrée (Phase 4 §6.2)
+# Prime Care v1.0.0 — Script de restauration d'une sauvegarde chiffrée (Phase 4 §6.2 & H6)
 # Usage :
 #   PRIME_CARE_BACKUP_KEY="..." ./bin/restore.sh <fichier.tar.gz.enc> [nom_base_cible]
+#   ou avec age : AGE_IDENTITY="/etc/prime-care/age.key" ./bin/restore.sh <fichier.tar.gz.enc> [nom_base_cible]
 # ==============================================================================
 set -euo pipefail
+
+ENV_FILE="${PRIME_CARE_ENV_FILE:-/etc/prime-care/backup.env}"
+set -a
+if [[ -f "${ENV_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  source "${ENV_FILE}"
+elif [[ -f "${HOME}/.config/prime-care/backup.env" ]]; then
+  # shellcheck disable=SC1090
+  source "${HOME}/.config/prime-care/backup.env"
+fi
+set +a
+export PRIME_CARE_BACKUP_KEY="${PRIME_CARE_BACKUP_KEY:-}"
 
 if [[ $# -lt 1 ]]; then
   echo "Usage : PRIME_CARE_BACKUP_KEY=\"...\" $0 <archive.tar.gz.enc> [db_name]" >&2
@@ -20,11 +33,6 @@ DB_USER="${PRIME_CARE_DB_USER:-root}"
 DB_PASS="${PRIME_CARE_DB_PASS:-}"
 RESTORE_UPLOADS_DIR="${PRIME_CARE_RESTORE_STORAGE_DIR:-${ROOT_DIR}/storage}"
 
-if [[ -z "${PRIME_CARE_BACKUP_KEY:-}" ]]; then
-  echo "[ERREUR] La variable d'environnement PRIME_CARE_BACKUP_KEY est obligatoire pour déchiffrer la sauvegarde." >&2
-  exit 1
-fi
-
 if [[ ! -f "${ARCHIVE_ENC}" ]]; then
   echo "[ERREUR] Fichier de sauvegarde introuvable : ${ARCHIVE_ENC}" >&2
   exit 1
@@ -35,11 +43,24 @@ trap 'rm -rf "${WORK_DIR}"' EXIT
 
 BUNDLE_TAR="${WORK_DIR}/bundle.tar.gz"
 
-echo "[1/3] Déchiffrement AES-256-CBC (PBKDF2) de ${ARCHIVE_ENC}..."
-openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 \
-  -in "${ARCHIVE_ENC}" \
-  -out "${BUNDLE_TAR}" \
-  -pass env:PRIME_CARE_BACKUP_KEY
+if head -c 22 "${ARCHIVE_ENC}" 2>/dev/null | grep -q "age-encryption.org/v1"; then
+  if ! command -v age >/dev/null 2>&1 || [[ -z "${AGE_IDENTITY:-}" ]]; then
+    echo "[ERREUR] L'archive est chiffrée avec age : le binaire 'age' et AGE_IDENTITY sont requis." >&2
+    exit 1
+  fi
+  echo "[1/3] Déchiffrement age de ${ARCHIVE_ENC}..."
+  age -d -i "${AGE_IDENTITY}" -o "${BUNDLE_TAR}" "${ARCHIVE_ENC}"
+else
+  if [[ -z "${PRIME_CARE_BACKUP_KEY:-}" ]]; then
+    echo "[ERREUR] La variable d'environnement PRIME_CARE_BACKUP_KEY est obligatoire pour déchiffrer la sauvegarde." >&2
+    exit 1
+  fi
+  echo "[1/3] Déchiffrement OpenSSL AES-256-CBC (PBKDF2) de ${ARCHIVE_ENC}..."
+  openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 \
+    -in "${ARCHIVE_ENC}" \
+    -out "${BUNDLE_TAR}" \
+    -pass env:PRIME_CARE_BACKUP_KEY
+fi
 
 tar -xzf "${BUNDLE_TAR}" -C "${WORK_DIR}"
 
