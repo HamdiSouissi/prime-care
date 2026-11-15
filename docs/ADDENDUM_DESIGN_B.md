@@ -88,9 +88,24 @@ Pour respecter une politique CSP stricte sans `unsafe-inline`, la couleur d’av
 
 ---
 
-## 8. Vitrine `/design` et documentation `docs/DESIGN_SYSTEM.md`
+## 8. Phase 2 — Composants médicaux « Bleu nuit »
 
-- La page `/design` et le document `docs/DESIGN_SYSTEM.md` présentent la direction artistique **Proposition B — Bleu nuit**, ses tokens exacts, le dégradé 45° `#5E5CE6 → #BF5AF2`, les cartes 24 px sans ombre, l’en-tête Bleu nuit pleine largeur à coins bas 32 px, la barre d’onglets pilule Bleu nuit et le loader Bleu nuit avec barre de progression.
+1. **Chronologie du poste sur l’accueil aide-soignante** :
+   - Fil vertical structuré sous l’en-tête Bleu nuit :
+     - **Fait** : ligne apaisée avec coche verte (`--ok`) et horodatage d’exécution ;
+     - **En retard** : carte à bordure/accent rouge (`--danger`) avec badge icône + texte « En retard » et bouton d’action directe (« Saisir » / « Valider ») ;
+     - **Tâche en cours mise en avant** : carte **Bleu nuit (`#0A1633`)** à rayon 24 px avec halos subtils, texte blanc et boutons d’action immédiate (« Donné » / « Non donné » ou « Saisir la glycémie ») ;
+     - **À venir** : cartes groupées sobres avec l’heure prévue en chiffres tabulaires.
+2. **Bloc héros Bleu nuit (détail d’une mesure `/health/{code}`)** :
+   - Carte supérieure sur fond `#0A1633` avec halos, affichant la dernière valeur mesurée en **graisse `800`** (`tabular-nums`), l’unité, le badge de statut (icône + libellé explicite), le contexte et l’auteur.
+   - Pour la glycémie : **jauge horizontale à 3 zones** (`Hypo < 0,70`, `Cible 0,80–1,30 / < 1,80`, `Hyper > 2,50`) avec curseur positionné par classe CSS (aucun `style=` en ligne).
+3. **Graphiques ApexCharts (7, 30 et 90 jours)** :
+   - Couleurs des modules (`--c-vitals: #FF2D55`, `--c-meds: #00C7BE`, `--c-meals: #FF9500`, `--brand: #5E5CE6`), bandes horizontales de seuils (cible verte translucide, seuil critique rouge en pointillés), chiffres tabulaires, lisibilité parfaite en mode clair et sombre, animations désactivées si `prefers-reduced-motion: reduce`, et **résumé textuel accessible** sous chaque graphique.
+4. **Barre de portion de repas en 4 segments & Photos avant/après côte à côte** :
+   - Sélecteur tactile de portion mangée (`Rien 0 %`, `1/4 · 25 %`, `Moitié · 50 %`, `3/4 · 75 %`, `Tout · 100 %`) avec jauge visuelle à 4 segments.
+   - Grille de deux emplacements photo côte à côte (**Avant le repas** / **Après le repas**) avec aperçu miniature et barre de progression de compression.
+5. **Vitrine `/design` et documentation `docs/DESIGN_SYSTEM.md`** :
+   - Présentent l’ensemble des tokens et composants des Phases 1 et 2.
 
 ---
 
