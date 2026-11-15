@@ -18,12 +18,32 @@ final class ThresholdService
         return (int) round($gPerLiter * 100.0);
     }
 
+    public static function gPerLToMgPerDl(float $gPerLiter): int
+    {
+        return self::gToMgDl($gPerLiter);
+    }
+
     /**
      * Convert mg/dL to g/L (100 mg/dL = 1.00 g/L).
      */
     public static function mgDlToG(float $mgPerDeciliter): float
     {
         return round($mgPerDeciliter / 100.0, 2);
+    }
+
+    public static function mgPerDlToGPerL(float $mgPerDeciliter): float
+    {
+        return self::mgDlToG($mgPerDeciliter);
+    }
+
+    /**
+     * Compute a percentage position (5..95) on the 3-zone glycemia gauge (0.40..3.00 g/L).
+     */
+    public static function computeGaugePercentage(float $valueGL): float
+    {
+        $clamped = max(0.40, min(3.00, $valueGL));
+        $pct = (($clamped - 0.40) / 2.60) * 100.0;
+        return max(5.0, min(95.0, round($pct, 1)));
     }
 
     /**

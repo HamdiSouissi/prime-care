@@ -447,3 +447,111 @@ if (!function_exists('can')) {
     }
 }
 
+if (!function_exists('quick_add_context')) {
+    /**
+     * Load shared context for the global '+' quick-add bottom sheets (measure entry, meal entry,
+     * as-needed medication, note/handover, quick care).
+     *
+     * @return array<string, mixed>
+     */
+    function quick_add_context(): array
+    {
+        static $cached = null;
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        try {
+            $pdo = \App\Core\Database::connection();
+            $tz = new DateTimeZone((string) Config::get('app.timezone', 'Europe/Paris'));
+            $nowLocal = new DateTimeImmutable('now', $tz);
+
+            $mtStmt = $pdo->query(
+                'SELECT * FROM `measure_types` WHERE `patient_id` = 1 AND `is_active` = 1 AND `deleted_at` IS NULL ORDER BY `sort_order` ASC, `id` ASC'
+            );
+            $measureTypes = $mtStmt !== false ? $mtStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+            $patStmt = $pdo->query('SELECT * FROM `patients` WHERE `id` = 1 LIMIT 1');
+            $patient = $patStmt !== false ? ($patStmt->fetch(PDO::FETCH_ASSOC) ?: []) : [];
+
+            $contactStmt = $pdo->query(
+                'SELECT * FROM `patient_contacts` WHERE `patient_id` = 1 AND `deleted_at` IS NULL ORDER BY `is_emergency_priority` DESC, `sort_order` ASC LIMIT 2'
+            );
+            $contacts = $contactStmt !== false ? $contactStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+            $favStmt = $pdo->query(
+                'SELECT * FROM `food_favorites` WHERE `patient_id` = 1 AND `is_active` = 1 AND `deleted_at` IS NULL ORDER BY `sort_order` ASC'
+            );
+            $favorites = $favStmt !== false ? $favStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+            $ciStmt = $pdo->query(
+                'SELECT * FROM `care_items` WHERE `patient_id` = 1 AND `is_active` = 1 AND `deleted_at` IS NULL ORDER BY `sort_order` ASC'
+            );
+            $careItems = $ciStmt !== false ? $ciStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+            $anStmt = $pdo->query(
+                'SELECT p.*, p.id AS prescription_id, m.name AS medication_name, m.form AS medication_form
+                 FROM `prescriptions` p
+                 INNER JOIN `medications` m ON m.id = p.medication_id
+                 WHERE p.patient_id = 1 AND p.as_needed = 1 AND p.is_active = 1 AND p.deleted_at IS NULL'
+            );
+            $asNeeded = $anStmt !== false ? $anStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            foreach ($asNeeded as &$anRow) {
+                $anRow['can_give'] = true;
+            }
+            unset($anRow);
+
+            $handoverSummary = \App\Services\HandoverService::buildShiftSummary();
+            $deducedMealType = \App\Services\MealService::deduceMealType($nowLocal->format('H:i'));
+            $insulinRotation = \App\Services\InsulinService::getRotationSuggestion(1);
+
+            // Deduce glycemia context from time of day
+            $hour = (int) $nowLocal->format('G');
+            $deducedGlycemiaContext = match (true) {
+                $hour >= 5 && $hour <= 9 => 'fasting',
+                ($hour >= 11 && $hour <= 12) || ($hour >= 18 && $hour <= 19) => 'pre_meal',
+                ($hour >= 13 && $hour <= 15) || ($hour >= 20 && $hour <= 21) => 'post_meal',
+                default => 'bedtime',
+            };
+
+            $cached = [
+                'measure_types' => $measureTypes,
+                'patient' => $patient,
+                'priority_contact' => $contacts[0] ?? null,
+                'food_favorites' => $favorites,
+                'care_items' => $careItems,
+                'as_needed_prescriptions' => $asNeeded,
+                'as_needed' => $asNeeded,
+                'insulin_rotation' => $insulinRotation,
+                'handover_summary' => $handoverSummary,
+                'now_date' => $nowLocal->format('Y-m-d'),
+                'now_time' => $nowLocal->format('H:i'),
+                'deduced_meal_type' => $deducedMealType,
+                'default_meal_type' => $deducedMealType,
+                'deduced_glycemia_context' => $deducedGlycemiaContext,
+                'default_glycemia_context' => $deducedGlycemiaContext,
+            ];
+        } catch (Throwable) {
+            $cached = [
+                'measure_types' => [],
+                'patient' => [],
+                'priority_contact' => null,
+                'food_favorites' => [],
+                'care_items' => [],
+                'as_needed_prescriptions' => [],
+                'as_needed' => [],
+                'insulin_rotation' => [],
+                'handover_summary' => [],
+                'now_date' => date('Y-m-d'),
+                'now_time' => date('H:i'),
+                'deduced_meal_type' => 'lunch',
+                'default_meal_type' => 'lunch',
+                'deduced_glycemia_context' => 'pre_meal',
+                'default_glycemia_context' => 'pre_meal',
+            ];
+        }
+
+        return $cached;
+    }
+}
+

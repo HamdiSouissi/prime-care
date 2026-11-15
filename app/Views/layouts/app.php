@@ -18,7 +18,7 @@ $hideNavbar = (bool) ($hideNavbar ?? false);
 /** @var string|null $themeColor */
 $themeColor = isset($themeColor) && is_string($themeColor) ? $themeColor : null;
 /** @var string $statusBarStyle */
-$statusBarStyle = isset($statusBarStyle) && is_string($statusBarStyle) ? $statusBarStyle : 'default';
+$statusBarStyle = isset($statusBarStyle) && is_string($statusBarStyle) ? $statusBarStyle : 'black-translucent';
 
 $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
 ?>
@@ -30,9 +30,10 @@ $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
   <?php if ($themeColor !== null): ?>
     <meta name="theme-color" content="<?= e($themeColor) ?>">
   <?php else: ?>
-    <meta name="theme-color" content="#F4F7FC" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0A1633" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#060B1A" media="(prefers-color-scheme: dark)">
   <?php endif; ?>
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="<?= e($statusBarStyle) ?>">
   <meta name="apple-mobile-web-app-title" content="Prime Care">
@@ -46,6 +47,10 @@ $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
   <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/brand/apple-touch-icon.png">
+  <link rel="apple-touch-startup-image" href="/assets/brand/splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+  <link rel="apple-touch-startup-image" href="/assets/brand/splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/assets/brand/splash/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/assets/brand/splash/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
   <link rel="stylesheet" href="<?= e(asset('css/tokens.css')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/base.css')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/components.css')) ?>">
@@ -87,6 +92,7 @@ $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
   <?= View::partial('quick-add-sheet') ?>
   <?= View::partial('install-sheet') ?>
 
+  <script nonce="<?= e($cspNonce) ?>" src="<?= e(asset('vendor/apexcharts.min.js')) ?>"></script>
   <script type="module" nonce="<?= e($cspNonce) ?>" src="<?= e(asset('js/app.js')) ?>"></script>
 </body>
 </html>

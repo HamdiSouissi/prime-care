@@ -8,13 +8,14 @@ return [
         'slogan' => 'Suivi de soins à domicile',
         'publisher' => 'Prime Vision Solutions',
         'publisher_url' => 'https://primevisionsolutions.fr',
-        'version' => '1.0.0-phase1',
+        'version' => '1.1.0-phase2',
         'url' => 'http://localhost:8000',
         'env' => 'development', // 'development' | 'production' | 'testing'
         'debug' => true,
         'timezone' => 'Europe/Paris',
         'db_timezone' => 'UTC',
         'locale' => 'fr',
+        'loader_min_ms' => 2000, // Durée minimale du loader de lancement (2 secondes)
     ],
 
     'db' => [

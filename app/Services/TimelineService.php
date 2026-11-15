@@ -368,6 +368,25 @@ final class TimelineService
         // Sort descending by timestamp_utc
         usort($items, static fn(array $a, array $b): int => strcmp($b['timestamp_utc'], $a['timestamp_utc']));
 
+        // Add view compatibility aliases on each item
+        foreach ($items as &$it) {
+            $it['module'] = $it['module_class'] ?? 'notes';
+            $it['badge_class'] = $it['status_badge_class'] ?? 'pc-status-pill--neutral';
+            $it['badge_label'] = $it['status_label'] ?? '';
+            $bodyParts = [];
+            if (!empty($it['value_display'])) {
+                $bodyParts[] = $it['value_display'];
+            }
+            if (!empty($it['subtitle'])) {
+                $bodyParts[] = $it['subtitle'];
+            }
+            if (!empty($it['comment'])) {
+                $bodyParts[] = $it['comment'];
+            }
+            $it['body'] = implode(' · ', $bodyParts);
+        }
+        unset($it);
+
         $total = count($items);
         $safePage = max(1, $page);
         $safePerPage = max(5, min(100, $perPage));

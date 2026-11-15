@@ -34,7 +34,7 @@ final class EditWindowService
         int $userId,
         string $userRole,
         ?string $modifiedReason = null,
-        ?string $nowUtc = null
+        string|DateTimeImmutable|null $nowUtc = null
     ): array {
         if ($userRole === 'viewer') {
             return [
@@ -51,9 +51,13 @@ final class EditWindowService
 
         $utcTz = new DateTimeZone('UTC');
         $createdDt = new DateTimeImmutable($createdAtStr, $utcTz);
-        $nowDt = $nowUtc !== null
-            ? new DateTimeImmutable($nowUtc, $utcTz)
-            : new DateTimeImmutable('now', $utcTz);
+        if ($nowUtc instanceof DateTimeImmutable) {
+            $nowDt = $nowUtc->setTimezone($utcTz);
+        } elseif (is_string($nowUtc) && $nowUtc !== '') {
+            $nowDt = new DateTimeImmutable($nowUtc, $utcTz);
+        } else {
+            $nowDt = new DateTimeImmutable('now', $utcTz);
+        }
 
         $elapsedSeconds = max(0, $nowDt->getTimestamp() - $createdDt->getTimestamp());
         $within30Min = $elapsedSeconds <= (self::WINDOW_MINUTES * 60);
@@ -65,7 +69,7 @@ final class EditWindowService
                     'allowed' => false,
                     'requires_reason' => false,
                     'http_status' => 403,
-                    'code' => 'NOT_RECORD_OWNER',
+                    'code' => 'NOT_OWNER',
                     'message' => 'Une aide-soignante ne peut modifier que ses propres saisies.',
                 ];
             }
@@ -96,7 +100,7 @@ final class EditWindowService
                 'allowed' => false,
                 'requires_reason' => true,
                 'http_status' => 422,
-                'code' => 'MODIFICATION_REASON_REQUIRED',
+                'code' => 'REASON_REQUIRED',
                 'message' => 'Un motif de modification est obligatoire au-delà de 30 minutes ou sur la saisie d’un tiers.',
             ];
         }

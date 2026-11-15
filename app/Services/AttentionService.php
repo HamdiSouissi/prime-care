@@ -193,12 +193,14 @@ final class AttentionService
 
         $count = count($items);
         $hasCritical = false;
-        foreach ($items as $it) {
+        foreach ($items as &$it) {
+            $it['link'] = $it['action_url'] ?? '/today';
+            $it['time'] = $it['time_local'] ?? '';
             if ($it['severity'] === 'critical') {
                 $hasCritical = true;
-                break;
             }
         }
+        unset($it);
 
         if ($count === 0) {
             $headline = 'Tout va bien';

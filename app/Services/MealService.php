@@ -36,12 +36,18 @@ final class MealService
     /**
      * Deduce the meal_type from a local HH:MM time (or current Europe/Paris time).
      */
-    public static function deduceMealType(?string $localTimeHhMm = null): string
+    public static function deduceMealType(int|string|null $localTimeHhMm = null): string
     {
-        if ($localTimeHhMm === null || !preg_match('/^(\d{1,2}):(\d{2})/', trim($localTimeHhMm), $m)) {
-            $tz = new DateTimeZone((string) Config::get('app.timezone', 'Europe/Paris'));
-            $nowLocal = new DateTimeImmutable('now', $tz);
-            $minutesOfDay = ((int) $nowLocal->format('G')) * 60 + (int) $nowLocal->format('i');
+        if (is_int($localTimeHhMm)) {
+            $minutesOfDay = $localTimeHhMm * 60;
+        } elseif ($localTimeHhMm === null || !preg_match('/^(\d{1,2}):(\d{2})/', trim($localTimeHhMm), $m)) {
+            if (is_string($localTimeHhMm) && ctype_digit(trim($localTimeHhMm))) {
+                $minutesOfDay = ((int) trim($localTimeHhMm)) * 60;
+            } else {
+                $tz = new DateTimeZone((string) Config::get('app.timezone', 'Europe/Paris'));
+                $nowLocal = new DateTimeImmutable('now', $tz);
+                $minutesOfDay = ((int) $nowLocal->format('G')) * 60 + (int) $nowLocal->format('i');
+            }
         } else {
             $minutesOfDay = ((int) $m[1]) * 60 + (int) $m[2];
         }
@@ -119,6 +125,13 @@ final class MealService
             'max_utc' => $afterMax,
         ]);
         $after = $afterStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if ($before !== null) {
+            $before['time_local'] = ScheduleService::utcToLocalParis((string) $before['measured_at'], 'H:i');
+        }
+        if ($after !== null) {
+            $after['time_local'] = ScheduleService::utcToLocalParis((string) $after['measured_at'], 'H:i');
+        }
 
         return [
             'before' => $before,

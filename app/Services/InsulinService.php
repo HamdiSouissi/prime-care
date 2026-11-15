@@ -60,6 +60,7 @@ final class InsulinService
                 return [
                     'matched' => true,
                     'proposed_dose' => $dose,
+                    'dose' => $dose,
                     'bracket_label' => sprintf(
                         '%s à %s g/L',
                         number_format($min, 2, ',', ''),
@@ -67,6 +68,7 @@ final class InsulinService
                     ),
                     'note' => $note,
                     'disclaimer' => self::DISCLAIMER,
+                    'label' => self::DISCLAIMER . ' : ' . $dose . ' UI (' . $note . ')',
                 ];
             }
         }
@@ -74,10 +76,17 @@ final class InsulinService
         return [
             'matched' => false,
             'proposed_dose' => null,
+            'dose' => null,
             'bracket_label' => 'Hors tranches du tableau',
             'note' => 'Valeur hors des tranches configurées — contacter le responsable ou le médecin.',
             'disclaimer' => self::DISCLAIMER,
+            'label' => self::DISCLAIMER . ' : hors tranches configurées',
         ];
+    }
+
+    public static function lookupDoseFromTable(array $correctionTable, ?float $glycemiaGL): array
+    {
+        return self::lookupDose($correctionTable, $glycemiaGL);
     }
 
     /**
@@ -130,13 +139,19 @@ final class InsulinService
             ];
         }
 
+        $lastLabel = $lastSite !== null && isset(self::INJECTION_SITES[$lastSite])
+            ? self::INJECTION_SITES[$lastSite]
+            : null;
+
         return [
             'last_site' => $lastSite,
-            'last_site_label' => $lastSite !== null && isset(self::INJECTION_SITES[$lastSite])
-                ? self::INJECTION_SITES[$lastSite]
-                : null,
+            'last_site_label' => $lastLabel,
+            'last_code' => $lastSite,
+            'last_label' => $lastLabel,
             'suggested_site' => $suggestedSite,
             'suggested_site_label' => self::INJECTION_SITES[$suggestedSite],
+            'suggested_code' => $suggestedSite,
+            'suggested_label' => self::INJECTION_SITES[$suggestedSite],
             'sites' => $sitesList,
         ];
     }

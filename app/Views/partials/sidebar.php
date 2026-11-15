@@ -27,7 +27,15 @@ $isAdmin = Auth::hasRole('admin');
     </a>
     <a href="/health" class="pc-sidebar__link <?= $activeTab === 'health' ? 'is-active' : '' ?>">
       <?= icon('heart-pulse', '', 20) ?>
-      <span>Santé & Constantes</span>
+      <span>Santé &amp; Constantes</span>
+    </a>
+    <a href="/treatments" class="pc-sidebar__link">
+      <?= icon('pill', '', 20) ?>
+      <span>Traitements &amp; Insuline</span>
+    </a>
+    <a href="/meals" class="pc-sidebar__link">
+      <?= icon('utensils', '', 20) ?>
+      <span>Repas &amp; Photos</span>
     </a>
     <a href="/journal" class="pc-sidebar__link <?= $activeTab === 'journal' ? 'is-active' : '' ?>">
       <?= icon('notebook-pen', '', 20) ?>
@@ -38,22 +46,30 @@ $isAdmin = Auth::hasRole('admin');
       <span>Fiche patient</span>
     </a>
     <?php if ($isAdmin) : ?>
+      <a href="/admin/treatments" class="pc-sidebar__link">
+        <?= icon('clipboard-list', '', 20) ?>
+        <span>Plan de traitement</span>
+      </a>
+      <a href="/admin/measures" class="pc-sidebar__link">
+        <?= icon('sliders', '', 20) ?>
+        <span>Mesures &amp; Seuils</span>
+      </a>
+      <a href="/settings" class="pc-sidebar__link">
+        <?= icon('settings', '', 20) ?>
+        <span>Réglages médicaux</span>
+      </a>
       <a href="/users" class="pc-sidebar__link <?= $activeTab === 'team' ? 'is-active' : '' ?>">
         <?= icon('users', '', 20) ?>
         <span>Équipe</span>
       </a>
-      <a href="/design" class="pc-sidebar__link <?= $activeTab === 'design' ? 'is-active' : '' ?>">
-        <?= icon('palette', '', 20) ?>
-        <span>Design System</span>
-      </a>
     <?php endif; ?>
-    <a href="/profile" class="pc-sidebar__link <?= $activeTab === 'profile' ? 'is-active' : '' ?>">
-      <?= icon('settings', '', 20) ?>
-      <span>Mon profil</span>
+    <a href="/install" class="pc-sidebar__link">
+      <?= icon('smartphone', '', 20) ?>
+      <span>Installer l’app</span>
     </a>
     <a href="/more" class="pc-sidebar__link <?= $activeTab === 'more' ? 'is-active' : '' ?>">
       <?= icon('more-horizontal', '', 20) ?>
-      <span>Plus & À propos</span>
+      <span>Plus &amp; À propos</span>
     </a>
   </nav>
 

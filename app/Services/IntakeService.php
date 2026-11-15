@@ -62,7 +62,7 @@ final class IntakeService
      */
     public static function computeDisplayStatus(
         array $intake,
-        ?string $referenceUtc = null,
+        string|DateTimeImmutable|null $referenceUtc = null,
         ?int $windowMinutes = null
     ): array {
         $dbStatus = (string) ($intake['status'] ?? 'pending');
@@ -88,9 +88,13 @@ final class IntakeService
 
         $windowMin = $windowMinutes ?? self::getWindowMinutes((int) ($intake['patient_id'] ?? 1));
         $utcTz = new DateTimeZone('UTC');
-        $nowDt = $referenceUtc !== null
-            ? new DateTimeImmutable($referenceUtc, $utcTz)
-            : new DateTimeImmutable('now', $utcTz);
+        if ($referenceUtc instanceof DateTimeImmutable) {
+            $nowDt = $referenceUtc->setTimezone($utcTz);
+        } elseif (is_string($referenceUtc) && $referenceUtc !== '') {
+            $nowDt = new DateTimeImmutable($referenceUtc, $utcTz);
+        } else {
+            $nowDt = new DateTimeImmutable('now', $utcTz);
+        }
         $schedDt = new DateTimeImmutable((string) $intake['scheduled_at'], $utcTz);
 
         $diffSeconds = $nowDt->getTimestamp() - $schedDt->getTimestamp();
@@ -267,8 +271,12 @@ final class IntakeService
                 }
             }
 
-            $givenDose = isset($payload['given_dose']) && $payload['given_dose'] !== '' && is_numeric($payload['given_dose'])
-                ? (float) $payload['given_dose']
+            $rawDoseInput = $payload['given_dose'] ?? ($payload['dose_given'] ?? null);
+            if (is_string($rawDoseInput)) {
+                $rawDoseInput = str_replace(',', '.', trim($rawDoseInput));
+            }
+            $givenDose = ($rawDoseInput !== null && $rawDoseInput !== '' && is_numeric($rawDoseInput))
+                ? (float) $rawDoseInput
                 : $proposedDose;
 
             $injectionSite = isset($payload['injection_site']) && trim((string) $payload['injection_site']) !== ''
@@ -322,6 +330,7 @@ final class IntakeService
                 'status' => 'given',
                 'given_at' => $effectiveNowUtc,
                 'given_dose' => $givenDose,
+                'dose_given' => $givenDose,
                 'injection_site' => $injectionSite,
                 'related_measure_id' => $relatedMeasureId,
                 'given_by' => $userId,
@@ -743,6 +752,18 @@ final class IntakeService
             'days_30_pct' => $w30['pct'],
             'days_30_given' => $w30['given'],
             'days_30_total' => $w30['total'],
+            'days_7' => [
+                'rate' => (float) $w7['pct'],
+                'given' => $w7['given'],
+                'skipped' => $tCounts['skipped'],
+                'total' => $w7['total'],
+            ],
+            'days_30' => [
+                'rate' => (float) $w30['pct'],
+                'given' => $w30['given'],
+                'skipped' => $tCounts['skipped'],
+                'total' => $w30['total'],
+            ],
             'by_medication' => $byMedication,
         ];
     }

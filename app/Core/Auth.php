@@ -677,6 +677,12 @@ final class Auth
     /**
      * Check if the authenticated user is authorized for a resource action via Policy.
      */
+    public static function role(): ?string
+    {
+        $user = self::user();
+        return is_array($user) && isset($user['role']) ? (string) $user['role'] : null;
+    }
+
     public static function can(string $resource, string $action): bool
     {
         $user = self::user();

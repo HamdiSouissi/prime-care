@@ -163,6 +163,7 @@ final class HandoverService
             'from_local' => $fromLocal,
             'to_local' => $toLocal,
             'measures_total' => $measuresTotal,
+            'measures_count' => $measuresTotal,
             'measures_out_of_target' => $measuresOut,
             'measures_critical' => $measuresCrit,
             'last_glycemia' => $lastGlycemia,
@@ -186,6 +187,7 @@ final class HandoverService
         $pdo = Database::connection();
         $stmt = $pdo->prepare(
             'SELECT n.*,
+                    nr.id AS read_receipt_id,
                     u.first_name AS author_first_name,
                     u.last_name AS author_last_name,
                     u.role AS author_role
@@ -196,7 +198,6 @@ final class HandoverService
                AND n.is_handover = 1
                AND n.deleted_at IS NULL
                AND n.recorded_by != :author_exclude
-               AND nr.id IS NULL
              ORDER BY n.created_at DESC
              LIMIT 1'
         );
@@ -206,11 +207,12 @@ final class HandoverService
             'author_exclude' => $userId,
         ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$row) {
+        if (!$row || $row['read_receipt_id'] !== null) {
             return null;
         }
 
         $row['created_at_local'] = ScheduleService::utcToLocalParis((string) $row['created_at'], 'd/m à H:i');
+        $row['recorded_at'] = (string) $row['created_at'];
         $row['summary_decoded'] = is_string($row['handover_summary'] ?? null)
             ? (json_decode((string) $row['handover_summary'], true) ?: [])
             : [];

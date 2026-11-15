@@ -1,6 +1,6 @@
 /**
  * Bottom Sheets & iOS Destructive Confirmation Alerts (§6.5)
- * Supports drag-to-close on handle, backdrop click, Escape key, and focus trapping.
+ * Supports drag-to-close on handle, backdrop click, Escape key, focus trapping, and sheet switching.
  */
 import { triggerHaptic } from './haptics.js';
 
@@ -13,7 +13,13 @@ export function openSheet(sheetId) {
     return;
   }
 
-  previousFocusedElement = document.activeElement;
+  if (activeSheetBackdrop && activeSheetBackdrop !== backdrop) {
+    activeSheetBackdrop.classList.remove('is-open');
+    activeSheetBackdrop.setAttribute('aria-hidden', 'true');
+  } else {
+    previousFocusedElement = document.activeElement;
+  }
+
   activeSheetBackdrop = backdrop;
   backdrop.classList.add('is-open');
   backdrop.setAttribute('aria-hidden', 'false');
@@ -21,7 +27,7 @@ export function openSheet(sheetId) {
   triggerHaptic(8);
 
   const firstFocusable = backdrop.querySelector(
-    'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])'
+    'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), select, textarea, button, [href]'
   );
   if (firstFocusable instanceof HTMLElement) {
     window.setTimeout(() => firstFocusable.focus(), 80);
@@ -53,23 +59,41 @@ export function closeSheet(backdrop = activeSheetBackdrop) {
 }
 
 export function initSheets() {
+  const plusBtn = document.getElementById('pc-tabbar-plus');
+  if (plusBtn) {
+    plusBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openSheet('quick-add-sheet');
+    });
+  }
+
   document.addEventListener('click', (e) => {
     const target = e.target;
     if (!(target instanceof Element)) {
       return;
     }
 
-    const openTrigger = target.closest('[data-open-sheet]');
+    const switchTrigger = target.closest('[data-switch-sheet]');
+    if (switchTrigger) {
+      e.preventDefault();
+      const nextId = switchTrigger.getAttribute('data-switch-sheet');
+      if (nextId) {
+        openSheet(nextId);
+      }
+      return;
+    }
+
+    const openTrigger = target.closest('[data-open-sheet], [data-sheet-open]');
     if (openTrigger) {
       e.preventDefault();
-      const id = openTrigger.getAttribute('data-open-sheet');
+      const id = openTrigger.getAttribute('data-open-sheet') || openTrigger.getAttribute('data-sheet-open');
       if (id) {
         openSheet(id);
       }
       return;
     }
 
-    const closeTrigger = target.closest('[data-close-sheet]');
+    const closeTrigger = target.closest('[data-close-sheet], [data-sheet-close]');
     if (closeTrigger) {
       e.preventDefault();
       const backdrop = closeTrigger.closest('.pc-sheet-backdrop, .pc-alert-backdrop');

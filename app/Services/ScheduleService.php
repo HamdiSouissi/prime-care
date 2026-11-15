@@ -36,6 +36,32 @@ final class ScheduleService
         return $localDt->setTimezone($utcTz)->format('Y-m-d H:i:s');
     }
 
+    public static function localDateAndTimeToUtc(string $localDate, string $hhMm): string
+    {
+        return self::localParisToUtc($localDate, $hhMm);
+    }
+
+    /**
+     * Generate occurrences for a DateTimeImmutable window [from, to].
+     *
+     * @return array{intakes_created: int, expectations_created: int, intakes_inserted: int, expectations_inserted: int}
+     */
+    public static function generateForWindow(DateTimeImmutable $from, DateTimeImmutable $to, int $patientId = 1): array
+    {
+        $utcTz = new DateTimeZone('UTC');
+        $res = self::generateForRange(
+            $from->setTimezone($utcTz)->format('Y-m-d H:i:s'),
+            $to->setTimezone($utcTz)->format('Y-m-d H:i:s'),
+            $patientId
+        );
+        return [
+            'intakes_created' => $res['intakes_inserted'],
+            'expectations_created' => $res['expectations_inserted'],
+            'intakes_inserted' => $res['intakes_inserted'],
+            'expectations_inserted' => $res['expectations_inserted'],
+        ];
+    }
+
     /**
      * Convert a UTC DATETIME string to Europe/Paris formatted time (HH:MM or custom format).
      */
