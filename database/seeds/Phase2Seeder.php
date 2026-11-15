@@ -558,19 +558,19 @@ final class Phase2Seeder
         $mealPhotoStmt = $pdo->prepare(
             'INSERT INTO `meal_photos`
              (`patient_id`, `meal_id`, `kind`, `photo_path`, `thumb_path`, `sort_order`, `created_at`, `updated_at`, `created_by`)
-             VALUES (1, :meal_id, :kind, :photo, :thumb, :ord, :at, UTC_TIMESTAMP(), :by)'
+             VALUES (1, :meal_id, :kind, :photo, :thumb, :ord, :at, :updated_at, :by)'
         );
 
         $careCheckStmt = $pdo->prepare(
             'INSERT INTO `care_checks`
              (`patient_id`, `care_item_id`, `checked_at`, `comment`, `performed_by`, `created_at`, `updated_at`, `created_by`)
-             VALUES (1, :item_id, :at, :comment, :by, UTC_TIMESTAMP(), UTC_TIMESTAMP(), 1)'
+             VALUES (1, :item_id, :at, :comment, :by, :created_at, :updated_at, 1)'
         );
 
         $noteStmt = $pdo->prepare(
             'INSERT INTO `notes`
              (`patient_id`, `category`, `priority`, `title`, `content`, `is_handover`, `handover_summary`, `recorded_by`, `created_at`, `updated_at`, `created_by`)
-             VALUES (1, :cat, :prio, :title, :content, :handover, :summary, :by, :at, UTC_TIMESTAMP(), 1)'
+             VALUES (1, :cat, :prio, :title, :content, :handover, :summary, :by, :at, :updated_at, 1)'
         );
 
         $glycemiaSeries = [
@@ -904,6 +904,7 @@ final class Phase2Seeder
                         'thumb' => $demoPhotos['meal_before_thumb'],
                         'ord' => 1,
                         'at' => $eatenUtc,
+                        'updated_at' => $eatenUtc,
                         'by' => $ms['by'],
                     ]);
                     $mealPhotoStmt->execute([
@@ -913,6 +914,7 @@ final class Phase2Seeder
                         'thumb' => $demoPhotos['meal_after_thumb'],
                         'ord' => 2,
                         'at' => $eatenUtc,
+                        'updated_at' => $eatenUtc,
                         'by' => $ms['by'],
                     ]);
                 }
@@ -926,33 +928,47 @@ final class Phase2Seeder
                     'at' => $morningCareUtc,
                     'comment' => 'Toilette complète au lavabo, peau saine.',
                     'by' => $caregiverMorning,
+                    'created_at' => $morningCareUtc,
+                    'updated_at' => $morningCareUtc,
                 ]);
+                $feetUtc = ScheduleService::localParisToUtc($dayStr, '08:45');
                 $careCheckStmt->execute([
                     'item_id' => $careItemIds['diabetic_feet'],
-                    'at' => ScheduleService::localParisToUtc($dayStr, '08:45'),
+                    'at' => $feetUtc,
                     'comment' => 'Inspection interdigitale RAS, hydratation cutanée réalisée.',
                     'by' => $caregiverMorning,
+                    'created_at' => $feetUtc,
+                    'updated_at' => $feetUtc,
                 ]);
+                $hydGlassUtc = ScheduleService::localParisToUtc($dayStr, '09:30');
                 $careCheckStmt->execute([
                     'item_id' => $careItemIds['hydration_glass'],
-                    'at' => ScheduleService::localParisToUtc($dayStr, '09:30'),
+                    'at' => $hydGlassUtc,
                     'comment' => 'Verre d’eau 200 mL bu entièrement.',
                     'by' => $caregiverMorning,
+                    'created_at' => $hydGlassUtc,
+                    'updated_at' => $hydGlassUtc,
                 ]);
             }
 
             if (!$isToday) {
+                $walkUtc = ScheduleService::localParisToUtc($dayStr, '15:30');
                 $careCheckStmt->execute([
                     'item_id' => $careItemIds['walker_walk'],
-                    'at' => ScheduleService::localParisToUtc($dayStr, '15:30'),
+                    'at' => $walkUtc,
                     'comment' => 'Marche accompagnée dans le salon et le couloir (15 min).',
                     'by' => $caregiverMorning,
+                    'created_at' => $walkUtc,
+                    'updated_at' => $walkUtc,
                 ]);
+                $bedtimeCareUtc = ScheduleService::localParisToUtc($dayStr, '21:30');
                 $careCheckStmt->execute([
                     'item_id' => $careItemIds['bedtime_comfort'],
-                    'at' => ScheduleService::localParisToUtc($dayStr, '21:30'),
+                    'at' => $bedtimeCareUtc,
                     'comment' => 'Installation pour la nuit, sonnette et verre d’eau à portée de main.',
                     'by' => $caregiverEvening,
+                    'created_at' => $bedtimeCareUtc,
+                    'updated_at' => $bedtimeCareUtc,
                 ]);
             }
 
@@ -985,6 +1001,7 @@ final class Phase2Seeder
                     'summary' => $summaryJson,
                     'by' => $caregiverEvening,
                     'at' => $handoverUtc,
+                    'updated_at' => $handoverUtc,
                 ]);
             }
         }
@@ -1003,6 +1020,7 @@ final class Phase2Seeder
             'summary' => null,
             'by' => 4,
             'at' => $hypoNoteUtc,
+            'updated_at' => $hypoNoteUtc,
         ]);
 
         // 8. Process generated medication_intakes up to effectivePastCutoffUtc (~95% given, ~5% skipped with reason)
@@ -1030,7 +1048,8 @@ final class Phase2Seeder
                  `related_measure_id` = :rel_id,
                  `given_by` = :by,
                  `version` = 2,
-                 `updated_at` = UTC_TIMESTAMP()
+                 `created_at` = :created_at,
+                 `updated_at` = :updated_at
              WHERE `id` = :id'
         );
 
@@ -1042,7 +1061,8 @@ final class Phase2Seeder
                  `comment` = :comment,
                  `given_by` = :by,
                  `version` = 2,
-                 `updated_at` = UTC_TIMESTAMP()
+                 `created_at` = :created_at,
+                 `updated_at` = :updated_at
              WHERE `id` = :id'
         );
 
@@ -1061,6 +1081,8 @@ final class Phase2Seeder
                     'reason' => $skipReason,
                     'comment' => 'Observé et consigné dans le journal de bord.',
                     'by' => $giverId,
+                    'created_at' => $schedUtc,
+                    'updated_at' => $schedUtc,
                     'id' => (int) $intake['id'],
                 ]);
                 continue;
@@ -1108,6 +1130,8 @@ final class Phase2Seeder
                 'site' => $site,
                 'rel_id' => $relMeasureId,
                 'by' => $giverId,
+                'created_at' => $schedUtc,
+                'updated_at' => $schedUtc,
                 'id' => (int) $intake['id'],
             ]);
         }
@@ -1123,11 +1147,25 @@ final class Phase2Seeder
                     'INSERT INTO `medication_intakes`
                      (`patient_id`, `prescription_id`, `prescription_time_id`, `scheduled_at`, `status`,
                       `given_at`, `given_dose`, `reason`, `comment`, `given_by`, `version`, `created_at`, `updated_at`, `created_by`)
-                     VALUES (1, :rx_id, NULL, :at, \'given\', :given_at, 1000, \'Douleur arthrose genou droit (EVA 4/10)\', \'Soulagement rapide en 45 min.\', 3, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP(), 3)'
+                     VALUES (1, :rx_id, NULL, :at, \'given\', :given_at, 1000, \'Douleur arthrose genou droit (EVA 4/10)\', \'Soulagement rapide en 45 min.\', 3, 1, :created_at, :updated_at, 3)'
                 );
-                $asStmt->execute(['rx_id' => $paracetamolRxId, 'at' => $asNeededUtc, 'given_at' => $asNeededUtc]);
+                $asStmt->execute([
+                    'rx_id' => $paracetamolRxId,
+                    'at' => $asNeededUtc,
+                    'given_at' => $asNeededUtc,
+                    'created_at' => $asNeededUtc,
+                    'updated_at' => $asNeededUtc,
+                ]);
             }
         }
+
+        // E5: Ensure created_at and updated_at of all historical records equal the event date
+        $pdo->exec('UPDATE `measures` SET `created_at` = `measured_at`, `updated_at` = `measured_at` WHERE `patient_id` = 1');
+        $pdo->exec('UPDATE `meals` SET `created_at` = `eaten_at`, `updated_at` = `eaten_at` WHERE `patient_id` = 1');
+        $pdo->exec('UPDATE `care_checks` SET `created_at` = `checked_at`, `updated_at` = `checked_at` WHERE `patient_id` = 1');
+        $pdo->exec('UPDATE `notes` SET `updated_at` = `created_at` WHERE `patient_id` = 1');
+        $pdo->exec('UPDATE `medication_intakes` SET `created_at` = COALESCE(`given_at`, `scheduled_at`), `updated_at` = COALESCE(`given_at`, `scheduled_at`) WHERE `patient_id` = 1');
+        $pdo->exec('UPDATE `measure_expectations` SET `created_at` = `scheduled_at`, `updated_at` = `scheduled_at` WHERE `patient_id` = 1');
 
         ScheduleService::syncExpectationStatuses($nowUtc, 1);
     }
