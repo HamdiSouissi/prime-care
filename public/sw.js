@@ -10,6 +10,7 @@
 const STATIC_CACHE = 'prime-care-static-v3';
 const HTML_CACHE = 'prime-care-html-v3';
 const OFFLINE_URL = '/offline.html';
+const OFFLINE_NAV_WHITELIST = ['/', '/today', '/journal'];
 
 const PRECACHE_ASSETS = [
   OFFLINE_URL,
@@ -29,6 +30,25 @@ const PRECACHE_ASSETS = [
   '/assets/brand/icon-192.png',
   '/assets/brand/icon-512.png',
 ];
+
+function isForbiddenCacheUrl(pathname) {
+  return (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/media/') ||
+    pathname.includes('/export') ||
+    pathname.includes('/csv') ||
+    pathname.includes('/pdf')
+  );
+}
+
+function hasForbiddenCacheHeaders(response) {
+  const disposition = response.headers.get('Content-Disposition');
+  if (disposition) {
+    return true;
+  }
+  const cacheControl = (response.headers.get('Cache-Control') || '').toLowerCase();
+  return cacheControl.includes('no-store');
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -66,8 +86,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Never cache medical or JSON API responses in the Service Worker
-  if (url.pathname.startsWith('/api/')) {
+  // Never intercept or cache API, exports, CSV, PDF, or private media files
+  if (isForbiddenCacheUrl(url.pathname)) {
     return;
   }
 
@@ -79,7 +99,12 @@ self.addEventListener('fetch', (event) => {
           return cached;
         }
         return fetch(request).then((response) => {
-          if (response.ok && response.status === 200 && response.type === 'basic') {
+          if (
+            response.ok &&
+            response.status === 200 &&
+            response.type === 'basic' &&
+            !hasForbiddenCacheHeaders(response)
+          ) {
             const clone = response.clone();
             caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
           }
@@ -90,20 +115,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for HTML navigations with cached page fallback -> offline.html
+  // Network-first for HTML navigations: only cache exact whitelist ['/', '/today', '/journal']
   if (request.mode === 'navigate') {
+    const normalizedPath = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, '') : '/';
+    const isWhitelistedScreen = OFFLINE_NAV_WHITELIST.includes(normalizedPath) && url.search === '';
+
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok && response.status === 200 && !url.pathname.startsWith('/login')) {
+          if (
+            isWhitelistedScreen &&
+            response.ok &&
+            response.status === 200 &&
+            !hasForbiddenCacheHeaders(response)
+          ) {
             const clone = response.clone();
-            caches.open(HTML_CACHE).then((cache) => cache.put(request, clone));
+            caches.open(HTML_CACHE).then((cache) => cache.put(normalizedPath, clone));
           }
           return response;
         })
         .catch(() =>
           caches.open(HTML_CACHE).then((cache) =>
-            cache.match(request).then((cachedPage) => cachedPage || caches.match(OFFLINE_URL))
+            cache
+              .match(normalizedPath)
+              .then((cachedPage) => cachedPage || caches.match(OFFLINE_URL))
           )
         )
     );

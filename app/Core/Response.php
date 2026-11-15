@@ -116,7 +116,7 @@ final class Response
         $resp = new self('', 200, [
             'Content-Type' => $mimeType,
             'Content-Disposition' => $disposition,
-            'Cache-Control' => 'private, max-age=86400',
+            'Cache-Control' => 'no-store',
         ]);
         $resp->filePath = $filePath;
         return $resp;
