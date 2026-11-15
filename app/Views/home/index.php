@@ -119,8 +119,30 @@ $homeApexConfig = [
 </header>
 <?php View::endSection(); ?>
 
-<!-- 2. Bandeau de transmission de fin de poste non lue (E13 / §8.2) -->
-<?php if ($unreadHandover !== null): ?>
+<?php if ($isAdmin || $isCoordinator || $isViewer): ?>
+  <?php
+  $attLevel = (string) ($attention['status_level'] ?? (($attention['count'] ?? 0) > 0 ? 'warn' : 'ok'));
+  $attIcon = (string) ($attention['status_icon'] ?? ($attLevel === 'ok' ? 'check-circle' : ($attLevel === 'critical' ? 'alert-octagon' : 'alert-triangle')));
+  $attHeadline = (string) ($attention['headline'] ?? 'Tout va bien aujourd’hui');
+  ?>
+  <!-- Phrase de synthèse en tête de l'accueil admin (Additif Design B §8 / E3) -->
+  <section class="pc-admin-headline pc-admin-headline--<?= e($attLevel) ?>" aria-label="État général du jour">
+    <span class="pc-admin-headline__icon">
+      <?= icon($attIcon, '', 20) ?>
+    </span>
+    <div class="pc-admin-headline__body">
+      <div class="pc-admin-headline__title"><?= e($attHeadline) ?></div>
+      <div class="pc-admin-headline__sub">
+        <?= ($attention['count'] ?? 0) === 0
+            ? 'Constantes et prises conformes au programme du jour'
+            : 'Vérifiez les éléments signalés ci-dessous' ?>
+      </div>
+    </div>
+  </section>
+<?php endif; ?>
+
+<!-- 2. Bandeau de transmission de fin de poste non lue (E13 / §8.2 — Aide-soignante) -->
+<?php if ($isCaregiver && $unreadHandover !== null): ?>
   <?php
   $hSummary = is_string($unreadHandover['handover_summary'] ?? null)
       ? (json_decode((string) $unreadHandover['handover_summary'], true) ?: [])

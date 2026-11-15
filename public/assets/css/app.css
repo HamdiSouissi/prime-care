@@ -1790,4 +1790,79 @@
     fill: var(--text-3);
     font-size: 13px;
   }
+
+  /* E3 — Phrase de synthèse en tête de l'accueil Admin (Additif B §8) */
+  .pc-admin-headline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--r-card);
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+  }
+
+  .pc-admin-headline__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pc-admin-headline__title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .pc-admin-headline__sub {
+    font-size: 12px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+
+  .pc-admin-headline--ok {
+    border-color: rgba(52, 199, 89, 0.35);
+    background-color: rgba(52, 199, 89, 0.08);
+  }
+
+  .pc-admin-headline--ok .pc-admin-headline__icon {
+    background-color: rgba(52, 199, 89, 0.18);
+    color: var(--c-ok);
+  }
+
+  .pc-admin-headline--ok .pc-admin-headline__title {
+    color: var(--c-ok);
+  }
+
+  .pc-admin-headline--warn {
+    border-color: rgba(255, 149, 0, 0.4);
+    background-color: rgba(255, 149, 0, 0.08);
+  }
+
+  .pc-admin-headline--warn .pc-admin-headline__icon {
+    background-color: rgba(255, 149, 0, 0.18);
+    color: var(--c-warn);
+  }
+
+  .pc-admin-headline--warn .pc-admin-headline__title {
+    color: var(--c-warn);
+  }
+
+  .pc-admin-headline--critical {
+    border-color: rgba(255, 59, 48, 0.45);
+    background-color: rgba(255, 59, 48, 0.09);
+  }
+
+  .pc-admin-headline--critical .pc-admin-headline__icon {
+    background-color: rgba(255, 59, 48, 0.18);
+    color: var(--c-danger);
+  }
+
+  .pc-admin-headline--critical .pc-admin-headline__title {
+    color: var(--c-danger);
+  }
 }

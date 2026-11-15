@@ -158,10 +158,10 @@ final class AttentionService
             ];
         }
 
-        // 4. Unread urgent note or handover
+        // 4. Unread urgent note or handover (deduplicated per author & kind)
         if ($userId !== null && $userId > 0) {
             $unreadStmt = $pdo->prepare(
-                'SELECT n.id, n.title, n.content, n.is_handover, n.priority, n.created_at, u.first_name
+                'SELECT n.id, n.title, n.content, n.is_handover, n.priority, n.created_at, n.recorded_by, u.first_name
                  FROM `notes` n
                  INNER JOIN `users` u ON u.id = n.recorded_by
                  LEFT JOIN `note_reads` nr ON nr.note_id = n.id AND nr.user_id = :uid
@@ -170,21 +170,48 @@ final class AttentionService
                    AND n.recorded_by != :uid2
                    AND nr.id IS NULL
                    AND (n.is_handover = 1 OR n.priority = \'urgent\')
-                 ORDER BY n.created_at DESC
-                 LIMIT 2'
+                 ORDER BY n.created_at DESC'
             );
             $unreadStmt->execute(['uid' => $userId, 'pid' => $patientId, 'uid2' => $userId]);
+            $groupedUnread = [];
             foreach ($unreadStmt->fetchAll(PDO::FETCH_ASSOC) as $un) {
                 $isHandover = (int) $un['is_handover'] === 1;
+                $groupKey = ((int) $un['recorded_by']) . ':' . ($isHandover ? 'handover' : 'urgent_note');
+                if (!isset($groupedUnread[$groupKey])) {
+                    $groupedUnread[$groupKey] = [
+                        'count' => 0,
+                        'is_handover' => $isHandover,
+                        'first_name' => (string) $un['first_name'],
+                        'latest_content' => (string) $un['content'],
+                        'latest_created_at' => (string) $un['created_at'],
+                        'has_urgent' => false,
+                    ];
+                }
+                $groupedUnread[$groupKey]['count']++;
+                if ((string) $un['priority'] === 'urgent') {
+                    $groupedUnread[$groupKey]['has_urgent'] = true;
+                }
+            }
+
+            foreach ($groupedUnread as $grp) {
+                $nCnt = $grp['count'];
+                if ($grp['is_handover']) {
+                    $title = $nCnt > 1
+                        ? sprintf('%d transmissions non lues de %s', $nCnt, $grp['first_name'])
+                        : sprintf('Transmission non lue de %s', $grp['first_name']);
+                } else {
+                    $title = $nCnt > 1
+                        ? sprintf('%d notes urgentes non lues de %s', $nCnt, $grp['first_name'])
+                        : sprintf('Note urgente non lue de %s', $grp['first_name']);
+                }
+
                 $items[] = [
                     'type' => 'unread_handover',
-                    'severity' => (string) $un['priority'] === 'urgent' ? 'critical' : 'warn',
-                    'icon' => 'message-square-text',
-                    'title' => $isHandover
-                        ? sprintf('Transmission non lue de %s', (string) $un['first_name'])
-                        : sprintf('Note urgente non lue de %s', (string) $un['first_name']),
-                    'subtitle' => mb_strimwidth((string) $un['content'], 0, 80, '…'),
-                    'time_local' => ScheduleService::utcToLocalParis((string) $un['created_at'], 'H:i'),
+                    'severity' => $grp['has_urgent'] ? 'critical' : 'warn',
+                    'icon' => 'notebook-pen',
+                    'title' => $title,
+                    'subtitle' => mb_strimwidth($grp['latest_content'], 0, 80, '…'),
+                    'time_local' => ScheduleService::utcToLocalParis($grp['latest_created_at'], 'H:i'),
                     'action_url' => '/journal?filter=notes',
                     'action_label' => 'Lire',
                 ];
@@ -203,7 +230,7 @@ final class AttentionService
         unset($it);
 
         if ($count === 0) {
-            $headline = 'Tout va bien';
+            $headline = 'Tout va bien aujourd’hui';
             $statusLevel = 'ok';
             $statusIcon = 'check-circle';
         } elseif ($count === 1) {
