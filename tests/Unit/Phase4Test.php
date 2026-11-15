@@ -434,9 +434,30 @@ final class Phase4Test
             'Production §6.2: affiche le bandeau « Les alertes automatiques sont à l\'arrêt » sur l’accueil admin si le cron a > 15 min'
         );
 
-        // Mode production (app.env = production): /design -> 404, HSTS, __Host- cookies
+        // Mode production (app.env = production): /design -> 404, HSTS, __Host- cookies, et H2 debug forcé à false
         $prevEnv = (string) Config::get('app.env', 'testing');
+        $prevDebug = (bool) Config::get('app.debug', true);
         Config::set('app.env', 'production');
+        Config::set('app.debug', true);
+        $debugForcedFalseInProd = (Config::get('app.debug') === false);
+
+        $secretErrorMsg = 'SQLSTATE[HY000] Secret interne de base de donnees #987654';
+        $testExc = new \RuntimeException($secretErrorMsg, 500);
+        $htmlErrResp = \App\Core\ErrorHandler::handleException(
+            $testExc,
+            new Request([], [], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/today', 'HTTP_ACCEPT' => 'text/html'])
+        );
+        $jsonErrResp = \App\Core\ErrorHandler::handleException(
+            $testExc,
+            new Request([], [], [], ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => '/api/measures', 'HTTP_ACCEPT' => 'application/json'])
+        );
+        $noLeakHtml = ($htmlErrResp->status() === 500)
+            && !str_contains($htmlErrResp->body(), $secretErrorMsg)
+            && !str_contains($htmlErrResp->body(), 'Phase4Test.php');
+        $noLeakJson = ($jsonErrResp->status() === 500)
+            && !str_contains($jsonErrResp->body(), $secretErrorMsg)
+            && !str_contains($jsonErrResp->body(), 'Phase4Test.php');
+
         $designProdResp = (new DesignController())->index(new Request());
         $secMw = new SecurityHeadersMiddleware();
         $prodHeaderResp = $secMw->handle(new Request(), static fn() => Response::html('ok'));
@@ -444,6 +465,7 @@ final class Phase4Test
         $prodSessionCookie = Session::cookieName();
         $prodDeviceCookie = Auth::cookieName(Auth::TRUSTED_DEVICE_COOKIE);
         Config::set('app.env', $prevEnv);
+        Config::set('app.debug', $prevDebug);
 
         $assert(
             $designProdResp->status() === 404
@@ -451,6 +473,10 @@ final class Phase4Test
             && str_starts_with($prodSessionCookie, '__Host-')
             && str_starts_with($prodDeviceCookie, '__Host-'),
             'Production §6.1: en mode production, /design retourne 404, HSTS = max-age=63072000; includeSubDomains et les cookies ont le préfixe __Host-'
+        );
+        $assert(
+            $debugForcedFalseInProd && $noLeakHtml && $noLeakJson,
+            'Production §6.1 (H2): avec app.env=production et app.debug=true, debug est forcé à false et aucune trace ni message technique ne fuite en HTML ou JSON'
         );
 
         // =====================================================================
