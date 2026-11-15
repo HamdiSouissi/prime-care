@@ -221,9 +221,9 @@ $homeApexConfig = [
       </div>
     <?php endif; ?>
 
-    <!-- Rail glissant tactile ("Glisser pour arriver" / "Glisser pour partir") -->
+    <!-- Rail glissant tactile ("Glisser pour arriver" / "Glisser pour partir") — Addendum B §8.2 (G5) -->
     <div
-      class="pc-slide-punch <?= $isClockedIn ? 'pc-slide-punch--out' : 'pc-slide-punch--in' ?>"
+      class="pc-slide-punch pc-slider-punch <?= $isClockedIn ? 'pc-slide-punch--out' : 'pc-slide-punch--in' ?>"
       data-slide-punch
       data-punch-type="<?= $isClockedIn ? 'out' : 'in' ?>"
     >
@@ -238,7 +238,8 @@ $homeApexConfig = [
         data-slide-punch-thumb
         aria-label="<?= $isClockedIn ? 'Pointer mon départ (clavier ou glisser)' : 'Pointer mon arrivée (clavier ou glisser)' ?>"
       >
-        <?= icon('chevrons-right', '', 22) ?>
+        <span class="pc-slide-punch__icon-arrow"><?= icon('chevrons-right', '', 22) ?></span>
+        <span class="pc-slide-punch__icon-check"><?= icon('check', '', 22) ?></span>
       </button>
     </div>
 
