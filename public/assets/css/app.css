@@ -2692,7 +2692,6 @@
 
   .pc-report-section {
     margin-bottom: 20px;
-    break-inside: avoid;
   }
 
   .pc-report-section__title {
@@ -2702,6 +2701,8 @@
     padding-bottom: 6px;
     margin-bottom: 10px;
     border-bottom: 1px solid var(--sep);
+    break-after: avoid;
+    page-break-after: avoid;
   }
 
   .pc-report-kpi-grid {
@@ -2826,7 +2827,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm;
+    margin: 10mm;
     @bottom-left {
       content: "Généré avec Prime Care — Prime Vision Solutions · Document de suivi, ne remplace pas un avis médical";
       font-size: 8pt;
@@ -2843,16 +2844,21 @@
   html {
     background: #FFFFFF !important;
     color: #000000 !important;
-    font-size: 10pt;
+    font-size: 9pt;
+    line-height: 1.24;
   }
 
   .pc-loader,
   #pc-loader,
+  #pc-launch-loader,
   .pc-no-print,
   .pc-sidebar,
   .pc-tabbar,
   .pc-navbar,
+  .pc-large-header,
   .pc-page-footer,
+  .pc-report-footer,
+  .pc-report-print-Signature,
   #pc-fab-trigger,
   #pc-offline-banner,
   #pc-offline-queue-bar,
@@ -2876,13 +2882,96 @@
   .pc-report-sheet {
     box-shadow: none !important;
     border: 1px solid #D1D5DB !important;
+    border-radius: 8px !important;
     background: #FFFFFF !important;
     color: #000000 !important;
   }
 
+  .pc-report-header,
   .pc-report-section {
+    padding: 7px 10px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .pc-report-header__top,
+  .pc-report-patient-banner {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+  }
+
+  .pc-report-header__brand svg {
+    height: 26px !important;
+    width: auto !important;
+  }
+
+  .pc-report-header .mt-3,
+  .pc-report-section .mb-3,
+  .pc-report-section .mb-2 {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .pc-report-section .gap-3 {
+    gap: 6px !important;
+  }
+
+  .pc-report-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .pc-report-kpi {
+    padding: 4px 6px !important;
+  }
+
+  .pc-report-chart-wrap {
+    padding: 4px 6px !important;
+  }
+
+  .pc-report-svg {
+    max-height: 118px !important;
+  }
+
+  .pc-report-sparkline {
+    height: 22px !important;
+  }
+
+  .pc-report-section {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  .pc-report-section h2,
+  .pc-report-section h3,
+  .pc-report-section__title,
+  .pc-report-section > div:first-child {
     page-break-inside: avoid;
     break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .pc-report-header,
+  .pc-report-kpi-grid,
+  .pc-report-kpi,
+  .pc-report-chart-wrap,
+  .pc-table-wrap,
+  .pc-table,
+  .pc-report-table,
+  .pc-report-subbox,
+  .pc-report-vital-box,
+  .pc-report-section li {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .pc-table th,
+  .pc-table td,
+  .pc-report-table th,
+  .pc-report-table td {
+    padding: 2.5px 6px !important;
   }
 }
 

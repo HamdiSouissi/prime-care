@@ -54,17 +54,30 @@ function minifyCss(string $css): string
     // 1. Supprimer les commentaires /* ... */
     $css = (string) preg_replace('~/\*.*?\*/~s', '', $css);
 
-    // 2. Normaliser tous les retours à la ligne et tabulations en un seul espace
+    // 2. Protéger les chaînes entre guillemets ("..." et '...')
+    $placeholders = [];
+    $css = (string) preg_replace_callback('/"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\'/', static function (array $m) use (&$placeholders): string {
+        $key = '___CSS_STR_' . count($placeholders) . '___';
+        $placeholders[$key] = $m[0];
+        return $key;
+    }, $css);
+
+    // 3. Normaliser tous les retours à la ligne et tabulations en un seul espace
     $css = (string) preg_replace('/\s+/', ' ', $css);
 
-    // 3. Supprimer les espaces autour des délimiteurs structurels { } ; ,
+    // 4. Supprimer les espaces autour des délimiteurs structurels { } ; ,
     $css = (string) preg_replace('/\s*([{};,])\s*/', '$1', $css);
 
-    // 4. Supprimer les espaces après ':' (sans toucher à l'espace avant ':' pour préserver les sélecteurs descendants type ".foo :focus")
+    // 5. Supprimer les espaces après ':' (sans toucher à l'espace avant ':' pour préserver les sélecteurs descendants)
     $css = (string) preg_replace('/:\s+/', ':', $css);
 
-    // 5. Supprimer les points-virgules finaux avant '}'
+    // 6. Supprimer les points-virgules finaux avant '}'
     $css = str_replace(';}', '}', $css);
+
+    // 7. Restaurer les chaînes entre guillemets intactes
+    if ($placeholders !== []) {
+        $css = strtr($css, $placeholders);
+    }
 
     return trim($css) . "\n";
 }

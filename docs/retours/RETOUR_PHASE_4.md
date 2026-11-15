@@ -207,16 +207,44 @@ curl -s http://127.0.0.1:8080/healthz
 
 ## 8. Résultats qualité
 
-### 8.1 Scores Google Lighthouse Mobile (H4 — profil mobile officiel Moto G Power, throttling 4G)
+### 8.1 Scores Google Lighthouse Mobile (H4 & I1 — profil mobile officiel Moto G Power, throttling 4G, 3 passages par écran + médiane)
 
-Audit exécuté avec la CLI officielle **Google Lighthouse 12** sous Chromium headless (`/tmp/pw-tools/run-lighthouse.mjs` → `/tmp/lighthouse-results.json`) sur les 4 écrans cibles :
+Suite à la correction **I1** :
+1. **Regroupement et minification CSS en PHP pur (`bin/build-css.php` → `public/assets/css/app.min.css`)** : fusion de `tokens.css`, `base.css`, `components.css`, `utilities.css` et `app.css` en un unique fichier minifié `public/assets/css/app.min.css` (`111 648 octets → 79 314 octets`, soit **15 075 octets** compressé en `gzip`), éliminant les 5 aller-retours bloquants au démarrage. Cache long (`Cache-Control: public, max-age=31536000, immutable`) et compression `gzip` actifs aussi bien sous Apache/Nginx que sous le serveur de développement `php -S` (`public/index.php` et `Response::send()`).
+2. **Chargement dynamique à la demande des librairies lourdes (`jsQR.min.js` et `apexcharts.min.js`)** : retrait de `jsQR.min.js` (`251 Ko`) et d’`apexcharts.min.js` du chargement initial (`app/Views/layouts/app.php`) ainsi que du pré-cache immédiat du Service Worker (`public/sw.js`). `jsQR.min.js` n’est injecté dynamiquement (`<script>`) qu’au clic sur **« Scanner le QR code »** (`public/assets/js/modules/phase3.js`) et `apexcharts.min.js` n’est injecté dynamiquement via `IntersectionObserver` que lorsqu’un conteneur `[data-pc-chart]` entre dans la fenêtre d’affichage (`public/assets/js/modules/charts.js`).
+3. **Rendu immédiat de l’élément LCP (`#unread-handover-banner`) dès le premier HTML serveur** : suppression des animations d’entrée (`opacity: 0`) sur `.pc-card` / `.pc-auth-card`, passage des polices locales en `font-display: optional` et maintien de l’écran d’accueil de 2 secondes (`.pc-loader`) sans occultation opaque ni animation continue retardant la peinture du contenu réel situé dessous (`LCP = 0,9 s` sur `section#unread-handover-banner > p.pc-handover-banner__body` au lieu de `4,0–4,4 s`).
 
-| Écran audité (Profil Mobile) | Performance (cible ≥ 90) | Accessibilité (cible ≥ 95) | Bonnes pratiques (cible ≥ 95) | FCP | LCP | TBT | CLS | Speed Index |
-|---|---|---|---|---|---|---|---|---|
-| **Connexion (`/login`)** | **99 / 100** | **100 / 100** | **100 / 100** | `1,7 s` | `1,7 s` | `0 ms` | `0` | `2,3 s` |
-| **Accueil de l’aide-soignante (`/`)** | **95 / 100** | **100 / 100** | **96 / 100** | `2,3 s` | `2,3 s` | `0 ms` | `0` | `3,5 s` |
-| **Aujourd’hui (`/today`)** | **94 / 100** | **100 / 100** | **100 / 100** | `2,3 s` | `2,3 s` | `0 ms` | `0` | `3,9 s` |
-| **Santé (`/health`)** | **95 / 100** | **100 / 100** | **100 / 100** | `2,1 s` | `2,1 s` | `10 ms` | `0` | `3,9 s` |
+**Environnement serveur mesuré** :
+- Binaire `nginx` / `php-fpm` non installé dans le conteneur sandbox (`which nginx php-fpm` vide) ; mesures réalisées derrière **`php -S` en deux configurations** :
+  1. `PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8089 -t public public/index.php` (routeur `public/index.php` servant les assets statiques et le HTML avec compression `gzip` et `Cache-Control: immutable`) ;
+  2. `php -S 127.0.0.1:8089 -t public` (1 seul processus sans script routeur explicite).
+- Situation réelle de début de poste sur `/` : session authentifiée en tant que **Fatou Diallo (`fatou@primecare.test`)**, avec **transmission de relève non lue (`#unread-handover-banner`, ID 7)** et **8 points d’attention** affichés en haut d’écran.
+
+**Commande exacte exécutée (3 passages par écran + calcul de la médiane)** :
+```bash
+PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8089 -t public public/index.php >/tmp/php8089-full.log 2>&1 &
+CAREGIVER_COOKIE="prime_care_session=<session_fatou>" OUT_FILE="/tmp/lh-3pass-final.json" \
+  AWS_LAMBDA_JS_RUNTIME=nodejs22.x LD_LIBRARY_PATH=/tmp/al2023/lib:/tmp \
+  node /tmp/pw-tools/run-lighthouse-3pass.mjs
+```
+
+#### A. Résultats sur 3 passages + Médiane (`PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8089 -t public public/index.php`)
+
+| Écran audité (Profil Mobile) | Passage 1 (Perf / A11y / BP) | Passage 2 (Perf / A11y / BP) | Passage 3 (Perf / A11y / BP) | **MÉDIANE Performance (cible ≥ 90)** | **MÉDIANE Accessibilité (cible ≥ 95)** | **MÉDIANE Bonnes pratiques (cible ≥ 95)** | FCP médian | LCP médian | TBT médian | CLS | Speed Index |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Connexion (`/login`)** | `100 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 0 ms`) | `100 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 0 ms`) | `99 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 100 ms`) | **100 / 100** | **100 / 100** | **100 / 100** | `0,9 s` | `0,9 s` | `0 ms` | `0` | `1,8 s` |
+| **Accueil aide-soignante (`/`, Fatou avec relève non lue & 8 points d’attention)** | `100 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 10 ms`) | `100 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 0 ms`) | `100 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 40 ms`) | **100 / 100** | **100 / 100** | **100 / 100** | `0,9 s` | `0,9 s` | `10 ms` | `0` | `2,6 s` |
+| **Aujourd’hui (`/today`)** | `99 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 0 ms`) | `99 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 0 ms`) | `99 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 50 ms`) | **99 / 100** | **100 / 100** | **100 / 100** | `0,9 s` | `0,9 s` | `0 ms` | `0` | `3,1 s` |
+| **Santé (`/health`)** | `99 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 0 ms`) | `99 / 100 / 100` (`FCP 1,0 s`, `LCP 1,0 s`, `TBT 10 ms`) | `99 / 100 / 100` (`FCP 0,9 s`, `LCP 0,9 s`, `TBT 40 ms`) | **99 / 100** | **100 / 100** | **100 / 100** | `0,9 s` | `0,9 s` | `10 ms` | `0` | `3,2 s` |
+
+#### B. Résultats sur 3 passages + Médiane (`php -S 127.0.0.1:8089 -t public`, 1 seul processus sans routeur explicite)
+
+| Écran audité (Profil Mobile) | Passage 1 (Perf / A11y / BP) | Passage 2 (Perf / A11y / BP) | Passage 3 (Perf / A11y / BP) | **MÉDIANE Performance (cible ≥ 90)** | **MÉDIANE Accessibilité (cible ≥ 95)** | **MÉDIANE Bonnes pratiques (cible ≥ 95)** | FCP médian | LCP médian | TBT médian | CLS | Speed Index |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Connexion (`/login`)** | `100 / 100 / 100` (`LCP 1,3 s`) | `100 / 100 / 100` (`LCP 1,2 s`) | `100 / 100 / 100` (`LCP 1,2 s`) | **100 / 100** | **100 / 100** | **100 / 100** | `1,2 s` | `1,2 s` | `0 ms` | `0` | `2,0 s` |
+| **Accueil aide-soignante (`/`, Fatou avec relève non lue & 8 points d’attention)** | `100 / 100 / 100` (`LCP 1,2 s`) | `100 / 100 / 100` (`LCP 1,2 s`) | `100 / 100 / 100` (`LCP 1,2 s`) | **100 / 100** | **100 / 100** | **100 / 100** | `1,2 s` | `1,2 s` | `0 ms` | `0` | `2,7 s` |
+| **Aujourd’hui (`/today`)** | `99 / 100 / 100` (`LCP 1,2 s`) | `99 / 100 / 100` (`LCP 1,2 s`) | `99 / 100 / 100` (`LCP 1,2 s`) | **99 / 100** | **100 / 100** | **100 / 100** | `1,2 s` | `1,2 s` | `0 ms` | `0` | `3,2 s` |
+| **Santé (`/health`)** | `99 / 100 / 100` (`LCP 1,2 s`) | `99 / 100 / 100` (`LCP 1,2 s`) | `99 / 100 / 100` (`LCP 1,2 s`) | **99 / 100** | **100 / 100** | **100 / 100** | `1,2 s` | `1,2 s` | `0 ms` | `0` | `3,3 s` |
 
 ### 8.2 Audit d’accessibilité `axe-core` (H5 — 39 écrans/états en clair et sombre)
 - **39 / 39 écrans et états** (Phases 1, 2, 3 & 4 en thèmes Clair et Sombre, incluant `/`, `/today`, feuille de saisie de mesure ouverte, `/health`, `/meals`, `/journal`, `/planning`, `/attendance`, `/alerts`, `/documents`, `/reports`, `/reports/exports`, `/audit`, `/settings`, `/legal/*`) audités avec `axe-core` (`wcag2a`, `wcag2aa`, `wcag21aa`, `best-practice`) : **0 violation** (`critical = 0`, `serious = 0`, `moderate = 0`, `minor = 0`). Détail complet dans `docs/ACCESSIBILITE.md`.
@@ -312,8 +340,8 @@ Toutes les captures mobiles sont au format `390 × 844` (`deviceScaleFactor: 2`,
 | [`06-document-preview-dark.png`](captures/phase-4/06-document-preview-dark.png) | Détail et visionneuse intégrée d’un document médical (`/documents/1`) — Mode Sombre |
 | [`07-medical-report-light.png`](captures/phase-4/07-medical-report-light.png) | Rapport médical de synthèse (`/reports?period=30d`) avec courbe SVG sans chevauchement d’étiquettes (H9) — Mode Clair |
 | [`08-medical-report-dark.png`](captures/phase-4/08-medical-report-dark.png) | Rapport médical de synthèse (`/reports?period=30d`) avec courbe SVG corrigée (H9) — Mode Sombre |
-| [`09-medical-report-print-a4-page1.png`](captures/phase-4/09-medical-report-print-a4-page1.png) | **Aperçu d’impression A4 réel — Page 1/4** (`page.pdf()` Chromium rendu en PNG) : en-tête patient, synthèse glycémique, courbe SVG et pied de page paginé |
-| [`09-medical-report-print-a4-page2.png`](captures/phase-4/09-medical-report-print-a4-page2.png) | **Aperçu d’impression A4 réel — Page 2/4** (`page.pdf()` Chromium rendu en PNG) : tableau des constantes vitales avec sparklines SVG et pied de page paginé |
+| [`09-medical-report-print-a4-page1.png`](captures/phase-4/09-medical-report-print-a4-page1.png) | **Aperçu d’impression A4 réel — Page 1/2 (I2)** (`page.pdf()` Chromium rendu en PNG, 2 pages complètes sans titre d’écran redondant ni page à moitié vide) : en-tête patient, Section 1 (synthèse glycémique + courbe SVG), Section 2 (tableau des constantes vitales avec sparklines) et début de la Section 3 (tableau d’observance par médicament) |
+| [`09-medical-report-print-a4-page2.png`](captures/phase-4/09-medical-report-print-a4-page2.png) | **Aperçu d’impression A4 réel — Page 2/2 (I2)** (`page.pdf()` Chromium rendu en PNG) : fin de la Section 3 (doses d’insuline, rotation des sites, prises « Non donné »), Section 4 (alimentation & hydratation), Section 5 (valeurs critiques, chutes, incidents/transmissions urgentes, alertes critiques) et pied de page paginé `Page 2 / 2` |
 | [`10-exports-csv-light.png`](captures/phase-4/10-exports-csv-light.png) | Écran des exports CSV (`/reports/exports`) — Mode Clair |
 | [`11-exports-csv-dark.png`](captures/phase-4/11-exports-csv-dark.png) | Écran des exports CSV (`/reports/exports`) — Mode Sombre |
 | [`26-exports-success-light.png`](captures/phase-4/26-exports-success-light.png) | **H1 / H9 — Page Exports après téléchargement CSV réussi** (`#pc-export-feedback` affiché après clic sur « Exporter CSV ») — Mode Clair |
@@ -352,9 +380,9 @@ Toutes les captures mobiles sont au format `390 × 844` (`deviceScaleFactor: 2`,
 
 ---
 
-## 12. Corrections (H1 à H9)
+## 12. Corrections (1ʳᵉ série H1 à H9 et 2ᵉ série I1 à I2)
 
-Suite à la revue de la Phase 4, les **9 corrections (`H1` à `H9`)** ont été exécutées sur la branche `arena/f8be1f65-prime-care`, à raison d’un commit Conventional Commits par correction :
+Suite aux revues de la Phase 4, les corrections **H1 à H9** (1ʳᵉ série) puis **I1 et I2** (2ᵉ série) ont été exécutées sur la branche `arena/f8be1f65-prime-care`, à raison d’un commit Conventional Commits par correction :
 
 | Réf. | Commit | Description de la correction |
 |---|---|---|
@@ -366,4 +394,6 @@ Suite à la revue de la Phase 4, les **9 corrections (`H1` à `H9`)** ont été 
 | **H6** | `2cda5be` | **Copie distante `BACKUP_REMOTE` et support `age` dans `bin/backup.sh` & `bin/restore.sh` (§6.2)** : chargement automatique du fichier d’environnement externe `/etc/prime-care/backup.env` (`set -a`), chiffrement via `age` si installé (repli OpenSSL AES-256-CBC PBKDF2), copie hors site de l’archive chiffrée et de son `.sha256` vers `BACKUP_REMOTE` (`rsync` ou `sftp://`), test réel de bout en bout et documentation dans `docs/EXPLOITATION.md` et `docs/DEPLOIEMENT_HDS.md`. |
 | **H7** | `6926e4c` | **Grille complète OWASP ASVS 4.0 Niveau 1 dans `docs/SECURITE.md` (§6.3)** : réécriture de `docs/SECURITE.md` sous forme de tableau de conformité ASVS 4.0.3 Niveau 1 couvrant V2, V3, V4, V5, V7, V8, V9, V12, V13 et V14 avec numéro ASVS, statut (`Conforme`), preuve (nom du test automatisé ou commande), chemin du fichier de code et mention explicite `Écarts restants : aucun`. |
 | **H8** | `f4a80f5` | **Refonte par tâche de `docs/GUIDE_AIDE_SOIGNANTE.md` avec captures et mode hors ligne (§6.6)** : prise des 9 captures `390 × 844` dans `docs/guides/captures/`, organisation en une section dédiée par tâche, ajout de la section « 9. Travailler sans réseau », et remplacement du protocole médical d’hypoglycémie en dur par la description de la réaction de l’application (ouverture automatique de la fiche protocole définie par le responsable avec le médecin traitant dans Réglages, bouton SOS et appels en 1 touche). |
-| **H9** | *(présent commit)* | **Mise en conformité complète de `RETOUR_PHASE_4.md` (12 sections), captures manquantes et anti-collision SVG** : masquage du libellé de seuil secondaire à moins de `12 px` sur la courbe SVG du rapport (`ReportService::renderGlycemiaSvg`), mise à jour du titre de `tests/run.php` (`Phases 1, 2, 3 & 4`), ajout des captures manquantes (aperçu d’impression PDF A4 réel page 1 et page 2 via `page.pdf()`, vue liste du journal d’audit, bandeau « Les alertes automatiques sont à l’arrêt », page Exports après téléchargement réussi) et rédaction du présent rapport en 12 sections. |
+| **H9** | `2b7b58e` | **Mise en conformité complète de `RETOUR_PHASE_4.md` (12 sections), captures manquantes et anti-collision SVG** : masquage du libellé de seuil secondaire à moins de `12 px` sur la courbe SVG du rapport (`ReportService::renderGlycemiaSvg`), mise à jour du titre de `tests/run.php` (`Phases 1, 2, 3 & 4`), ajout des captures manquantes (aperçu d’impression PDF A4 réel page 1 et page 2 via `page.pdf()`, vue liste du journal d’audit, bandeau « Les alertes automatiques sont à l’arrêt », page Exports après téléchargement réussi) et rédaction du présent rapport en 12 sections. |
+| **I1** | `7ebac80` | **Performance Lighthouse mobile ≥ 90 sur l’accueil de l’aide-soignante (`/`) en situation réelle de début de poste** : création du script PHP pur `bin/build-css.php` regroupant et minifiant les 5 feuilles CSS en `public/assets/css/app.min.css` (`79 Ko` brut / `15 Ko` gzippé) documenté dans `README.md` ; chargement dynamique à la demande (`<script>`) de `jsQR.min.js` au clic sur « Scanner le QR code » (`phase3.js`) et d’`apexcharts.min.js` par `IntersectionObserver` (`charts.js`) avec retrait du pré-cache SW ; rendu immédiat de `#unread-handover-banner` dès le premier HTML serveur sans animation `opacity: 0` ni occultation par le loader de 2 s (`LCP = 0,9 s` au lieu de `4,0–4,4 s`) ; médianes sur 3 passages : **`100 / 100 / 100`** sur `/login` et `/`, **`99 / 100 / 100`** sur `/today` et `/health`. |
+| **I2** | *(présent commit)* | **Pagination A4 du rapport médical imprimé ramenée de 4 pages à 2 pages pleines sans page à moitié vide** : retrait de `break-inside: avoid` sur `.pc-report-section`, pose de `break-inside: avoid` sur les blocs élémentaires (chaque tableau, chaque graphique, chaque carte de synthèse) et de `break-after: avoid` sur les titres de section (`h2`, `h3`, en-têtes de section), masquage à l’impression du titre d’écran redondant « Rapports & Synthèse » (`.pc-large-header`), et remplacement des captures `09-medical-report-print-a4-page1.png` et `09-medical-report-print-a4-page2.png` par les 2 pages A4 réelles issues de Chromium `page.pdf()`. |
