@@ -73,6 +73,7 @@ L'assistant vérifie la version de PHP et les extensions requises, teste la conn
 | `php bin/migrate.php --fresh --seed` | Réinitialise la base et charge les données de démonstration (bloqué en production) |
 | `php bin/seed.php` | Recharge les données de démonstration (bloqué si `app.env = production`) |
 | `php bin/setup.php` | Assistant d'installation initiale en production |
+| `php bin/build-css.php` | Concatène et minifie `tokens.css`, `base.css`, `components.css`, `utilities.css` et `app.css` dans `public/assets/css/app.min.css` (à relancer après toute modification d'un fichier `.css` source avant de commiter) |
 | `php cron/run.php` | Exécute toutes les tâches planifiées (`schedule:generate`, `alerts:scan`, `notifications:send`, `cleanup`, `retention:purge`) |
 | `php cron/run.php retention:purge` | Exécute uniquement la purge RGPD des anciennes données hors médical |
 | `PRIME_CARE_BACKUP_KEY="..." ./bin/backup.sh` | Crée une sauvegarde chiffrée `AES-256-CBC` (base MySQL + `storage/uploads/`) dans `storage/backups/` |

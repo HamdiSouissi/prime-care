@@ -50,17 +50,18 @@ final class HomeController extends Controller
             $teamCount = count($userModel->allTeamMembers());
         }
 
+        $isManagerOrViewer = in_array($role, ['admin', 'coordinator', 'viewer'], true);
         $todayLocal = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'Y-m-d');
         $dayProgram = ShiftTimelineService::getDayProgram($todayLocal, 1);
         $unreadHandover = HandoverService::getLatestUnreadHandover($userId, 1);
         $attention = AttentionService::getCurrentAttentionPoints($userId, 1);
-        $observance = IntakeService::getObservanceSummary(1);
-        $adminMetrics = ShiftTimelineService::getAdminKeyMetrics(1);
+        $observance = $isManagerOrViewer ? IntakeService::getObservanceSummary(1) : [];
+        $adminMetrics = $isManagerOrViewer ? ShiftTimelineService::getAdminKeyMetrics(1) : [];
         $rotation = InsulinService::getRotationSuggestion(1);
         $clockState = \App\Services\AttendanceService::getUserClockState($userId, 1);
         $nextShift = \App\Services\PlanningService::getNextOrCurrentShiftForUser($userId, 1);
         $openAlertsCount = \App\Services\AlertService::countOpenAlerts(1);
-        $trends7d = in_array($role, ['admin', 'coordinator', 'viewer'], true)
+        $trends7d = $isManagerOrViewer
             ? \App\Services\ReportService::getAdmin7DayTrends(1)
             : [];
 

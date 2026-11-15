@@ -12,11 +12,7 @@ $nonce = csp_nonce();
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title><?= e($pageTitle) ?> — Prime Care</title>
   <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg">
-  <link rel="stylesheet" href="/assets/css/tokens.css" nonce="<?= e($nonce) ?>">
-  <link rel="stylesheet" href="/assets/css/base.css" nonce="<?= e($nonce) ?>">
-  <link rel="stylesheet" href="/assets/css/components.css" nonce="<?= e($nonce) ?>">
-  <link rel="stylesheet" href="/assets/css/utilities.css" nonce="<?= e($nonce) ?>">
-  <link rel="stylesheet" href="/assets/css/app.css" nonce="<?= e($nonce) ?>">
+  <link rel="stylesheet" href="/assets/css/app.min.css" nonce="<?= e($nonce) ?>">
 </head>
 <body>
   <main class="pc-shell pc-shell--centered">

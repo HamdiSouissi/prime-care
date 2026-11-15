@@ -65,10 +65,9 @@
     align-items: center;
     justify-content: center;
     padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
-    background-color: #0A1633;
+    background-color: rgba(10, 22, 51, 0.992);
     color: #FFFFFF;
-    transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out), visibility 300ms;
-    animation: pc-loader-failsafe 4s linear forwards;
+    transition: opacity 250ms var(--ease-out), visibility 250ms;
   }
 
   .pc-loader::before,
@@ -103,7 +102,6 @@
 
   .pc-loader.is-dismissed {
     opacity: 0;
-    transform: scale(1.03);
     visibility: hidden;
     pointer-events: none;
   }
@@ -111,20 +109,14 @@
   .pc-loader__monogram {
     width: 96px;
     height: 96px;
-    animation: pc-breathe 1.6s ease-in-out 900ms infinite;
   }
 
   .pc-loader__path-p {
     stroke: #FFFFFF;
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: pc-draw-stroke 650ms var(--ease-out) 0ms forwards;
   }
 
   .pc-loader__path-c {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: pc-draw-stroke 600ms var(--ease-out) 220ms forwards;
+    stroke-dasharray: none;
   }
 
   .pc-loader__wordmark {
@@ -136,8 +128,6 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     text-align: center;
-    opacity: 0;
-    animation: pc-fade-up 320ms var(--ease-out) 750ms forwards;
   }
 
   .pc-loader__slogan {
@@ -148,8 +138,6 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.72);
-    opacity: 0;
-    animation: pc-fade-up 320ms var(--ease-out) 880ms forwards;
   }
 
   .pc-loader__progress {
@@ -163,10 +151,10 @@
 
   .pc-loader__progress-bar {
     height: 100%;
-    width: 0%;
+    width: 100%;
     border-radius: 999px;
     background: var(--brand-gradient);
-    animation: pc-progress-fill 1050ms var(--ease-out) 120ms forwards;
+    transform-origin: left center;
   }
 
   .pc-loader__byline {
@@ -176,8 +164,6 @@
     font-weight: 500;
     letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.86);
-    opacity: 0;
-    animation: pc-fade-up 320ms var(--ease-out) 980ms forwards;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -677,7 +663,6 @@
     border: 1px solid var(--border);
     padding: 18px;
     box-shadow: none;
-    animation: pc-card-enter var(--dur-appear) var(--ease-out) both;
   }
 
   .pc-card--subtle {

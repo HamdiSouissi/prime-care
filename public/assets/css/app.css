@@ -172,7 +172,6 @@
     border: 1px solid var(--border);
     padding: 26px 20px 22px;
     box-shadow: none;
-    animation: pc-auth-card-spring 380ms var(--ease-spring) both;
   }
 
   .pc-auth-brand {

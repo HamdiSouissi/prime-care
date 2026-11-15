@@ -172,6 +172,26 @@ final class Response
             return;
         }
 
+        $contentType = (string) ($this->headers['Content-Type'] ?? '');
+        $acceptEnc = (string) ($_SERVER['HTTP_ACCEPT_ENCODING'] ?? '');
+        if (
+            PHP_SAPI !== 'cli'
+            && !headers_sent()
+            && $this->body !== ''
+            && (str_starts_with($contentType, 'text/') || str_starts_with($contentType, 'application/json'))
+            && str_contains($acceptEnc, 'gzip')
+            && function_exists('gzencode')
+        ) {
+            $gz = gzencode($this->body, 6);
+            if ($gz !== false) {
+                header('Content-Encoding: gzip');
+                header('Vary: Accept-Encoding');
+                header('Content-Length: ' . strlen($gz));
+                echo $gz;
+                return;
+            }
+        }
+
         echo $this->body;
     }
 }
