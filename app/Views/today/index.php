@@ -59,10 +59,10 @@ $isToday = (bool) ($isToday ?? true);
   ?>
   <section aria-labelledby="moment-heading-<?= e((string) $momentKey) ?>">
     <div class="flex items-center justify-between mb-2">
-      <div class="pc-section-header mb-0 flex items-center gap-2" id="moment-heading-<?= e((string) $momentKey) ?>">
+      <h2 class="pc-section-header mb-0 flex items-center gap-2" id="moment-heading-<?= e((string) $momentKey) ?>">
         <?= icon((string) ($moment['icon'] ?? 'clock'), 'text-brand', 16) ?>
         <span><?= e((string) $moment['label']) ?></span>
-      </div>
+      </h2>
       <span class="text-caption text-muted"><?= count($items) ?> élément(s)</span>
     </div>
 
@@ -159,7 +159,7 @@ $isToday = (bool) ($isToday ?? true);
 <!-- Traitements « Si besoin » (ex. Paracétamol 1 g avec intervalle minimum) -->
 <?php if ($asNeeded !== []): ?>
   <section aria-labelledby="today-as-needed-heading">
-    <div class="pc-section-header" id="today-as-needed-heading">Médicaments « Si besoin »</div>
+    <h2 class="pc-section-header" id="today-as-needed-heading">Médicaments « Si besoin »</h2>
     <div class="pc-stack gap-2">
       <?php foreach ($asNeeded as $an): ?>
         <div class="pc-card flex items-center justify-between gap-3">
