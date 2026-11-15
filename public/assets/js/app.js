@@ -157,6 +157,56 @@ function initAvatarCropAndUpload() {
   });
 }
 
+function initPhase4() {
+  // 1. Animated counters on Admin 7-day trends (disabled if prefers-reduced-motion)
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('[data-count-up]').forEach((el) => {
+    const rawTarget = parseFloat(el.getAttribute('data-count-up') || '0');
+    const decimals = parseInt(el.getAttribute('data-count-decimals') || '0', 10);
+    if (Number.isNaN(rawTarget)) {
+      return;
+    }
+
+    const formatVal = (n) => n.toFixed(decimals).replace('.', ',');
+    if (prefersReducedMotion || rawTarget === 0) {
+      el.textContent = formatVal(rawTarget);
+      return;
+    }
+
+    const duration = 650;
+    const startTime = performance.now();
+    const step = (now) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = formatVal(rawTarget * eased);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = formatVal(rawTarget);
+      }
+    };
+    requestAnimationFrame(step);
+  });
+
+  // 2. Print report buttons ([data-print-report])
+  document.querySelectorAll('[data-print-report]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      window.print();
+    });
+  });
+
+  // 3. Fullscreen image viewer toggle ([data-fullscreen-target])
+  document.querySelectorAll('[data-fullscreen-target]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-fullscreen-target');
+      const target = targetId ? document.getElementById(targetId) : null;
+      if (target && target.requestFullscreen) {
+        target.requestFullscreen().catch(() => {});
+      }
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initLaunchLoader();
   initNavbar();
@@ -170,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCharts();
   initMedical();
   initPhase3();
+  initPhase4();
   initOfflineQueue();
   initPasswordToggles();
   initFieldValidation();

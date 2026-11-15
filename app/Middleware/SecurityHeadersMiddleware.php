@@ -43,7 +43,7 @@ final class SecurityHeadersMiddleware
             ->withHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');
 
         if ($env === 'production') {
-            $response->withHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+            $response->withHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
         }
 
         return $response;

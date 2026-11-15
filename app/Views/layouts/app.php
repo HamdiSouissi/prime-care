@@ -53,6 +53,7 @@ $renderedAtLocal = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'H\hi
   <link rel="apple-touch-startup-image" href="/assets/brand/splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
   <link rel="apple-touch-startup-image" href="/assets/brand/splash/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
   <link rel="apple-touch-startup-image" href="/assets/brand/splash/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="preload" href="/assets/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="<?= e(asset('css/tokens.css')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/base.css')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/components.css')) ?>">
@@ -114,8 +115,16 @@ $renderedAtLocal = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'H\hi
   <?= View::partial('quick-add-sheet') ?>
   <?= View::partial('install-sheet') ?>
 
-  <script nonce="<?= e($cspNonce) ?>" src="<?= e(asset('vendor/apexcharts.min.js')) ?>"></script>
-  <script nonce="<?= e($cspNonce) ?>" src="<?= e(asset('vendor/jsQR.min.js')) ?>"></script>
+  <?php
+  $needsApexCharts = !empty($useCharts) || str_contains($content, 'data-apex-chart');
+  $needsJsQr = !empty($useQrScanner) || str_contains($content, 'data-qr-scan') || str_contains($content, 'pc-qr-scanner');
+  ?>
+  <?php if ($needsApexCharts): ?>
+    <script nonce="<?= e($cspNonce) ?>" src="<?= e(asset('vendor/apexcharts.min.js')) ?>"></script>
+  <?php endif; ?>
+  <?php if ($needsJsQr): ?>
+    <script nonce="<?= e($cspNonce) ?>" src="<?= e(asset('vendor/jsQR.min.js')) ?>"></script>
+  <?php endif; ?>
   <script type="module" nonce="<?= e($cspNonce) ?>" src="<?= e(asset('js/app.js')) ?>"></script>
 </body>
 </html>

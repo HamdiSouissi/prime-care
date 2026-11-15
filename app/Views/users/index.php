@@ -66,7 +66,7 @@ $groupLabels = [
         >
           <div class="pc-avatar <?= e(avatar_color_class($memberId)) ?>">
             <?php if (!empty($member['avatar_path'])): ?>
-              <img src="/media/<?= e((string) $member['avatar_path']) ?>" alt="<?= e($fullName) ?>">
+              <img src="/media/<?= e((string) $member['avatar_path']) ?>" alt="<?= e($fullName) ?>" loading="lazy">
             <?php else: ?>
               <?= e(initials((string) ($member['first_name'] ?? ''), (string) ($member['last_name'] ?? ''))) ?>
             <?php endif; ?>

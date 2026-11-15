@@ -8,7 +8,7 @@ return [
         'slogan' => 'Suivi de soins à domicile',
         'publisher' => 'Prime Vision Solutions',
         'publisher_url' => 'https://primevisionsolutions.fr',
-        'version' => '1.1.0-phase2',
+        'version' => '1.0.0',
         'url' => 'http://localhost:8000',
         'env' => 'development', // 'development' | 'production' | 'testing'
         'debug' => true,
@@ -60,7 +60,7 @@ return [
         'password_min_length' => 10,
         'pin_min_length' => 4,
         'pin_max_length' => 6,
-        'max_upload_bytes' => 5 * 1024 * 1024, // 5 MB
+        'max_upload_bytes' => 5 * 1024 * 1024, // 5 MB for photos; 10 MB for medical documents
     ],
 
     'paths' => [

@@ -11,6 +11,7 @@ use App\Controllers\ProfileController;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
+use App\Middleware\ApiRateLimitMiddleware;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\CsrfMiddleware;
 use App\Middleware\SecurityHeadersMiddleware;
@@ -35,7 +36,7 @@ $router->group([
 
     $api->post('/auth/pin', [AuthController::class, 'loginPin'], 'api.auth.pin');
 
-    $api->group(['middleware' => [AuthMiddleware::class]], static function (Router $authApi): void {
+    $api->group(['middleware' => [AuthMiddleware::class, ApiRateLimitMiddleware::class]], static function (Router $authApi): void {
         // Phase 1 Profile endpoints
         $authApi->post('/profile/theme', [ProfileController::class, 'updateTheme'], 'api.profile.theme');
         $authApi->post('/profile/avatar', [ProfileController::class, 'updateAvatar'], 'api.profile.avatar');

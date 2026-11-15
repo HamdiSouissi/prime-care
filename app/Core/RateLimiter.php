@@ -125,6 +125,64 @@ final class RateLimiter
         ]);
     }
 
+    /**
+     * Check and increment the per-user API write rate limit (120 write requests / minute / user — Phase 4 §6.3).
+     * Returns true if allowed, false if rate-limited (429).
+     */
+    public static function checkApiWriteLimit(int $userId, int $maxPerMinute = 120, ?string $nowUtc = null): bool
+    {
+        if ($userId <= 0) {
+            return true;
+        }
+
+        $pdo = Database::connection();
+        $now = $nowUtc !== null
+            ? new DateTimeImmutable($nowUtc, new DateTimeZone('UTC'))
+            : new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $windowMinute = $now->format('Y-m-d H:i');
+        $updatedAt = $now->format('Y-m-d H:i:s');
+
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT INTO `api_rate_limits` (`user_id`, `window_minute`, `hits`, `updated_at`)
+                 VALUES (:uid, :win, 1, :upd)
+                 ON DUPLICATE KEY UPDATE `hits` = `hits` + 1, `updated_at` = VALUES(`updated_at`)'
+            );
+            $stmt->execute([
+                'uid' => $userId,
+                'win' => $windowMinute,
+                'upd' => $updatedAt,
+            ]);
+
+            $check = $pdo->prepare(
+                'SELECT `hits` FROM `api_rate_limits` WHERE `user_id` = :uid AND `window_minute` = :win LIMIT 1'
+            );
+            $check->execute(['uid' => $userId, 'win' => $windowMinute]);
+            $hits = (int) $check->fetchColumn();
+
+            return $hits <= $maxPerMinute;
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    /**
+     * Clear API write rate limit buckets (for testing or admin reset).
+     */
+    public static function resetApiWriteLimit(?int $userId = null): void
+    {
+        try {
+            $pdo = Database::connection();
+            if ($userId !== null) {
+                $pdo->prepare('DELETE FROM `api_rate_limits` WHERE `user_id` = :uid')->execute(['uid' => $userId]);
+            } else {
+                $pdo->exec('DELETE FROM `api_rate_limits`');
+            }
+        } catch (\Throwable) {
+            // Ignore
+        }
+    }
+
     private static function windowStart(?string $nowUtc = null): string
     {
         $lockoutMinutes = (int) Config::get('security.login_lockout_minutes', 15);

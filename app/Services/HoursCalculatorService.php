@@ -254,12 +254,21 @@ final class HoursCalculatorService
      *   totals: array<string, mixed>
      * }
      */
-    public static function calculateMonthlySummary(int $year, int $month, ?int $onlyUserId = null, int $patientId = 1): array
-    {
+    public static function calculateMonthlySummary(
+        int $year,
+        int $month,
+        ?int $onlyUserId = null,
+        int $patientId = 1,
+        ?string $referenceNowUtc = null
+    ): array {
         $pdo = Database::connection();
         $tzName = (string) Config::get('app.timezone', 'Europe/Paris');
         $localTz = new DateTimeZone($tzName);
         $utcTz = new DateTimeZone('UTC');
+
+        $nowUtcDt = $referenceNowUtc !== null
+            ? new DateTimeImmutable($referenceNowUtc, $utcTz)
+            : new DateTimeImmutable('now', $utcTz);
 
         $monthStartLocal = new DateTimeImmutable(sprintf('%04d-%02d-01 00:00:00', $year, $month), $localTz);
         $monthEndLocal = $monthStartLocal->modify('first day of next month');
@@ -299,12 +308,20 @@ final class HoursCalculatorService
                 'weekly_hours' => (float) ($u['weekly_hours'] ?? 35.0),
                 'hourly_rate' => $u['hourly_rate'] !== null ? (float) $u['hourly_rate'] : null,
                 'planned_minutes' => 0,
+                'completed_planned_minutes' => 0,
+                'remaining_planned_minutes' => 0,
                 'punched_minutes' => 0,
                 'night_minutes' => 0,
                 'sunday_minutes' => 0,
                 'holiday_minutes' => 0,
                 'pending_count' => 0,
+                'late_arrivals_count' => 0,
+                'early_departures_count' => 0,
+                'absences_count' => 0,
+                'absence_days' => 0,
                 'shifts_count' => 0,
+                'completed_shifts_count' => 0,
+                'remaining_shifts_count' => 0,
             ];
             $perUserDay[$uid] = [];
         }
@@ -320,11 +337,26 @@ final class HoursCalculatorService
                 'daily_rows' => [],
                 'totals' => [
                     'planned_minutes' => 0,
+                    'completed_planned_minutes' => 0,
+                    'remaining_planned_minutes' => 0,
                     'punched_minutes' => 0,
                     'night_minutes' => 0,
                     'sunday_minutes' => 0,
                     'holiday_minutes' => 0,
                     'diff_minutes' => 0,
+                    'planned_hours' => 0.0,
+                    'completed_planned_hours' => 0.0,
+                    'remaining_planned_hours' => 0.0,
+                    'punched_hours' => 0.0,
+                    'night_hours' => 0.0,
+                    'sunday_hours' => 0.0,
+                    'holiday_hours' => 0.0,
+                    'diff_hours' => 0.0,
+                    'late_arrivals_count' => 0,
+                    'early_departures_count' => 0,
+                    'pending_count' => 0,
+                    'absences_count' => 0,
+                    'absence_days' => 0,
                 ],
             ];
         }
@@ -348,7 +380,9 @@ final class HoursCalculatorService
         ]);
         $shifts = $shiftStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $shiftsById = [];
         foreach ($shifts as $s) {
+            $shiftsById[(int) $s['id']] = $s;
             $uid = (int) $s['user_id'];
             if (!isset($caregivers[$uid])) {
                 continue;
@@ -367,11 +401,58 @@ final class HoursCalculatorService
             $caregivers[$uid]['planned_minutes'] += $split['total_minutes'];
             $caregivers[$uid]['shifts_count']++;
 
+            // Phase 4 §2.2: Separate completed shifts (end_at <= nowUtc) from remaining upcoming shifts
+            $isCompletedShift = ($sEnd <= $nowUtcDt);
+            if ($isCompletedShift) {
+                $caregivers[$uid]['completed_planned_minutes'] += $split['total_minutes'];
+                $caregivers[$uid]['completed_shifts_count']++;
+            } else {
+                $caregivers[$uid]['remaining_planned_minutes'] += $split['total_minutes'];
+                $caregivers[$uid]['remaining_shifts_count']++;
+            }
+
             foreach ($split['by_day'] as $ymd => $dayData) {
                 if (!isset($perUserDay[$uid][$ymd])) {
                     $perUserDay[$uid][$ymd] = self::emptyDayRow($ymd, $dayData);
                 }
                 $perUserDay[$uid][$ymd]['planned_minutes'] += $dayData['total_minutes'];
+                if ($isCompletedShift) {
+                    $perUserDay[$uid][$ymd]['completed_planned_minutes'] += $dayData['total_minutes'];
+                } else {
+                    $perUserDay[$uid][$ymd]['remaining_planned_minutes'] += $dayData['total_minutes'];
+                }
+            }
+        }
+
+        // 1b. Absences in month per caregiver (§2.2 Rapport RH)
+        $mStartYmd = $monthStartLocal->format('Y-m-d');
+        $mEndYmd = $monthEndLocal->modify('-1 day')->format('Y-m-d');
+        $absStmt = $pdo->prepare(
+            "SELECT user_id, start_date, end_date, absence_type
+             FROM absences
+             WHERE patient_id = :pid
+               AND deleted_at IS NULL
+               AND end_date >= :mstart
+               AND start_date <= :mend"
+        );
+        $absStmt->execute([
+            'pid' => $patientId,
+            'mstart' => $mStartYmd,
+            'mend' => $mEndYmd,
+        ]);
+        foreach ($absStmt->fetchAll(PDO::FETCH_ASSOC) as $ab) {
+            $uid = (int) $ab['user_id'];
+            if (!isset($caregivers[$uid])) {
+                continue;
+            }
+            $caregivers[$uid]['absences_count']++;
+            $aStart = max($mStartYmd, (string) $ab['start_date']);
+            $aEnd = min($mEndYmd, (string) $ab['end_date']);
+            if ($aEnd >= $aStart) {
+                $d1 = new DateTimeImmutable($aStart, $localTz);
+                $d2 = new DateTimeImmutable($aEnd, $localTz);
+                $days = (int) $d1->diff($d2)->days + 1;
+                $caregivers[$uid]['absence_days'] += max(1, $days);
             }
         }
 
@@ -416,6 +497,31 @@ final class HoursCalculatorService
         ]);
         $attendances = $attStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Count late arrivals (> 15 min after shift start) and early departures (> 15 min before shift end)
+        foreach ($attendances as $att) {
+            $uid = (int) $att['user_id'];
+            $sid = isset($att['shift_id']) && $att['shift_id'] !== null ? (int) $att['shift_id'] : null;
+            if (!isset($caregivers[$uid]) || $sid === null || !isset($shiftsById[$sid])) {
+                continue;
+            }
+            $effDt = new DateTimeImmutable((string) $att['effective_at'], $utcTz);
+            if ($effDt < $monthStartUtc || $effDt >= $monthEndUtc) {
+                continue;
+            }
+            $sh = $shiftsById[$sid];
+            if ($att['type'] === 'in') {
+                $shStart = new DateTimeImmutable((string) $sh['start_at'], $utcTz);
+                if (($effDt->getTimestamp() - $shStart->getTimestamp()) > 900) {
+                    $caregivers[$uid]['late_arrivals_count']++;
+                }
+            } elseif ($att['type'] === 'out') {
+                $shEnd = new DateTimeImmutable((string) $sh['end_at'], $utcTz);
+                if (($shEnd->getTimestamp() - $effDt->getTimestamp()) > 900) {
+                    $caregivers[$uid]['early_departures_count']++;
+                }
+            }
+        }
+
         $pairsByUser = self::pairAttendances($attendances);
 
         foreach ($pairsByUser as $uid => $pairs) {
@@ -451,19 +557,29 @@ final class HoursCalculatorService
         }
 
         // Finalize caregiver stats and daily rows
+        // Phase 4 §2.2: diff_minutes is calculated ONLY on completed shifts (completed_planned_minutes)!
         $totals = [
             'planned_minutes' => 0,
+            'completed_planned_minutes' => 0,
+            'remaining_planned_minutes' => 0,
             'punched_minutes' => 0,
             'night_minutes' => 0,
             'sunday_minutes' => 0,
             'holiday_minutes' => 0,
             'diff_minutes' => 0,
+            'late_arrivals_count' => 0,
+            'early_departures_count' => 0,
+            'pending_count' => 0,
+            'absences_count' => 0,
+            'absence_days' => 0,
         ];
 
         $dailyRows = [];
         foreach ($caregivers as $uid => &$cg) {
-            $cg['diff_minutes'] = $cg['punched_minutes'] - $cg['planned_minutes'];
+            $cg['diff_minutes'] = $cg['punched_minutes'] - $cg['completed_planned_minutes'];
             $cg['planned_hours'] = round($cg['planned_minutes'] / 60, 2);
+            $cg['completed_planned_hours'] = round($cg['completed_planned_minutes'] / 60, 2);
+            $cg['remaining_planned_hours'] = round($cg['remaining_planned_minutes'] / 60, 2);
             $cg['punched_hours'] = round($cg['punched_minutes'] / 60, 2);
             $cg['night_hours'] = round($cg['night_minutes'] / 60, 2);
             $cg['sunday_hours'] = round($cg['sunday_minutes'] / 60, 2);
@@ -471,24 +587,33 @@ final class HoursCalculatorService
             $cg['diff_hours'] = round($cg['diff_minutes'] / 60, 2);
 
             $totals['planned_minutes'] += $cg['planned_minutes'];
+            $totals['completed_planned_minutes'] += $cg['completed_planned_minutes'];
+            $totals['remaining_planned_minutes'] += $cg['remaining_planned_minutes'];
             $totals['punched_minutes'] += $cg['punched_minutes'];
             $totals['night_minutes'] += $cg['night_minutes'];
             $totals['sunday_minutes'] += $cg['sunday_minutes'];
             $totals['holiday_minutes'] += $cg['holiday_minutes'];
             $totals['diff_minutes'] += $cg['diff_minutes'];
+            $totals['late_arrivals_count'] += $cg['late_arrivals_count'];
+            $totals['early_departures_count'] += $cg['early_departures_count'];
+            $totals['pending_count'] += $cg['pending_count'];
+            $totals['absences_count'] += $cg['absences_count'];
+            $totals['absence_days'] += $cg['absence_days'];
 
             ksort($perUserDay[$uid]);
             foreach ($perUserDay[$uid] as $ymd => $dRow) {
                 $dRow['user_id'] = $uid;
                 $dRow['full_name'] = $cg['full_name'];
                 $dRow['contract_type'] = $cg['contract_type'];
-                $dRow['diff_minutes'] = $dRow['punched_minutes'] - $dRow['planned_minutes'];
+                $dRow['diff_minutes'] = $dRow['punched_minutes'] - $dRow['completed_planned_minutes'];
                 $dailyRows[] = $dRow;
             }
         }
         unset($cg);
 
         $totals['planned_hours'] = round($totals['planned_minutes'] / 60, 2);
+        $totals['completed_planned_hours'] = round($totals['completed_planned_minutes'] / 60, 2);
+        $totals['remaining_planned_hours'] = round($totals['remaining_planned_minutes'] / 60, 2);
         $totals['punched_hours'] = round($totals['punched_minutes'] / 60, 2);
         $totals['night_hours'] = round($totals['night_minutes'] / 60, 2);
         $totals['sunday_hours'] = round($totals['sunday_minutes'] / 60, 2);
@@ -634,6 +759,8 @@ final class HoursCalculatorService
         return [
             'date' => $ymd,
             'planned_minutes' => 0,
+            'completed_planned_minutes' => 0,
+            'remaining_planned_minutes' => 0,
             'punched_minutes' => 0,
             'night_minutes' => 0,
             'sunday_minutes' => 0,

@@ -175,4 +175,12 @@ $activeProfile = $trustedProfiles[0] ?? null;
       </div>
     </form>
   <?php endif; ?>
+
+  <div class="mt-4 pt-3 border-t flex items-center justify-center gap-3 flex-wrap text-caption text-muted">
+    <a href="/legal/mentions" class="pc-auth-link pc-auth-link--muted">Mentions légales</a>
+    <span aria-hidden="true">·</span>
+    <a href="/legal/privacy" class="pc-auth-link pc-auth-link--muted">Confidentialité</a>
+    <span aria-hidden="true">·</span>
+    <a href="/legal/attendance-notice" class="pc-auth-link pc-auth-link--muted">Notice pointage</a>
+  </div>
 </section>

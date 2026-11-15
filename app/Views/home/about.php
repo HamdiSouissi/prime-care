@@ -45,3 +45,36 @@ $version = (string) \App\Core\Config::get('app.version', '1.0.0');
     </div>
   </div>
 </section>
+
+<!-- Informations légales & RGPD (Phase 4 §5.3) -->
+<section aria-labelledby="about-legal-heading" class="mt-3">
+  <div class="pc-section-header" id="about-legal-heading">Informations légales &amp; RGPD</div>
+  <div class="pc-list-group">
+    <a href="/legal/mentions" class="pc-list-item">
+      <span class="pc-list-icon pc-list-icon--docs"><?= icon('file-text', 18) ?></span>
+      <div class="pc-list-body">
+        <div class="pc-list-title">Mentions légales</div>
+        <div class="pc-list-subtitle">Éditeur, responsable de publication et hébergement HDS</div>
+      </div>
+      <?= icon('chevron-right', 16) ?>
+    </a>
+
+    <a href="/legal/privacy" class="pc-list-item">
+      <span class="pc-list-icon pc-list-icon--ok"><?= icon('shield-check', 18) ?></span>
+      <div class="pc-list-body">
+        <div class="pc-list-title">Politique de confidentialité</div>
+        <div class="pc-list-subtitle">Finalités, durées de conservation RGPD et exercice des droits</div>
+      </div>
+      <?= icon('chevron-right', 16) ?>
+    </a>
+
+    <a href="/legal/attendance-notice" class="pc-list-item">
+      <span class="pc-list-icon pc-list-icon--team"><?= icon('map-pin', 18) ?></span>
+      <div class="pc-list-body">
+        <div class="pc-list-title">Notice pointage &amp; géolocalisation</div>
+        <div class="pc-list-subtitle">Information des intervenants sur la vérification ponctuelle de présence</div>
+      </div>
+      <?= icon('chevron-right', 16) ?>
+    </a>
+  </div>
+</section>

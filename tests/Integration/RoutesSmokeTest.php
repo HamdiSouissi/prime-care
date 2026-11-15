@@ -108,7 +108,11 @@ final class RoutesSmokeTest
             '/attendance',
             '/attendance/hours',
             '/alerts',
-            '/coming-soon/timeclock',
+            '/documents',
+            '/documents/1',
+            '/reports',
+            '/reports/exports',
+            '/audit',
             '/profile',
             '/patient',
             '/users',
@@ -139,7 +143,8 @@ final class RoutesSmokeTest
             '/planning',
             '/planning?view=month',
             '/alerts',
-            '/coming-soon/timeclock',
+            '/documents',
+            '/documents/1',
             '/profile',
             '/patient',
             '/api/health',
@@ -154,6 +159,7 @@ final class RoutesSmokeTest
             '/users/3/edit',
             '/admin/treatments',
             '/admin/measures',
+            '/audit',
             '/settings',
             '/settings/attendance/qr-print',
             '/design',
@@ -180,7 +186,7 @@ final class RoutesSmokeTest
             }
         }
 
-        foreach (['/login', '/login/pin', '/forgot-password', '/api/health'] as $guestUri) {
+        foreach (['/login', '/login/pin', '/forgot-password', '/api/health', '/healthz', '/legal/mentions', '/legal/privacy', '/legal/attendance-notice'] as $guestUri) {
             $resp = self::dispatchGet($router, $guestUri);
             if ($resp->status() >= 500) {
                 $zero500Unauth = false;

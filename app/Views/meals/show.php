@@ -60,7 +60,7 @@ $isViewer = $role === 'viewer';
         <div class="text-caption font-semibold mb-1"><?= e($lbl) ?></div>
         <?php if ($ph): ?>
           <a href="/media/meals/<?= e(basename((string) $ph['photo_path'])) ?>" target="_blank" class="pc-meal-photo-frame">
-            <img src="/media/meals/<?= e(basename((string) $ph['photo_path'])) ?>" alt="<?= e($lbl) ?>">
+            <img src="/media/meals/<?= e(basename((string) $ph['photo_path'])) ?>" alt="<?= e($lbl) ?>" loading="lazy">
           </a>
         <?php else: ?>
           <div class="pc-meal-photo-empty">Aucune photo « <?= e($k) ?> »</div>

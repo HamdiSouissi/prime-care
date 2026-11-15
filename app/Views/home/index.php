@@ -32,6 +32,7 @@ $unreadHandover = is_array($unreadHandover ?? null) ? $unreadHandover : null;
 $attention = is_array($attention ?? null) ? $attention : ['count' => 0, 'items' => []];
 $observance = is_array($observance ?? null) ? $observance : ['days_7' => ['rate' => 100, 'given' => 0, 'total' => 0], 'days_30' => ['rate' => 100, 'given' => 0, 'total' => 0]];
 $adminMetrics = is_array($adminMetrics ?? null) ? $adminMetrics : [];
+$trends7d = is_array($trends7d ?? null) ? $trends7d : [];
 
 $clockState = is_array($clockState ?? null) ? $clockState : [
     'is_clocked_in' => false,
@@ -91,6 +92,19 @@ $homeApexConfig = [
 ?>
 <?php View::section('hero_header'); ?>
 <!-- 1. En-tête Bleu nuit pleine largeur en haut de l'écran (§4 & §8 de l'additif Design B) -->
+<?php if (!empty($cronStale)): ?>
+  <div class="pc-card pc-card--danger flex items-center justify-between gap-2 mb-3" role="alert">
+    <div class="flex items-center gap-2">
+      <?= icon('alert-triangle', 'text-danger', 20) ?>
+      <div>
+        <div class="font-bold text-danger">Les alertes automatiques sont à l'arrêt</div>
+        <div class="text-caption">La tâche cron ne s’est pas exécutée depuis plus de 15 minutes. Vérifiez la planification serveur.</div>
+      </div>
+    </div>
+    <a href="/settings" class="pc-btn pc-btn--secondary pc-btn--sm">Vérifier</a>
+  </div>
+<?php endif; ?>
+
 <header class="pc-home-hero" aria-label="En-tête d’accueil Prime Care">
   <div class="pc-home-hero__topbar">
     <div class="pc-home-hero__brand-date">
@@ -101,7 +115,8 @@ $homeApexConfig = [
     </div>
 
     <div class="pc-home-hero__actions">
-      <a href="/alerts" class="pc-home-hero__circle-btn pc-home-hero__circle-btn--bell" aria-label="Centre d’alertes (<?= $openAlertsCount ?> ouverte<?= $openAlertsCount > 1 ? 's' : '' ?>)">
+      <a href="/alerts" class="pc-home-hero__circle-btn pc-home-hero__circle-btn--bell">
+        <span class="sr-only">Centre d’alertes</span>
         <?= icon('bell', '', 17) ?>
         <?php if ($openAlertsCount > 0): ?>
           <span class="pc-alert-badge" data-alert-badge><?= $openAlertsCount > 99 ? '99+' : $openAlertsCount ?></span>
@@ -110,11 +125,12 @@ $homeApexConfig = [
       <a href="/patient" class="pc-home-hero__circle-btn" aria-label="Urgences et protocole patient">
         <?= icon('phone', '', 17) ?>
       </a>
-      <a href="/profile" class="pc-home-hero__circle-btn pc-home-hero__circle-btn--profile" aria-label="Mon profil (<?= e($firstName) ?>)">
+      <a href="/profile" class="pc-home-hero__circle-btn pc-home-hero__circle-btn--profile">
+        <span class="sr-only">Mon profil (<?= e($firstName) ?>)</span>
         <?php if (!empty($user['avatar_path'])): ?>
           <img src="/media/<?= e((string) $user['avatar_path']) ?>" alt="<?= e($firstName) ?>">
         <?php else: ?>
-          <span><?= e(initials($firstName, $lastName)) ?></span>
+          <span aria-hidden="true"><?= e(initials($firstName, $lastName)) ?></span>
         <?php endif; ?>
       </a>
     </div>
@@ -125,8 +141,8 @@ $homeApexConfig = [
     <span class="pc-badge pc-badge--hero"><?= e(t('roles.' . $role)) ?></span>
   </div>
 
-  <a href="/patient" class="pc-home-patient" aria-label="Ouvrir la fiche de <?= e($patientName) ?>">
-    <div class="pc-home-patient__avatar">
+  <a href="/patient" class="pc-home-patient">
+    <div class="pc-home-patient__avatar" aria-hidden="true">
       <?= e(initials($patientFirst, $patientLast)) ?>
     </div>
     <div class="pc-home-patient__info">
@@ -529,10 +545,10 @@ $homeApexConfig = [
         <div class="pc-section-header mb-0" id="home-attention-heading">
           Points d’attention &amp; Alertes ouvertes (<?= (int) $attention['count'] ?>)
         </div>
-        <a href="/alerts" class="text-footnote font-semibold text-brand">Centre d’alertes &rarr;</a>
+        <a href="/alerts" class="text-footnote font-semibold text-brand">Centre d’alertes &rsaquo;</a>
       </div>
       <div class="pc-stack gap-2">
-        <?php foreach (array_slice($attention['items'], 0, 4) as $att): ?>
+        <?php foreach (array_slice($attention['items'], 0, 2) as $att): ?>
           <a href="<?= e((string) $att['link']) ?>" class="pc-attention-card pc-attention-card--<?= e((string) $att['severity']) ?>">
             <span class="pc-attention-card__dot"></span>
             <div class="flex-1 min-w-0">
@@ -543,6 +559,101 @@ $homeApexConfig = [
             <?= icon('chevron-right', '', 16) ?>
           </a>
         <?php endforeach; ?>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  <!-- Section « Tendances 7 jours » sous les points d'attention (Phase 4 §2.3) -->
+  <?php if ($trends7d !== []): ?>
+    <?php
+    $tGly = $trends7d['avg_glycemia'] ?? [];
+    $tTir = $trends7d['time_in_target'] ?? [];
+    $tObs = $trends7d['observance'] ?? [];
+    $tHypo = $trends7d['hypo_count'] ?? [];
+    $arrowChar = static fn(string $dir): string => '';
+    ?>
+    <section class="pc-trends-7d" aria-labelledby="home-trends-heading">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="pc-section-header mb-0" id="home-trends-heading">Tendances 7 jours</h2>
+        <a href="/reports?period=30d" class="text-footnote font-semibold text-brand">Rapport complet &rsaquo;</a>
+      </div>
+
+      <div class="pc-module-grid pc-module-grid--2col">
+        <!-- 1. Glycémie moyenne -->
+        <div class="pc-card pc-trend-card">
+          <div class="flex items-center justify-between">
+            <span class="text-caption font-semibold text-vitals">Glycémie moyenne</span>
+            <span class="pc-badge pc-badge--<?= e((string) ($tGly['trend_tone'] ?? 'ok')) ?> font-mono">
+              <?= e($arrowChar((string) ($tGly['direction'] ?? 'flat'))) ?>
+              <?= e((string) ($tGly['diff_formatted'] ?? '0,00')) ?>
+            </span>
+          </div>
+          <div class="pc-metric-lg mt-1">
+            <span
+              data-count-up="<?= e((string) ($tGly['value'] ?? 0)) ?>"
+              data-count-decimals="2"
+            ><?= e((string) ($tGly['formatted'] ?? '0,00')) ?></span>
+            <span class="pc-metric-unit">g/L</span>
+          </div>
+          <div class="text-caption text-muted">vs 7 jours précédents</div>
+        </div>
+
+        <!-- 2. Temps dans la cible -->
+        <div class="pc-card pc-trend-card">
+          <div class="flex items-center justify-between">
+            <span class="text-caption font-semibold text-ok">Temps dans la cible</span>
+            <span class="pc-badge pc-badge--<?= e((string) ($tTir['trend_tone'] ?? 'ok')) ?> font-mono">
+              <?= e($arrowChar((string) ($tTir['direction'] ?? 'flat'))) ?>
+              <?= e((string) ($tTir['diff_formatted'] ?? '0,0 pts')) ?>
+            </span>
+          </div>
+          <div class="pc-metric-lg mt-1">
+            <span
+              data-count-up="<?= e((string) ($tTir['value'] ?? 0)) ?>"
+              data-count-decimals="1"
+            ><?= e((string) ($tTir['formatted'] ?? '0,0')) ?></span>
+            <span class="pc-metric-unit">%</span>
+          </div>
+          <div class="text-caption text-muted">mesures dans la cible</div>
+        </div>
+
+        <!-- 3. Observance -->
+        <div class="pc-card pc-trend-card">
+          <div class="flex items-center justify-between">
+            <span class="text-caption font-semibold text-meds">Observance</span>
+            <span class="pc-badge pc-badge--<?= e((string) ($tObs['trend_tone'] ?? 'ok')) ?> font-mono">
+              <?= e($arrowChar((string) ($tObs['direction'] ?? 'flat'))) ?>
+              <?= e((string) ($tObs['diff_formatted'] ?? '0,0 pts')) ?>
+            </span>
+          </div>
+          <div class="pc-metric-lg mt-1">
+            <span
+              data-count-up="<?= e((string) ($tObs['value'] ?? 100)) ?>"
+              data-count-decimals="1"
+            ><?= e((string) ($tObs['formatted'] ?? '100,0')) ?></span>
+            <span class="pc-metric-unit">%</span>
+          </div>
+          <div class="text-caption text-muted">prises administrées</div>
+        </div>
+
+        <!-- 4. Hypoglycémies -->
+        <div class="pc-card pc-trend-card">
+          <div class="flex items-center justify-between">
+            <span class="text-caption font-semibold text-danger">Hypoglycémies</span>
+            <span class="pc-badge pc-badge--<?= e((string) ($tHypo['trend_tone'] ?? 'ok')) ?> font-mono">
+              <?= e($arrowChar((string) ($tHypo['direction'] ?? 'flat'))) ?>
+              <?= e((string) ($tHypo['diff_formatted'] ?? '0 vs J-7')) ?>
+            </span>
+          </div>
+          <div class="pc-metric-lg mt-1">
+            <span
+              data-count-up="<?= (int) ($tHypo['value'] ?? 0) ?>"
+              data-count-decimals="0"
+            ><?= e((string) ($tHypo['formatted'] ?? '0')) ?></span>
+            <span class="pc-metric-unit">&lt; 0,70 g/L</span>
+          </div>
+          <div class="text-caption text-muted">sur les 7 derniers jours</div>
+        </div>
       </div>
     </section>
   <?php endif; ?>

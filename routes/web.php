@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 use App\Controllers\AlertController;
 use App\Controllers\AttendanceController;
+use App\Controllers\AuditController;
 use App\Controllers\AuthController;
 use App\Controllers\DesignController;
+use App\Controllers\DocumentController;
 use App\Controllers\HealthController;
+use App\Controllers\HealthzController;
 use App\Controllers\HomeController;
 use App\Controllers\JournalController;
+use App\Controllers\LegalController;
 use App\Controllers\MealController;
 use App\Controllers\MediaController;
 use App\Controllers\PatientController;
 use App\Controllers\PlanningController;
 use App\Controllers\ProfileController;
+use App\Controllers\ReportController;
 use App\Controllers\SettingsController;
 use App\Controllers\TodayController;
 use App\Controllers\TreatmentController;
@@ -48,6 +53,12 @@ $router->group([
 
     $r->get('/login/switch', [AuthController::class, 'switchUser'], 'auth.switch');
     $r->post('/logout', [AuthController::class, 'logout'], 'auth.logout', [AuthMiddleware::class]);
+
+    // Public healthcheck & legal pages (Phase 4 §5.3 & §6.2)
+    $r->get('/healthz', [HealthzController::class, 'status'], 'healthz');
+    $r->get('/legal/mentions', [LegalController::class, 'mentions'], 'legal.mentions');
+    $r->get('/legal/privacy', [LegalController::class, 'privacy'], 'legal.privacy');
+    $r->get('/legal/attendance-notice', [LegalController::class, 'attendanceNotice'], 'legal.attendance_notice');
 
     // Authenticated routes
     $r->group(['middleware' => [AuthMiddleware::class]], static function (Router $auth): void {
@@ -114,8 +125,23 @@ $router->group([
         $auth->post('/alerts/{id:\d+}/seen', [AlertController::class, 'markSeen'], 'alerts.seen');
         $auth->post('/alerts/{id:\d+}/handle', [AlertController::class, 'handle'], 'alerts.handle');
 
+        // E22 — Documents médicaux (Phase 4 §1)
+        $auth->get('/documents', [DocumentController::class, 'index'], 'documents.index');
+        $auth->post('/documents', [DocumentController::class, 'store'], 'documents.store');
+        $auth->get('/documents/{id:\d+}', [DocumentController::class, 'show'], 'documents.show');
+        $auth->get('/documents/{id:\d+}/file', [DocumentController::class, 'file'], 'documents.file');
+        $auth->get('/documents/{id:\d+}/download', [DocumentController::class, 'download'], 'documents.download');
+        $auth->post('/documents/{id:\d+}/delete', [DocumentController::class, 'delete'], 'documents.delete');
+
+        // E23 — Rapports & Exports CSV (Phase 4 §2 & §3)
+        $auth->get('/reports', [ReportController::class, 'index'], 'reports.index');
+        $auth->get('/reports/exports', [ReportController::class, 'exports'], 'reports.exports');
+        $auth->get('/reports/export/{type:[a-z_]+}', [ReportController::class, 'exportCsv'], 'reports.export_csv');
+
         // Profile (all roles)
         $auth->get('/profile', [ProfileController::class, 'show'], 'profile.show');
+        $auth->get('/profile/export-data', [ProfileController::class, 'exportData'], 'profile.export_data');
+        $auth->post('/profile/export-data', [ProfileController::class, 'exportData'], 'profile.export_data.post');
         $auth->post('/profile/info', [ProfileController::class, 'updateInfo'], 'profile.info');
         $auth->post('/profile/avatar', [ProfileController::class, 'updateAvatar'], 'profile.avatar');
         $auth->post('/profile/password', [ProfileController::class, 'updatePassword'], 'profile.password');
@@ -159,16 +185,27 @@ $router->group([
             $admin->post('/admin/measures/types/{id:\d+}/update', [TreatmentController::class, 'updateMeasureType'], 'admin.measures.types.update');
             $admin->post('/admin/measures/schedules', [TreatmentController::class, 'storeMeasureSchedule'], 'admin.measures.schedules.store');
 
-            // Réglages médicaux & Pointage (admin)
+            // E24 — Réglages unifiés (admin, Phase 4 §5)
             $admin->get('/settings', [SettingsController::class, 'index'], 'settings');
             $admin->post('/settings/general', [SettingsController::class, 'updateGeneral'], 'settings.general');
+            $admin->post('/settings/thresholds', [SettingsController::class, 'updateThresholds'], 'settings.thresholds');
             $admin->post('/settings/attendance', [SettingsController::class, 'updateAttendance'], 'settings.attendance');
             $admin->post('/settings/attendance/qr-regenerate', [SettingsController::class, 'regenerateAttendanceQr'], 'settings.attendance.qr_regenerate');
             $admin->get('/settings/attendance/qr-print', [SettingsController::class, 'printAttendanceQr'], 'settings.attendance.qr_print');
+            $admin->post('/settings/alerts', [SettingsController::class, 'updateAlerts'], 'settings.alerts');
+            $admin->post('/settings/smtp', [SettingsController::class, 'updateSmtp'], 'settings.smtp');
+            $admin->post('/settings/smtp/test', [SettingsController::class, 'testSmtp'], 'settings.smtp.test');
+            $admin->post('/settings/retention', [SettingsController::class, 'updateRetention'], 'settings.retention');
+            $admin->get('/settings/export-patient-data', [SettingsController::class, 'exportPatientData'], 'settings.export_patient_data');
+            $admin->post('/settings/export-patient-data', [SettingsController::class, 'exportPatientData'], 'settings.export_patient_data.post');
             $admin->post('/settings/care-items', [SettingsController::class, 'storeCareItem'], 'settings.care.store');
+            $admin->post('/settings/care-items/{id:\d+}/toggle', [SettingsController::class, 'toggleCareItem'], 'settings.care.toggle');
             $admin->post('/settings/care-items/{id:\d+}/delete', [SettingsController::class, 'deleteCareItem'], 'settings.care.delete');
             $admin->post('/settings/favorites', [SettingsController::class, 'storeFavorite'], 'settings.favorites.store');
             $admin->post('/settings/favorites/{id:\d+}/delete', [SettingsController::class, 'deleteFavorite'], 'settings.favorites.delete');
+
+            // E26 — Journal d'audit (admin, Phase 4 §4)
+            $admin->get('/audit', [AuditController::class, 'index'], 'audit.index');
 
             // Design System showcase (admin only)
             $admin->get('/design', [DesignController::class, 'index'], 'design.index');
