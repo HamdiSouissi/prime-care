@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use App\Core\Auth;
 use App\Core\View;
+use App\Services\AlertService;
 
 /** @var string $activeTab */
 $activeTab = $activeTab ?? 'home';
-$isAdmin = Auth::hasRole('admin');
+$role = (string) (Auth::role() ?? 'caregiver');
+$isAdmin = $role === 'admin';
+$isCoordinator = $role === 'coordinator';
+$openAlertsCount = AlertService::countOpenAlerts(1);
 ?>
 <aside class="pc-sidebar" aria-label="Menu latéral">
   <div class="pc-sidebar__brand">
@@ -24,6 +28,23 @@ $isAdmin = Auth::hasRole('admin');
     <a href="/today" class="pc-sidebar__link <?= $activeTab === 'today' ? 'is-active' : '' ?>">
       <?= icon('calendar-days', '', 20) ?>
       <span>Aujourd’hui</span>
+    </a>
+    <a href="/planning" class="pc-sidebar__link <?= $activeTab === 'planning' ? 'is-active' : '' ?>">
+      <?= icon('calendar-check', '', 20) ?>
+      <span><?= $role === 'caregiver' ? 'Mon planning' : 'Planning d’équipe' ?></span>
+    </a>
+    <?php if ($role !== 'viewer') : ?>
+      <a href="/attendance" class="pc-sidebar__link">
+        <?= icon('clock', '', 20) ?>
+        <span><?= ($isAdmin || $isCoordinator) ? 'Contrôle des pointages' : 'Mon pointage' ?></span>
+      </a>
+    <?php endif; ?>
+    <a href="/alerts" class="pc-sidebar__link">
+      <?= icon('bell', '', 20) ?>
+      <span>Centre d’alertes</span>
+      <?php if ($openAlertsCount > 0) : ?>
+        <span class="pc-alert-badge pc-alert-badge--inline"><?= $openAlertsCount ?></span>
+      <?php endif; ?>
     </a>
     <a href="/health" class="pc-sidebar__link <?= $activeTab === 'health' ? 'is-active' : '' ?>">
       <?= icon('heart-pulse', '', 20) ?>
@@ -56,7 +77,7 @@ $isAdmin = Auth::hasRole('admin');
       </a>
       <a href="/settings" class="pc-sidebar__link">
         <?= icon('settings', '', 20) ?>
-        <span>Réglages médicaux</span>
+        <span>Réglages &amp; Pointage</span>
       </a>
       <a href="/users" class="pc-sidebar__link <?= $activeTab === 'team' ? 'is-active' : '' ?>">
         <?= icon('users', '', 20) ?>

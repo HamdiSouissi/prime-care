@@ -200,3 +200,31 @@ declare(strict_types=1);
     </div>
   </div>
 </section>
+
+<!-- 6. Composants Phase 3 : Pointage glissant, Planning & Alertes -->
+<section aria-labelledby="ds-phase3-heading">
+  <div class="pc-section-header" id="ds-phase3-heading">6. Pointage, Planning &amp; Mode Hors Ligne (Phase 3)</div>
+  <div class="pc-card flex flex-col gap-3">
+    <div class="pc-label">Bouton glissant de pointage (E05)</div>
+    <div class="pc-slide-punch pc-slide-punch--in">
+      <div class="pc-slide-punch__track" aria-hidden="true">
+        <span class="pc-slide-punch__label">Glisser pour arriver</span>
+      </div>
+      <button type="button" class="pc-slide-punch__thumb" aria-label="Pointer mon arrivée">
+        <?= icon('chevrons-right', '', 22) ?>
+      </button>
+    </div>
+
+    <div class="pc-label mt-2">Créneau non couvert hachuré rouge (E16)</div>
+    <div class="pc-shift-card pc-shift-card--uncovered">
+      <div class="pc-shift-card__main">
+        <span class="pc-list-icon pc-list-icon--vitals"><?= icon('alert-triangle', '', 18) ?></span>
+        <div>
+          <div class="text-subhead font-bold">Garde de nuit 20:00 &rarr; 08:00</div>
+          <div class="text-caption text-muted">Aucune aide-soignante affectée</div>
+        </div>
+      </div>
+      <span class="pc-badge pc-badge--danger">Non couvert</span>
+    </div>
+  </div>
+</section>

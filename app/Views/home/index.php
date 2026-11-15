@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Core\Session;
 use App\Core\View;
+use App\Services\ScheduleService;
 
 $user = is_array($user ?? null) ? $user : (auth() ?? []);
 $patient = is_array($patient ?? null) ? $patient : [];
@@ -30,6 +32,21 @@ $unreadHandover = is_array($unreadHandover ?? null) ? $unreadHandover : null;
 $attention = is_array($attention ?? null) ? $attention : ['count' => 0, 'items' => []];
 $observance = is_array($observance ?? null) ? $observance : ['days_7' => ['rate' => 100, 'given' => 0, 'total' => 0], 'days_30' => ['rate' => 100, 'given' => 0, 'total' => 0]];
 $adminMetrics = is_array($adminMetrics ?? null) ? $adminMetrics : [];
+
+$clockState = is_array($clockState ?? null) ? $clockState : [
+    'is_clocked_in' => false,
+    'last_attendance' => null,
+    'next_type' => 'in',
+    'next_shift' => null,
+    'gdpr_accepted' => true,
+    'settings' => ['verification_mode' => 'gps', 'radius_m' => 150, 'require_clocked_in' => false],
+];
+$nextShift = is_array($nextShift ?? null) ? $nextShift : ($clockState['next_shift'] ?? null);
+$openAlertsCount = isset($openAlertsCount) ? (int) $openAlertsCount : 0;
+$nowLocalHm = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'H\hi');
+$nowLocalInputHm = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'H:i');
+$todayYmd = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'Y-m-d');
+$promptHandover = Session::getFlash('prompt_handover') === '1';
 
 // Build 7-day glycemia ApexCharts config for Admin / Coordinator / Viewer synthesis
 $glySeriesData = [];
@@ -84,6 +101,12 @@ $homeApexConfig = [
     </div>
 
     <div class="pc-home-hero__actions">
+      <a href="/alerts" class="pc-home-hero__circle-btn pc-home-hero__circle-btn--bell" aria-label="Centre d’alertes (<?= $openAlertsCount ?> ouverte<?= $openAlertsCount > 1 ? 's' : '' ?>)">
+        <?= icon('bell', '', 17) ?>
+        <?php if ($openAlertsCount > 0): ?>
+          <span class="pc-alert-badge" data-alert-badge><?= $openAlertsCount > 99 ? '99+' : $openAlertsCount ?></span>
+        <?php endif; ?>
+      </a>
       <a href="/patient" class="pc-home-hero__circle-btn" aria-label="Urgences et protocole patient">
         <?= icon('phone', '', 17) ?>
       </a>
@@ -119,10 +142,265 @@ $homeApexConfig = [
 </header>
 <?php View::endSection(); ?>
 
+<?php if ($promptHandover): ?>
+  <!-- Invite immédiate de transmission de fin de poste après pointage de départ (E05) -->
+  <section class="pc-handover-banner" id="departure-handover-prompt" aria-label="Transmission de fin de poste">
+    <div class="pc-handover-banner__header">
+      <div class="flex items-center gap-2">
+        <span class="pc-list-icon pc-list-icon--notes">
+          <?= icon('notebook-pen', '', 18) ?>
+        </span>
+        <div>
+          <div class="text-subhead font-bold">Fin de poste enregistrée</div>
+          <div class="text-caption text-muted">Transmettez les points clés à la collègue qui prend la relève.</div>
+        </div>
+      </div>
+      <span class="pc-badge pc-badge--brand">Relève</span>
+    </div>
+    <div class="pc-handover-banner__actions mt-2">
+      <a href="/journal?handover=1" class="pc-btn pc-btn--primary pc-btn--sm">
+        <?= icon('notebook-pen', '', 16) ?>
+        <span>Rédiger la transmission de fin de poste</span>
+      </a>
+    </div>
+  </section>
+<?php endif; ?>
+
+<?php if ($isCaregiver || $isCoordinator): ?>
+  <!-- ======================================================================
+       BLOC POINTAGE (E05) & MON PROCHAIN CRÉNEAU (E16)
+       ====================================================================== -->
+  <?php
+  $isClockedIn = !empty($clockState['is_clocked_in']);
+  $lastAtt = $clockState['last_attendance'] ?? null;
+  $lastAttLocalHm = $lastAtt
+      ? ScheduleService::utcToLocalParis((string) ($lastAtt['declared_at'] ?? $lastAtt['recorded_at']), 'H\hi')
+      : null;
+  $vMode = (string) ($clockState['settings']['verification_mode'] ?? 'gps');
+  $gdprAccepted = !empty($clockState['gdpr_accepted']);
+  ?>
+  <section class="pc-card pc-punch-card" aria-labelledby="home-punch-heading" data-punch-widget data-verification-mode="<?= e($vMode) ?>" data-next-type="<?= $isClockedIn ? 'out' : 'in' ?>">
+    <div class="flex items-center justify-between gap-2 mb-3">
+      <div class="flex items-center gap-2">
+        <span class="pc-list-icon <?= $isClockedIn ? 'pc-list-icon--ok' : 'pc-list-icon--team' ?>">
+          <?= icon('clock', '', 18) ?>
+        </span>
+        <div>
+          <h2 class="text-subhead font-bold" id="home-punch-heading">
+            <?= $isClockedIn ? 'En poste depuis ' . e((string) $lastAttLocalHm) : 'Pointage de prise de poste' ?>
+          </h2>
+          <div class="text-caption text-muted">
+            <?php if ($nextShift): ?>
+              <?= !empty($nextShift['is_active_now']) ? 'Créneau en cours' : 'Mon prochain créneau' ?> :
+              <strong><?= e((string) $nextShift['local_start_time']) ?> – <?= e((string) $nextShift['local_end_time']) ?></strong>
+              <?php if (!empty($nextShift['replaced_first_name'])): ?>
+                <span>(remplace <?= e((string) $nextShift['replaced_first_name']) ?>)</span>
+              <?php endif; ?>
+            <?php else: ?>
+              Heure enregistrée côté serveur · Vérification <?= e(strtoupper($vMode)) ?>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+
+      <span class="pc-badge <?= $isClockedIn ? 'pc-badge--ok' : 'pc-badge--neutral' ?>" id="pc-punch-status-badge">
+        <?= icon($isClockedIn ? 'check-circle' : 'clock', '', 13) ?>
+        <span><?= $isClockedIn ? 'En poste' : 'Hors poste' ?></span>
+      </span>
+    </div>
+
+    <?php if (!$gdprAccepted): ?>
+      <div class="pc-gdpr-notice mb-3" id="pc-gdpr-notice">
+        <div class="text-caption">
+          <strong>Information RGPD (Pointage) :</strong> Lors du pointage uniquement, votre position ou le scan du QR code du domicile est vérifié afin d’attester la présence auprès de M. Henri Benali (aucun suivi en continu).
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <!-- Rail glissant tactile ("Glisser pour arriver" / "Glisser pour partir") -->
+    <div
+      class="pc-slide-punch <?= $isClockedIn ? 'pc-slide-punch--out' : 'pc-slide-punch--in' ?>"
+      data-slide-punch
+      data-punch-type="<?= $isClockedIn ? 'out' : 'in' ?>"
+    >
+      <div class="pc-slide-punch__track" aria-hidden="true">
+        <span class="pc-slide-punch__label" data-slide-punch-label>
+          <?= $isClockedIn ? 'Glisser pour partir' : 'Glisser pour arriver' ?>
+        </span>
+      </div>
+      <button
+        type="button"
+        class="pc-slide-punch__thumb"
+        data-slide-punch-thumb
+        aria-label="<?= $isClockedIn ? 'Pointer mon départ (clavier ou glisser)' : 'Pointer mon arrivée (clavier ou glisser)' ?>"
+      >
+        <?= icon('chevrons-right', '', 22) ?>
+      </button>
+    </div>
+
+    <!-- Alternative accessible clavier / lecteur d'écran + Scan QR code + Oubli de pointage -->
+    <div class="pc-punch-card__links mt-3">
+      <button
+        type="button"
+        class="pc-btn pc-btn--tinted pc-btn--sm"
+        data-sheet-open="punch-confirm-sheet"
+      >
+        <?= icon('check-circle', '', 15) ?>
+        <span><?= $isClockedIn ? 'Confirmer mon départ' : 'Confirmer mon arrivée' ?></span>
+      </button>
+
+      <button
+        type="button"
+        class="pc-btn pc-btn--ghost pc-btn--sm"
+        data-open-qr-scanner
+      >
+        <?= icon('qr-code', '', 15) ?>
+        <span>Scanner QR domicile</span>
+      </button>
+
+      <button
+        type="button"
+        class="pc-btn pc-btn--ghost pc-btn--sm"
+        data-sheet-open="forgot-punch-sheet"
+      >
+        <span>J’ai oublié de pointer</span>
+      </button>
+    </div>
+
+    <?php if ($nextShift): ?>
+      <div class="pc-punch-card__shift-footer mt-3">
+        <div class="text-caption text-muted">
+          <?= icon('calendar-days', '', 14) ?>
+          <span>Mon prochain créneau : <?= e(format_date_fr((string) $nextShift['local_date'])) ?> · <?= e((string) $nextShift['local_start_time']) ?>–<?= e((string) $nextShift['local_end_time']) ?></span>
+        </div>
+        <a href="/planning" class="text-caption font-semibold text-brand">Voir mon planning &rarr;</a>
+      </div>
+    <?php endif; ?>
+  </section>
+
+  <!-- Feuille de confirmation accessible (clavier / lecteur d'écran : "Confirmer mon arrivée à HHhMM") -->
+  <div class="pc-sheet-backdrop" id="punch-confirm-sheet" hidden aria-hidden="true">
+    <div class="pc-sheet" role="dialog" aria-modal="true" aria-labelledby="punch-confirm-title">
+      <div class="pc-sheet__handle" aria-hidden="true"></div>
+      <div class="pc-sheet__header">
+        <h2 class="pc-sheet__title" id="punch-confirm-title">
+          <?= $isClockedIn ? "Confirmer mon départ à {$nowLocalHm}" : "Confirmer mon arrivée à {$nowLocalHm}" ?>
+        </h2>
+        <button type="button" class="pc-sheet__close" data-sheet-close aria-label="Fermer">
+          <?= icon('x', '', 20) ?>
+        </button>
+      </div>
+      <form method="POST" action="/attendance/punch" class="pc-sheet__body pc-stack gap-3" data-accessible-punch-form>
+        <?= csrf_field() ?>
+        <input type="hidden" name="type" value="<?= $isClockedIn ? 'out' : 'in' ?>">
+        <input type="hidden" name="method" value="slide">
+        <input type="hidden" name="accept_gdpr" value="1">
+        <input type="hidden" name="latitude" value="" data-punch-lat>
+        <input type="hidden" name="longitude" value="" data-punch-lon>
+        <input type="hidden" name="accuracy_m" value="" data-punch-acc>
+        <input type="hidden" name="redirect_to" value="/">
+
+        <p class="text-subhead text-muted">
+          L’heure officielle enregistrée sera l’heure exacte du serveur au moment de la validation (<?= e($nowLocalHm) ?>).
+        </p>
+
+        <div class="flex items-center gap-2">
+          <button type="submit" class="pc-btn pc-btn--primary pc-btn--block">
+            <?= icon('check', '', 18) ?>
+            <span><?= $isClockedIn ? "Confirmer mon départ à {$nowLocalHm}" : "Confirmer mon arrivée à {$nowLocalHm}" ?></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Feuille de scan du QR code du domicile (Caméra BarcodeDetector + jsQR fallback) -->
+  <div class="pc-sheet-backdrop" id="qr-punch-sheet" hidden aria-hidden="true">
+    <div class="pc-sheet" role="dialog" aria-modal="true" aria-labelledby="qr-punch-title">
+      <div class="pc-sheet__handle" aria-hidden="true"></div>
+      <div class="pc-sheet__header">
+        <h2 class="pc-sheet__title" id="qr-punch-title">Scanner le QR code du domicile</h2>
+        <button type="button" class="pc-sheet__close" data-sheet-close data-stop-qr-scanner aria-label="Fermer">
+          <?= icon('x', '', 20) ?>
+        </button>
+      </div>
+      <div class="pc-sheet__body pc-stack gap-3">
+        <div class="pc-qr-scanner-box">
+          <video id="pc-qr-video" class="pc-qr-video" playsinline muted></video>
+          <canvas id="pc-qr-canvas" class="is-hidden"></canvas>
+          <div class="pc-qr-scanner-status" id="pc-qr-status">Pointez la caméra vers l’affiche QR code de l’entrée.</div>
+        </div>
+        <form method="POST" action="/attendance/punch" id="pc-qr-manual-form" class="pc-stack gap-2">
+          <?= csrf_field() ?>
+          <input type="hidden" name="type" value="<?= $isClockedIn ? 'out' : 'in' ?>">
+          <input type="hidden" name="method" value="qr">
+          <input type="hidden" name="accept_gdpr" value="1">
+          <label class="pc-label" for="qr-payload-input">Ou saisir le code de secours figurant sous le QR :</label>
+          <input type="text" id="qr-payload-input" name="qr_payload" class="pc-input font-mono" placeholder="PRIMECARE-HOME:..." required>
+          <button type="submit" class="pc-btn pc-btn--primary pc-btn--block">
+            <?= icon('qr-code', '', 18) ?>
+            <span>Valider le pointage par QR code</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feuille "J'ai oublié de pointer" (heure réelle déclarée + motif obligatoire -> pending) -->
+  <div class="pc-sheet-backdrop" id="forgot-punch-sheet" hidden aria-hidden="true">
+    <div class="pc-sheet" role="dialog" aria-modal="true" aria-labelledby="forgot-punch-title">
+      <div class="pc-sheet__handle" aria-hidden="true"></div>
+      <div class="pc-sheet__header">
+        <h2 class="pc-sheet__title" id="forgot-punch-title">Déclarer un oubli de pointage</h2>
+        <button type="button" class="pc-sheet__close" data-sheet-close aria-label="Fermer">
+          <?= icon('x', '', 20) ?>
+        </button>
+      </div>
+      <form method="POST" action="/attendance/declare" class="pc-sheet__body pc-stack gap-3">
+        <?= csrf_field() ?>
+        <input type="hidden" name="redirect_to" value="/">
+
+        <div>
+          <label class="pc-label" for="declared-type">Type de pointage oublié</label>
+          <select id="declared-type" name="type" class="pc-input">
+            <option value="in">Arrivée (prise de poste)</option>
+            <option value="out">Départ (fin de poste)</option>
+          </select>
+        </div>
+
+        <div class="pc-module-grid pc-module-grid--2col">
+          <div>
+            <label class="pc-label" for="declared-date">Date réelle</label>
+            <input type="date" id="declared-date" name="declared_date" class="pc-input" value="<?= e($todayYmd) ?>" required>
+          </div>
+          <div>
+            <label class="pc-label" for="declared-time">Heure réelle</label>
+            <input type="time" id="declared-time" name="declared_time" class="pc-input" value="<?= e($nowLocalInputHm) ?>" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="pc-label" for="declared-reason">Motif de l’oubli (obligatoire)</label>
+          <textarea id="declared-reason" name="reason" class="pc-input" rows="2" placeholder="Ex. : Soin urgent dès mon arrivée auprès de M. Benali..." required></textarea>
+        </div>
+
+        <p class="text-caption text-muted">
+          Ce pointage sera enregistré avec le statut « À valider » et notifié au responsable.
+        </p>
+
+        <button type="submit" class="pc-btn pc-btn--primary pc-btn--block">
+          <?= icon('check', '', 18) ?>
+          <span>Envoyer pour validation</span>
+        </button>
+      </form>
+    </div>
+  </div>
+<?php endif; ?>
+
 <?php if ($isAdmin || $isCoordinator || $isViewer): ?>
   <?php
   $attLevel = (string) ($attention['status_level'] ?? (($attention['count'] ?? 0) > 0 ? 'warn' : 'ok'));
-  $attIcon = (string) ($attention['status_icon'] ?? ($attLevel === 'ok' ? 'check-circle' : ($attLevel === 'critical' ? 'alert-octagon' : 'alert-triangle')));
+  $attIcon = (string) ($attention['status_icon'] ?? ($attLevel === 'ok' ? 'check-circle' : ($attLevel === 'critical' ? 'shield-alert' : 'alert-triangle')));
   $attHeadline = (string) ($attention['headline'] ?? 'Tout va bien aujourd’hui');
   ?>
   <!-- Phrase de synthèse en tête de l'accueil admin (Additif Design B §8 / E3) -->
@@ -138,6 +416,7 @@ $homeApexConfig = [
             : 'Vérifiez les éléments signalés ci-dessous' ?>
       </div>
     </div>
+    <a href="/alerts" class="pc-btn pc-btn--tinted pc-btn--sm">Alertes</a>
   </section>
 <?php endif; ?>
 
@@ -147,7 +426,7 @@ $homeApexConfig = [
   $hSummary = is_string($unreadHandover['handover_summary'] ?? null)
       ? (json_decode((string) $unreadHandover['handover_summary'], true) ?: [])
       : [];
-  $hTime = \App\Services\ScheduleService::utcToLocalParis((string) $unreadHandover['recorded_at'], 'd/m à H:i');
+  $hTime = ScheduleService::utcToLocalParis((string) $unreadHandover['recorded_at'], 'd/m à H:i');
   ?>
   <section class="pc-handover-banner" id="unread-handover-banner" aria-label="Transmission de relève non lue">
     <div class="pc-handover-banner__header">
@@ -210,11 +489,14 @@ $homeApexConfig = [
        VUE SYNTHÈSE RESPONSABLE / RÉFÉRENTE / LECTURE SEULE (§3 Écran 2)
        ====================================================================== -->
 
-  <!-- Points d'attention en temps réel -->
+  <!-- Points d'attention en temps réel (unifiés sur la table `alerts`) -->
   <?php if (($attention['count'] ?? 0) > 0): ?>
     <section aria-labelledby="home-attention-heading">
-      <div class="pc-section-header" id="home-attention-heading">
-        Points d’attention (<?= (int) $attention['count'] ?>)
+      <div class="flex items-center justify-between mb-2">
+        <div class="pc-section-header mb-0" id="home-attention-heading">
+          Points d’attention &amp; Alertes ouvertes (<?= (int) $attention['count'] ?>)
+        </div>
+        <a href="/alerts" class="text-footnote font-semibold text-brand">Centre d’alertes &rarr;</a>
       </div>
       <div class="pc-stack gap-2">
         <?php foreach (array_slice($attention['items'], 0, 4) as $att): ?>
@@ -315,25 +597,21 @@ $homeApexConfig = [
         <?php endif; ?>
       </a>
 
-      <!-- SpO2 & Poids -->
-      <?php
-      $lastSpo2 = $adminMetrics['latest']['spo2'] ?? null;
-      $lastWeight = $adminMetrics['latest']['weight'] ?? null;
-      ?>
-      <a href="/health" class="pc-card flex flex-col justify-between gap-2">
+      <!-- Planning & Pointages (Accès rapide Responsable) -->
+      <a href="/planning" class="pc-card flex flex-col justify-between gap-2">
         <div class="flex items-center justify-between">
-          <span class="pc-health-card__header text-vitals">
-            <?= icon('activity', '', 17) ?>
-            <span>SpO2 &amp; Poids</span>
+          <span class="pc-health-card__header text-brand">
+            <?= icon('calendar-check', '', 17) ?>
+            <span>Planning &amp; Heures</span>
           </span>
-          <span class="pc-badge pc-badge--ok">Suivi</span>
+          <span class="pc-badge pc-badge--brand">Équipe</span>
         </div>
         <div>
           <div class="pc-metric-lg">
-            <?= $lastSpo2 ? e((string) $lastSpo2['formatted']) . ' %' : '—' ?>
-            <span class="pc-metric-unit">· <?= $lastWeight ? e((string) $lastWeight['formatted']) . ' kg' : '—' ?></span>
+            24h/24
+            <span class="pc-metric-unit">garde continue</span>
           </div>
-          <div class="text-caption text-muted">Toutes les constantes &rarr;</div>
+          <div class="text-caption text-muted">Planning, pointages &amp; heures &rarr;</div>
         </div>
       </a>
     </div>
@@ -477,6 +755,30 @@ $homeApexConfig = [
 <section aria-labelledby="quick-access-heading">
   <div class="pc-section-header" id="quick-access-heading"><?= e(t('home.quick_access')) ?></div>
   <div class="pc-list-group">
+    <a href="/planning" class="pc-list-item">
+      <span class="pc-list-icon pc-list-icon--team">
+        <?= icon('calendar-check', '', 18) ?>
+      </span>
+      <div class="pc-list-body">
+        <div class="pc-list-title"><?= $isCaregiver ? 'Mon planning de gardes' : 'Planning d’équipe &amp; Gardes' ?></div>
+        <div class="pc-list-subtitle">Créneaux de jour et de nuit, remplacements et absences</div>
+      </div>
+      <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+    </a>
+
+    <?php if (!$isViewer): ?>
+      <a href="/attendance" class="pc-list-item">
+        <span class="pc-list-icon pc-list-icon--ok">
+          <?= icon('clock', '', 18) ?>
+        </span>
+        <div class="pc-list-body">
+          <div class="pc-list-title"><?= ($isAdmin || $isCoordinator) ? 'Contrôle des pointages &amp; Heures' : 'Mon pointage &amp; Mes heures' ?></div>
+          <div class="pc-list-subtitle">Suivi hebdomadaire, récapitulatif mensuel et export CSV paie</div>
+        </div>
+        <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+      </a>
+    <?php endif; ?>
+
     <a href="/health" class="pc-list-item">
       <span class="pc-list-icon pc-list-icon--vitals">
         <?= icon('heart-pulse', '', 18) ?>
@@ -520,18 +822,5 @@ $homeApexConfig = [
       </div>
       <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
     </a>
-
-    <?php if ($isAdmin): ?>
-      <a href="/admin/treatments" class="pc-list-item">
-        <span class="pc-list-icon pc-list-icon--meds">
-          <?= icon('clipboard-list', '', 18) ?>
-        </span>
-        <div class="pc-list-body">
-          <div class="pc-list-title">Administration du plan de traitement</div>
-          <div class="pc-list-subtitle">Médicaments, prescriptions, grille d’insuline &amp; ordonnances</div>
-        </div>
-        <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
-      </a>
-    <?php endif; ?>
   </div>
 </section>

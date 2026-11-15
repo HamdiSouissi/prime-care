@@ -10,7 +10,9 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Models\Setting;
+use App\Services\AttendanceService;
 use App\Services\AuditService;
+use App\Services\QrCodeService;
 use PDO;
 
 /**
@@ -18,6 +20,8 @@ use PDO;
  * - Quick care items (care_items)
  * - Food favorites (food_favorites)
  * - Intake window (intake_window_min) & glycemia unit (g/L vs mg/dL)
+ * - Phase 3: Attendance verification settings (gps, qr, both, none, radius_m, require_clocked_in)
+ *   & Home QR code HMAC generation / A4 printable sheet.
  */
 final class SettingsController extends Controller
 {
@@ -42,8 +46,12 @@ final class SettingsController extends Controller
         $gUnitCfg = Setting::getValue('glycemia_unit', ['unit' => 'g/L'], 1);
         $glycemiaUnit = is_array($gUnitCfg) ? (string) ($gUnitCfg['unit'] ?? 'g/L') : 'g/L';
 
+        $attendanceSettings = AttendanceService::getSettings(1);
+        $activeQrToken = AttendanceService::getActiveQrToken(1);
+        $homeQrSvg = QrCodeService::renderSvg((string) $activeQrToken['qr_payload'], 200);
+
         return $this->view('settings/index', [
-            'pageTitle' => 'Réglages médicaux',
+            'pageTitle' => 'Réglages médicaux & Pointage',
             'activeTab' => 'more',
             'backUrl' => '/more',
             'backLabel' => 'Plus',
@@ -52,6 +60,9 @@ final class SettingsController extends Controller
             'favorites' => $favorites,
             'intakeWindowMin' => $intakeWindowMin,
             'glycemiaUnit' => $glycemiaUnit,
+            'attendanceSettings' => $attendanceSettings,
+            'activeQrToken' => $activeQrToken,
+            'homeQrSvg' => $homeQrSvg,
         ]);
     }
 
@@ -73,6 +84,49 @@ final class SettingsController extends Controller
 
         Session::flash('success', 'Réglages généraux enregistrés.');
         return $this->redirect('/settings');
+    }
+
+    /**
+     * POST /settings/attendance (Réglages -> Pointage)
+     */
+    public function updateAttendance(Request $request): Response
+    {
+        $this->authorize('settings', 'update');
+
+        AttendanceService::updateSettings($request->all(), Auth::id() ?? 1, 1);
+        Session::flash('success', 'Réglages de pointage et de vérification de présence enregistrés.');
+        return $this->redirect('/settings');
+    }
+
+    /**
+     * POST /settings/attendance/qr-regenerate (Révoquer et régénérer le QR code du domicile)
+     */
+    public function regenerateAttendanceQr(Request $request): Response
+    {
+        $this->authorize('settings', 'update');
+
+        $label = trim((string) $request->input('label', 'Domicile M. Henri Benali'));
+        AttendanceService::regenerateQrToken(Auth::id() ?? 1, 1, $label !== '' ? $label : 'Domicile M. Henri Benali');
+
+        Session::flash('success', 'Nouveau QR code du domicile généré. L’ancien code a été révoqué immédiatement.');
+        return $this->redirect('/settings');
+    }
+
+    /**
+     * GET /settings/attendance/qr-print (Affiche A4 imprimable du QR code de pointage du domicile)
+     */
+    public function printAttendanceQr(Request $request): Response
+    {
+        $this->authorize('settings', 'view');
+
+        $activeQrToken = AttendanceService::getActiveQrToken(1);
+        $qrSvg = QrCodeService::renderSvg((string) $activeQrToken['qr_payload'], 320);
+
+        return $this->view('settings/qr-print', [
+            'pageTitle' => 'QR Code Pointage Domicile — M. Henri Benali',
+            'activeQrToken' => $activeQrToken,
+            'qrSvg' => $qrSvg,
+        ], 'print');
     }
 
     public function storeCareItem(Request $request): Response

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Services\AlertService;
+
 $pageTitle = (string) ($pageTitle ?? 'Prime Care');
 $backUrl = isset($backUrl) ? (string) $backUrl : null;
 $backLabel = (string) ($backLabel ?? 'Retour');
@@ -9,6 +11,7 @@ $isHome = (bool) ($isHome ?? false);
 $navbarActionHtml = View::yieldSection('navbar_action');
 $currentUser = auth();
 $avatarClass = avatar_color_class((int) ($currentUser['id'] ?? 1));
+$openAlertsCount = isset($openAlertsCount) ? (int) $openAlertsCount : AlertService::countOpenAlerts(1);
 ?>
 <header class="pc-navbar" data-navbar>
   <div class="pc-navbar__inner">
@@ -31,6 +34,13 @@ $avatarClass = avatar_color_class((int) ($currentUser['id'] ?? 1));
     </div>
 
     <div class="pc-navbar__right">
+      <a href="/alerts" class="pc-navbar__bell" aria-label="Centre d’alertes (<?= $openAlertsCount ?> ouverte<?= $openAlertsCount > 1 ? 's' : '' ?>)">
+        <?= icon('bell', '', 20) ?>
+        <?php if ($openAlertsCount > 0): ?>
+          <span class="pc-alert-badge" data-alert-badge><?= $openAlertsCount > 99 ? '99+' : $openAlertsCount ?></span>
+        <?php endif; ?>
+      </a>
+
       <?php if ($navbarActionHtml !== ''): ?>
         <?= $navbarActionHtml ?>
       <?php elseif ($currentUser !== null): ?>

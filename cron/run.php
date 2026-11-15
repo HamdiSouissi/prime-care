@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 // Prime Care — Scheduled Background Runner (Cron)
 // Crontab: */5 * * * * php /chemin/cron/run.php
-// Usage:   php cron/run.php [schedule:generate]
+// Usage:   php cron/run.php [all|schedule:generate|alerts:scan|notifications:send|alerts:daily|cleanup]
 
 require_once dirname(__DIR__) . '/app/Helpers/bootstrap.php';
 
 use App\Core\Config;
 use App\Core\Logger;
-use App\Services\ScheduleService;
+use App\Services\CronService;
 
 $cacheDir = (string) Config::get('paths.cache', dirname(__DIR__) . '/storage/cache');
 if (!is_dir($cacheDir)) {
@@ -25,7 +25,6 @@ if ($fp === false) {
 }
 
 if (!flock($fp, LOCK_EX | LOCK_NB)) {
-    // Another cron execution is already running
     fclose($fp);
     exit(0);
 }
@@ -37,14 +36,15 @@ fflush($fp);
 $task = $argv[1] ?? 'all';
 
 try {
-    if ($task === 'all' || $task === 'schedule:generate') {
-        $res = ScheduleService::generateUpcoming48h();
-        ScheduleService::syncExpectationStatuses();
+    $res = CronService::runTask($task, 1);
+    @file_put_contents($cacheDir . '/cron_last_run.txt', (string) time());
+
+    foreach ($res as $taskName => $summary) {
         echo sprintf(
-            "[%s] schedule:generate OK (prises créées : %d, mesures attendues créées : %d)\n",
+            "[%s] %s OK : %s\n",
             gmdate('Y-m-d H:i:s'),
-            $res['intakes_inserted'],
-            $res['expectations_inserted']
+            $taskName,
+            json_encode($summary, JSON_UNESCAPED_UNICODE)
         );
     }
 } catch (Throwable $e) {

@@ -34,8 +34,9 @@ final class TodayController extends Controller
             $selectedDate = $todayStr;
         }
 
-        // Trigger idempotent generation for the selected date & upcoming 48h
+        // Trigger idempotent generation for the selected date & upcoming 48h + periodic alerts safety net
         ScheduleService::generateUpcoming48h();
+        \App\Services\CronService::runFallbackIfNeeded(1);
         $program = ShiftTimelineService::getDayProgram($selectedDate, 1);
 
         $selDt = new DateTimeImmutable($selectedDate . ' 12:00:00', $parisTz);

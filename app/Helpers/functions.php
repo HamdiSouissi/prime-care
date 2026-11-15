@@ -292,6 +292,13 @@ if (!function_exists('format_date')) {
     }
 }
 
+if (!function_exists('format_date_fr')) {
+    function format_date_fr(?string $utcDate, bool|string $withYear = true): string
+    {
+        return format_date($utcDate, $withYear);
+    }
+}
+
 if (!function_exists('format_time')) {
     /**
      * Format a UTC datetime string into Europe/Paris HH:MM format.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Auth;
 use App\Core\View;
+use App\Services\ScheduleService;
 
 /** @var string $pageTitle */
 $pageTitle = $pageTitle ?? 'Prime Care';
@@ -21,9 +22,10 @@ $themeColor = isset($themeColor) && is_string($themeColor) ? $themeColor : null;
 $statusBarStyle = isset($statusBarStyle) && is_string($statusBarStyle) ? $statusBarStyle : 'black-translucent';
 
 $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
+$renderedAtLocal = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'H\hi');
 ?>
 <!doctype html>
-<html lang="fr" data-theme="<?= e($userTheme) ?>">
+<html lang="fr" data-theme="<?= e($userTheme) ?>" data-rendered-at="<?= e($renderedAtLocal) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -65,6 +67,26 @@ $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
     <?= View::partial('sidebar', ['activeTab' => $activeTab ?? 'home']) ?>
 
     <div class="pc-shell <?= $wideLayout ? 'pc-shell--wide' : '' ?>">
+      <!-- Bandeau Mode Hors Ligne & File d'attente IndexedDB (§4.1 / Étape 6) -->
+      <div class="pc-offline-banner is-hidden" id="pc-offline-banner" role="status" aria-live="polite">
+        <div class="pc-offline-banner__main">
+          <?= icon('wifi-off', '', 16) ?>
+          <span id="pc-offline-banner-text">Hors ligne — données de <?= e($renderedAtLocal) ?></span>
+        </div>
+        <span class="pc-badge pc-badge--warn">Mode hors ligne</span>
+      </div>
+
+      <div class="pc-offline-queue-bar is-hidden" id="pc-offline-queue-bar" role="status" aria-live="polite">
+        <div class="pc-offline-queue-bar__info">
+          <?= icon('cloud-upload', '', 16) ?>
+          <span id="pc-offline-queue-count">0 saisie en attente</span>
+        </div>
+        <button type="button" class="pc-btn pc-btn--primary pc-btn--sm" id="pc-offline-sync-btn">
+          <?= icon('refresh-cw', '', 14) ?>
+          <span>Synchroniser maintenant</span>
+        </button>
+      </div>
+
       <?php if (View::hasSection('hero_header')): ?>
         <?= View::yieldSection('hero_header') ?>
       <?php elseif (!$hideNavbar): ?>
@@ -93,6 +115,7 @@ $userTheme = (string) (Auth::user()['theme'] ?? 'auto');
   <?= View::partial('install-sheet') ?>
 
   <script nonce="<?= e($cspNonce) ?>" src="<?= e(asset('vendor/apexcharts.min.js')) ?>"></script>
+  <script nonce="<?= e($cspNonce) ?>" src="<?= e(asset('vendor/jsQR.min.js')) ?>"></script>
   <script type="module" nonce="<?= e($cspNonce) ?>" src="<?= e(asset('js/app.js')) ?>"></script>
 </body>
 </html>

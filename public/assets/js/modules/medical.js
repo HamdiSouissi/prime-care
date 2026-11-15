@@ -8,6 +8,7 @@
 import { openSheet, closeSheet } from './sheet.js';
 import { showToast } from './toast.js';
 import { triggerHaptic } from './haptics.js';
+import { enqueueOfflineAction, generateClientUuid } from '../offline-queue.js';
 
 function getCsrfToken() {
   const meta = document.querySelector('meta[name="csrf-token"]');
@@ -246,7 +247,7 @@ export function initMedical() {
       return;
     }
 
-    // 1-tap Give intake ("Donné") via JSON API
+    // 1-tap Give intake ("Donné") via JSON API (with Phase 3 client_uuid & offline queue fallback)
     const giveBtn = target.closest('[data-quick-give-id]');
     if (giveBtn instanceof HTMLButtonElement) {
       e.preventDefault();
@@ -254,15 +255,21 @@ export function initMedical() {
       if (!intakeId || giveBtn.disabled) {
         return;
       }
+      const clientUuid = generateClientUuid();
+      const endpoint = `/api/intakes/${intakeId}/give`;
+      if (navigator.onLine === false) {
+        enqueueOfflineAction(endpoint, { client_uuid: clientUuid }, `Prise #${intakeId}`);
+        return;
+      }
       giveBtn.disabled = true;
-      fetch(`/api/intakes/${intakeId}/give`, {
+      fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
           'X-CSRF-Token': getCsrfToken(),
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ client_uuid: clientUuid }),
       })
         .then(async (res) => ({ status: res.status, body: await res.json() }))
         .then(({ status, body }) => {
@@ -277,17 +284,23 @@ export function initMedical() {
         })
         .catch(() => {
           giveBtn.disabled = false;
-          showToast('Erreur réseau lors de la validation.', 'error');
+          enqueueOfflineAction(endpoint, { client_uuid: clientUuid }, `Prise #${intakeId}`);
         });
       return;
     }
 
-    // 1-tap Quick Care Check ("Soin rapide") via JSON API
+    // 1-tap Quick Care Check ("Soin rapide") via JSON API (with Phase 3 client_uuid & offline queue fallback)
     const careBtn = target.closest('[data-quick-care-id]');
     if (careBtn instanceof HTMLButtonElement) {
       e.preventDefault();
       const careItemId = Number(careBtn.getAttribute('data-quick-care-id') || '0');
       if (!careItemId || careBtn.disabled) {
+        return;
+      }
+      const clientUuid = generateClientUuid();
+      if (navigator.onLine === false) {
+        enqueueOfflineAction('/api/care-checks', { care_item_id: careItemId, client_uuid: clientUuid }, 'Soin rapide');
+        closeSheet();
         return;
       }
       careBtn.disabled = true;
@@ -298,7 +311,7 @@ export function initMedical() {
           Accept: 'application/json',
           'X-CSRF-Token': getCsrfToken(),
         },
-        body: JSON.stringify({ care_item_id: careItemId }),
+        body: JSON.stringify({ care_item_id: careItemId, client_uuid: clientUuid }),
       })
         .then((res) => res.json())
         .then((body) => {
@@ -316,7 +329,8 @@ export function initMedical() {
         })
         .catch(() => {
           careBtn.disabled = false;
-          showToast('Erreur réseau.', 'error');
+          enqueueOfflineAction('/api/care-checks', { care_item_id: careItemId, client_uuid: clientUuid }, 'Soin rapide');
+          closeSheet();
         });
       return;
     }

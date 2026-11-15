@@ -67,6 +67,24 @@ final class AuditService
     }
 
     /**
+     * Alias for record() accepting actorId as 6th parameter.
+     *
+     * @param array<string, mixed>|null $before
+     * @param array<string, mixed>|null $after
+     */
+    public static function log(
+        string $action,
+        string $entityType,
+        ?int $entityId = null,
+        ?array $before = null,
+        ?array $after = null,
+        ?int $actorId = null,
+        int $patientId = 1
+    ): void {
+        self::record($action, $entityType, $entityId, $before, $after, $patientId, $actorId);
+    }
+
+    /**
      * @param array<string, mixed> $data
      * @return array<string, mixed>
      */

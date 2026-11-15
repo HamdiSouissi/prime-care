@@ -28,6 +28,13 @@ final class ProfileController extends Controller
         $userId = (int) ($user['id'] ?? 0);
 
         $trustedDevice = $userId > 0 ? Auth::currentBrowserTrustedForUser($userId) : null;
+        $notificationSettings = $userId > 0 ? \App\Services\AlertService::getUserNotificationSettings($userId) : [];
+        $vapidKeys = \App\Services\WebPushService::getOrCreateVapidKeys();
+
+        $pdo = \App\Core\Database::connection();
+        $subStmt = $pdo->prepare('SELECT COUNT(*) FROM push_subscriptions WHERE user_id = :uid AND deleted_at IS NULL');
+        $subStmt->execute(['uid' => $userId]);
+        $pushSubsCount = (int) $subStmt->fetchColumn();
 
         return $this->view('profile/index', [
             'pageTitle' => 'Mon profil',
@@ -38,7 +45,24 @@ final class ProfileController extends Controller
             'trustedDevice' => $trustedDevice,
             'deviceTrusted' => $trustedDevice !== null,
             'authenticatedViaPassword' => Auth::authenticatedViaPassword(),
+            'notificationSettings' => $notificationSettings,
+            'alertTypes' => \App\Services\AlertService::TYPES,
+            'vapidPublicKey' => $vapidKeys['publicKey'],
+            'pushSubsCount' => $pushSubsCount,
         ]);
+    }
+
+    public function updateNotifications(Request $request): Response
+    {
+        $this->authorize('profile', 'update');
+        $user = Auth::user();
+        if ($user === null) {
+            return Response::redirect('/login');
+        }
+
+        \App\Services\AlertService::updateUserNotificationSettings((int) $user['id'], $request->all());
+        Session::flash('toast_success', 'Vos préférences d’alertes et heures calmes ont été enregistrées.');
+        return Response::redirect('/profile');
     }
 
     public function updateInfo(Request $request): Response

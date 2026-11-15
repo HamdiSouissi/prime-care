@@ -12,6 +12,8 @@ import { initTransitions } from './modules/transitions.js';
 import { initPwa } from './modules/pwa.js';
 import { initCharts } from './modules/charts.js';
 import { initMedical } from './modules/medical.js';
+import { initPhase3 } from './modules/phase3.js';
+import { initOfflineQueue } from './offline-queue.js';
 import { triggerHaptic } from './modules/haptics.js';
 
 function initPasswordToggles() {
@@ -167,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initPwa();
   initCharts();
   initMedical();
+  initPhase3();
+  initOfflineQueue();
   initPasswordToggles();
   initFieldValidation();
   initInstantSearch();

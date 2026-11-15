@@ -103,7 +103,8 @@ final class View
             return $content;
         }
 
-        $layoutFile = $viewsDir . '/' . ltrim($layout, '/') . '.php';
+        $cleanLayout = str_contains($layout, '/') ? ltrim($layout, '/') : 'layouts/' . ltrim($layout, '/');
+        $layoutFile = $viewsDir . '/' . $cleanLayout . '.php';
         if (!is_file($layoutFile)) {
             throw new RuntimeException("Layout introuvable : {$layout}", 500);
         }

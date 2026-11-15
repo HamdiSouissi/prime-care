@@ -9,6 +9,19 @@ $hasPin = !empty($user['pin_hash']);
 $trustedDevice = is_array($trustedDevice ?? null) ? $trustedDevice : null;
 $authenticatedViaPassword = (bool) ($authenticatedViaPassword ?? false);
 $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
+$notificationSettings = is_array($notificationSettings ?? null) ? $notificationSettings : [
+    'push_critical' => 1,
+    'push_warning' => 1,
+    'push_info' => 0,
+    'email_critical' => 1,
+    'email_warning' => 0,
+    'email_info' => 0,
+    'daily_digest_email' => 0,
+    'quiet_hours_enabled' => 1,
+    'quiet_start' => '22:00:00',
+    'quiet_end' => '07:00:00',
+];
+$vapidPublicKey = (string) ($vapidPublicKey ?? '');
 ?>
 <!-- 1. Photo de profil & Identité -->
 <section class="pc-card flex flex-col items-center text-center gap-3">
@@ -66,6 +79,158 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
       <span>Sombre</span>
     </button>
   </div>
+</section>
+
+<!-- 2 bis. Notifications Web Push VAPID, Emails & Heures calmes (§3.8 / Phase 3) -->
+<section class="pc-card" id="notifications-section" aria-labelledby="profile-notif-heading">
+  <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
+    <div class="flex items-center gap-3">
+      <span class="pc-list-icon pc-list-icon--vitals">
+        <?= icon('bell', 18) ?>
+      </span>
+      <div>
+        <h2 class="text-headline" id="profile-notif-heading">Notifications &amp; Heures calmes</h2>
+        <p class="text-footnote text-muted">Web Push VAPID, alertes par e-mail et plage de tranquillité</p>
+      </div>
+    </div>
+    <span class="pc-badge pc-badge--brand" id="pc-push-permission-badge">Web Push</span>
+  </div>
+
+  <!-- Abonnement Web Push navigateur & Bouton de test -->
+  <div class="pc-card pc-card--subtle mb-4 pc-stack gap-2">
+    <div class="text-subhead font-semibold">Notifications push sur cet appareil</div>
+    <p class="text-caption text-muted">
+      Recevez immédiatement les alertes médicales et de garde sur votre téléphone (y compris écran verrouillé une fois la PWA installée).
+    </p>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button
+        type="button"
+        class="pc-btn pc-btn--primary pc-btn--sm"
+        id="pc-enable-push-btn"
+        data-enable-web-push
+        data-vapid-public-key="<?= e($vapidPublicKey) ?>"
+      >
+        <?= icon('bell', 15) ?>
+        <span>Activer les notifications push</span>
+      </button>
+
+      <form method="POST" action="/profile/push-test">
+        <?= csrf_field() ?>
+        <button type="submit" class="pc-btn pc-btn--tinted pc-btn--sm">
+          <?= icon('send', 15) ?>
+          <span>Envoyer une notification de test</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Préférences par canal et par gravité + Heures calmes -->
+  <form method="POST" action="/profile/notifications" class="pc-stack gap-3">
+    <?= csrf_field() ?>
+
+    <div class="pc-notif-prefs-grid">
+      <div class="pc-notif-pref-row">
+        <div>
+          <div class="text-subhead font-semibold">Alertes critiques (Hypo/Hyper sévère, escalade)</div>
+          <div class="text-caption text-muted">Ignorent toujours les heures calmes pour la sécurité du patient.</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-1 text-caption font-semibold">
+            <input type="checkbox" name="push_critical" value="1" <?= !empty($notificationSettings['push_critical']) ? 'checked' : '' ?>>
+            <span>Push</span>
+          </label>
+          <label class="flex items-center gap-1 text-caption font-semibold">
+            <input type="checkbox" name="email_critical" value="1" <?= !empty($notificationSettings['email_critical']) ? 'checked' : '' ?>>
+            <span>E-mail</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="pc-notif-pref-row">
+        <div>
+          <div class="text-subhead font-semibold">Alertes d’attention (Retards, pointage absent, garde &lt; 24h)</div>
+          <div class="text-caption text-muted">Respectent vos heures calmes.</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-1 text-caption font-semibold">
+            <input type="checkbox" name="push_warning" value="1" <?= !empty($notificationSettings['push_warning']) ? 'checked' : '' ?>>
+            <span>Push</span>
+          </label>
+          <label class="flex items-center gap-1 text-caption font-semibold">
+            <input type="checkbox" name="email_warning" value="1" <?= !empty($notificationSettings['email_warning']) ? 'checked' : '' ?>>
+            <span>E-mail</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="pc-notif-pref-row">
+        <div>
+          <div class="text-subhead font-semibold">Informations &amp; Récapitulatif quotidien (20h)</div>
+          <div class="text-caption text-muted">Bilan journalier si l’observance est inférieure à 90 % ou en cas d’alerte.</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-1 text-caption font-semibold">
+            <input type="checkbox" name="push_info" value="1" <?= !empty($notificationSettings['push_info']) ? 'checked' : '' ?>>
+            <span>Push</span>
+          </label>
+          <label class="flex items-center gap-1 text-caption font-semibold">
+            <input type="checkbox" name="daily_digest_email" value="1" <?= !empty($notificationSettings['daily_digest_email']) ? 'checked' : '' ?>>
+            <span>Bilan 20h</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc-card pc-card--subtle pc-stack gap-2">
+      <div class="flex items-center justify-between">
+        <div>
+          <label for="quiet-hours-enabled" class="text-subhead font-semibold cursor-pointer">
+            Activer les heures calmes
+          </label>
+          <div class="text-caption text-muted">Suspend les notifications non critiques la nuit (les alertes critiques passent toujours).</div>
+        </div>
+        <label class="pc-switch">
+          <input
+            type="checkbox"
+            id="quiet-hours-enabled"
+            name="quiet_hours_enabled"
+            value="1"
+            <?= !empty($notificationSettings['quiet_hours_enabled']) ? 'checked' : '' ?>
+          >
+          <span class="pc-switch__track">
+            <span class="pc-switch__thumb"></span>
+          </span>
+        </label>
+      </div>
+
+      <div class="pc-module-grid pc-module-grid--2col mt-1">
+        <div>
+          <label class="pc-label" for="quiet-start">Début des heures calmes</label>
+          <input
+            type="time"
+            id="quiet-start"
+            name="quiet_start"
+            class="pc-input font-mono"
+            value="<?= e(substr((string) ($notificationSettings['quiet_start'] ?? '22:00:00'), 0, 5)) ?>"
+          >
+        </div>
+        <div>
+          <label class="pc-label" for="quiet-end">Fin des heures calmes</label>
+          <input
+            type="time"
+            id="quiet-end"
+            name="quiet_end"
+            class="pc-input font-mono"
+            value="<?= e(substr((string) ($notificationSettings['quiet_end'] ?? '07:00:00'), 0, 5)) ?>"
+          >
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="pc-btn pc-btn--primary pc-btn--block">
+      Enregistrer mes préférences de notifications
+    </button>
+  </form>
 </section>
 
 <!-- 3. Coordonnées & Contact d'urgence -->
@@ -174,7 +339,7 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
         <?= icon('key-round', 18) ?>
       </span>
       <div>
-        <h2 class="text-headline">Code PIN & Appareil de confiance</h2>
+        <h2 class="text-headline">Code PIN &amp; Appareil de confiance</h2>
         <p class="text-footnote text-muted">4 à 6 chiffres pour déverrouiller Prime Care à une main</p>
       </div>
     </div>
@@ -287,7 +452,7 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
       <?= icon('lock', 18) ?>
     </span>
     <div>
-      <h2 class="text-headline">Mot de passe & Sécurité</h2>
+      <h2 class="text-headline">Mot de passe &amp; Sécurité</h2>
       <p class="text-footnote text-muted">10 caractères minimum</p>
     </div>
   </div>
@@ -359,11 +524,10 @@ $avatarClass = avatar_color_class((int) ($user['id'] ?? 1));
 </section>
 
 <!-- 6. Déconnexion -->
-<form method="POST" action="/logout" data-loading-form>
+<form method="POST" action="/logout" data-loading-form data-logout-form>
   <?= csrf_field() ?>
   <button type="submit" class="pc-btn pc-btn--danger pc-btn--block">
     <?= icon('log-out', 18) ?>
     <span><?= e(t('auth.logout')) ?></span>
   </button>
 </form>
-
