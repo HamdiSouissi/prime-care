@@ -221,6 +221,32 @@ final class RoutesSmokeTest
         $assert($caregiver403Ok, 'D1 Smoke (caregiver): 403 sur /users, /admin/treatments, /admin/measures, /settings et /design');
 
         // Verify Caregiver JSON API endpoints (POST /api/measures, POST /api/notes, POST /api/care-checks)
+        // E2 API: POST /api/measures sans en-tête CSRF retourne 419 + format d'erreur JSON vérifié
+        $noCsrfReq = new Request(
+            [],
+            ['type_code' => 'glycemia', 'value' => '1.14', 'context' => 'fasting'],
+            [],
+            [
+                'REQUEST_METHOD' => 'POST',
+                'REQUEST_URI' => '/api/measures',
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_ACCEPT' => 'application/json',
+                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.1',
+            ]
+        );
+        try {
+            $noCsrfResp = $router->dispatch($noCsrfReq);
+        } catch (Throwable $e) {
+            $noCsrfResp = ErrorHandler::handleException($e, $noCsrfReq);
+        }
+        $noCsrfJson = json_decode($noCsrfResp->body(), true) ?: [];
+        $assert(
+            $noCsrfResp->status() === 419
+            && ($noCsrfJson['ok'] ?? null) === false
+            && isset($noCsrfJson['error']['code'], $noCsrfJson['error']['message']),
+            'E2 API JSON: POST /api/measures sans en-tête CSRF retourne 419 au format JSON {ok: false, error: {code, message}}'
+        );
+
         $apiMeasureResp = self::dispatchJsonPost($router, '/api/measures', [
             'type_code' => 'glycemia',
             'value' => '1.14',

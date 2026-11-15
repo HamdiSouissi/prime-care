@@ -6,13 +6,18 @@ namespace Tests\Unit;
 
 use App\Controllers\ApiMedicalController;
 use App\Core\Auth;
+use App\Core\Config;
+use App\Core\Database;
 use App\Core\Request;
+use App\Core\Uploader;
+use App\Services\AttentionService;
 use App\Services\EditWindowService;
 use App\Services\HandoverService;
 use App\Services\MealService;
 use App\Services\QrCodeService;
 use DateTimeImmutable;
 use DateTimeZone;
+use Throwable;
 
 final class EditWindowHandoverMealTest
 {
@@ -121,6 +126,98 @@ final class EditWindowHandoverMealTest
             && ($photoOnlyJson['data']['description'] ?? '') === 'Repas photographié'
             && count($photoOnlyJson['data']['photos'] ?? []) === 1,
             'E4 MealService/API: repas avec photo seule est accepté (201) et affiche « Repas photographié »'
+        );
+
+        // 6. E2 Uploads:
+        // 6a. Faux JPEG contenant du PHP refusé
+        $fakePhpJpg = tempnam(sys_get_temp_dir(), 'pc_fake_') . '.jpg';
+        file_put_contents($fakePhpJpg, "<?php system(\$_GET['cmd']); ?>");
+        $fakeRejected = false;
+        try {
+            Uploader::uploadImage([
+                'name' => 'avatar.jpg',
+                'type' => 'image/jpeg',
+                'tmp_name' => $fakePhpJpg,
+                'error' => UPLOAD_ERR_OK,
+                'size' => filesize($fakePhpJpg),
+            ], 'meals', 1200, 400);
+        } catch (Throwable) {
+            $fakeRejected = true;
+        } finally {
+            @unlink($fakePhpJpg);
+        }
+        $assert($fakeRejected, 'E2 Uploads: faux JPEG contenant du code PHP est refusé par finfo');
+
+        // 6b. Vrai JPEG avec segment EXIF APP1 ré-encodé sans EXIF + miniature carrée 400 px
+        $rawGdJpg = tempnam(sys_get_temp_dir(), 'pc_raw_') . '.jpg';
+        $exifJpg = tempnam(sys_get_temp_dir(), 'pc_exif_') . '.jpg';
+        $srcIm = imagecreatetruecolor(900, 600);
+        $c1 = imagecolorallocate($srcIm, 24, 104, 219);
+        imagefilledrectangle($srcIm, 0, 0, 900, 600, $c1);
+        imagejpeg($srcIm, $rawGdJpg, 90);
+        imagedestroy($srcIm);
+
+        // Inject a synthetic APP1 Exif header right after SOI (\xFF\xD8)
+        $rawBytes = (string) file_get_contents($rawGdJpg);
+        $exifPayload = "Exif\x00\x00II*\x00\x08\x00\x00\x00\x01\x00\x12\x01\x03\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00GPSSecretLocation";
+        $app1Segment = "\xFF\xE1" . pack('n', strlen($exifPayload) + 2) . $exifPayload;
+        file_put_contents($exifJpg, substr($rawBytes, 0, 2) . $app1Segment . substr($rawBytes, 2));
+        @unlink($rawGdJpg);
+
+        $hadExifBefore = str_contains((string) file_get_contents($exifJpg), "Exif\x00\x00");
+        $uploaded = Uploader::uploadImage([
+            'name' => 'repas_exif.jpg',
+            'type' => 'image/jpeg',
+            'tmp_name' => $exifJpg,
+            'error' => UPLOAD_ERR_OK,
+            'size' => filesize($exifJpg),
+        ], 'meals', 1200, 400);
+        @unlink($exifJpg);
+
+        $uploadsRoot = (string) Config::get('paths.uploads');
+        $savedMainPath = $uploadsRoot . '/' . $uploaded['filename'];
+        $savedThumbPath = $uploadsRoot . '/' . $uploaded['thumb'];
+        $hasExifAfter = str_contains((string) file_get_contents($savedMainPath), 'GPSSecretLocation');
+        $thumbInfo = @getimagesize($savedThumbPath);
+
+        $assert(
+            $hadExifBefore === true
+            && $hasExifAfter === false
+            && is_array($thumbInfo)
+            && $thumbInfo[0] === 400
+            && $thumbInfo[1] === 400,
+            'E2 Uploads: vrai JPEG avec EXIF est ré-encodé sans EXIF et génère une miniature 400×400 px'
+        );
+
+        // 6c. Fichier trop lourd (> 5 Mo) refusé
+        $oversizedJpg = tempnam(sys_get_temp_dir(), 'pc_big_') . '.jpg';
+        file_put_contents($oversizedJpg, $rawBytes);
+        $oversizedRejected = false;
+        try {
+            Uploader::uploadImage([
+                'name' => 'huge.jpg',
+                'type' => 'image/jpeg',
+                'tmp_name' => $oversizedJpg,
+                'error' => UPLOAD_ERR_OK,
+                'size' => 6 * 1024 * 1024, // 6 MB > 5 MB limit
+            ], 'meals', 1200, 400);
+        } catch (Throwable) {
+            $oversizedRejected = true;
+        } finally {
+            @unlink($oversizedJpg);
+        }
+        $assert($oversizedRejected, 'E2 Uploads: fichier trop lourd (> 5 Mo) est refusé');
+
+        // 7. E3 AttentionService: dédoublonnage des transmissions non lues par auteur + phrase de synthèse
+        $attAdmin = AttentionService::getCurrentAttentionPoints(1, 1);
+        $marieUnreadItems = array_values(array_filter(
+            $attAdmin['items'],
+            static fn (array $item): bool => ($item['type'] ?? '') === 'unread_handover' && str_contains((string) $item['title'], 'Marie')
+        ));
+        $assert(
+            count($marieUnreadItems) === 1
+            && str_contains((string) $marieUnreadItems[0]['title'], 'transmissions non lues de Marie'),
+            'E3 AttentionService: plusieurs transmissions non lues de Marie sont dédoublonnées en un seul point'
         );
     }
 }

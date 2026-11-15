@@ -113,12 +113,45 @@ final class IntakeAndInsulinTest
         if ($skipIntakeId > 0) {
             $noReason = IntakeService::skipIntake($skipIntakeId, 3, '', '');
             $assert(
-                $noReason['ok'] === false && $noReason['http_status'] === 422,
-                'IntakeService: marquer « Non pris » sans motif est refusé (422)'
+                $noReason['ok'] === false
+                && $noReason['http_status'] === 422
+                && ($noReason['code'] ?? '') === 'REASON_REQUIRED',
+                'E2 IntakeService: marquer « Non donné » sans motif retourne 422 REASON_REQUIRED'
             );
 
             $validSkip = IntakeService::skipIntake($skipIntakeId, 3, 'refus_patient', 'Nausée passagère');
             $assert($validSkip['ok'] === true, 'IntakeService: marquer « Non pris » avec motif valide réussit');
+        }
+
+        // 7. E2: Prise « si besoin » (seconde prise avant min_interval_h retourne 422 MIN_INTERVAL_VIOLATION + heure prochaine prise)
+        $asNeededRxId = (int) $pdo->query(
+            'SELECT `id` FROM `prescriptions` WHERE `as_needed` = 1 AND `is_active` = 1 AND `deleted_at` IS NULL LIMIT 1'
+        )->fetchColumn();
+
+        if ($asNeededRxId > 0) {
+            $t1Utc = '2026-11-14 10:00:00'; // 11h00 Paris
+            $firstAsNeeded = IntakeService::giveAsNeeded($asNeededRxId, 3, [
+                'reason' => 'Douleur genou',
+                'comment' => 'Première prise',
+            ], $t1Utc);
+            $assert(
+                $firstAsNeeded['ok'] === true && $firstAsNeeded['http_status'] === 201,
+                'E2 Prise « si besoin »: première prise de Paracétamol 1 g acceptée (201)'
+            );
+
+            // Second attempt 2 hours later (12:00 UTC = 13h00 Paris), before min_interval_h = 6h (next allowed: 16:00 UTC = 17h00 Paris)
+            $t2Utc = '2026-11-14 12:00:00';
+            $secondAsNeeded = IntakeService::giveAsNeeded($asNeededRxId, 3, [
+                'reason' => 'Douleur persistante',
+            ], $t2Utc);
+            $assert(
+                $secondAsNeeded['ok'] === false
+                && $secondAsNeeded['http_status'] === 422
+                && ($secondAsNeeded['code'] ?? '') === 'MIN_INTERVAL_VIOLATION'
+                && ($secondAsNeeded['next_allowed_local'] ?? '') === '17h00'
+                && str_contains($secondAsNeeded['message'], '17h00'),
+                'E2 Prise « si besoin »: seconde prise avant min_interval_h retourne 422 MIN_INTERVAL_VIOLATION avec prochaine prise à 17h00'
+            );
         }
     }
 }
