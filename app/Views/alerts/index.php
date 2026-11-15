@@ -11,7 +11,7 @@ $canHandle = !empty($canHandle);
 <!-- Barre de filtres du Centre d'alertes (§3.8) -->
 <section class="pc-card mb-3" aria-label="Filtres du centre d’alertes">
   <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-    <div class="pc-segmented" role="tablist" aria-label="Statut des alertes">
+    <div class="pc-segmented" role="group" aria-label="Statut des alertes">
       <a
         href="/alerts?filter=open&amp;severity=<?= e($severityFilter) ?>"
         class="pc-segmented__btn <?= $statusFilter === 'open' ? 'is-active' : '' ?>"

@@ -3136,6 +3136,17 @@ a.text-brand {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+[data-theme="dark"] .pc-filter-pill.is-active,
+[data-theme="dark"] .pc-chip-radio input:checked + span {
+  background: #4F46E5;
+  color: #FFFFFF;
+}
+.pc-btn--ghost {
+  color: var(--brand-strong);
+}
+[data-theme="dark"] .pc-btn--ghost {
+  color: #C7D2FE;
+}
 .sr-only {
   position: absolute;
   width: 1px;
