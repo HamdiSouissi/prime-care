@@ -47,7 +47,7 @@ $canQuickAdd = in_array($role, ['admin', 'coordinator', 'caregiver'], true);
 
     <?php if ($canQuickAdd) : ?>
       <div class="pc-tabbar__plus-slot">
-        <button type="button" id="pc-tabbar-plus" class="pc-tabbar__plus-btn" aria-label="Ajouter une saisie rapide">
+        <button type="button" id="pc-tabbar-plus" data-sheet-open="quick-add-sheet" class="pc-tabbar__plus-btn" aria-label="Ajouter une saisie rapide">
           <?= icon('plus', '', 24) ?>
         </button>
       </div>

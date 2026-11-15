@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 /**
  * Generates derived brand PNG assets (PWA icons, Apple touch icon, maskable icon,
- * favicon, Android notification badge, and Open Graph image) from the official
- * Prime Care brand PNG files using GD.
+ * favicon, Android notification badge, Open Graph image, and iOS standalone splash screens)
+ * from the official Prime Care brand PNG files using GD.
+ *
+ * IMPORTANT: Never modifies the 7 official SVG/PNG source files in public/assets/brand/.
  */
 
 $brandDir = dirname(__DIR__) . '/public/assets/brand';
@@ -22,7 +24,7 @@ foreach ([$degradePath, $transparentPath, $completPath] as $requiredFile) {
 }
 
 /**
- * Create a transparent true-color GD image.
+ * Create a true-color GD image.
  */
 function createCanvas(int $width, int $height, bool $transparent = true, array $bgRgb = [255, 255, 255]): GdImage
 {
@@ -69,6 +71,31 @@ foreach ([512 => 'icon-512.png', 192 => 'icon-192.png'] as $size => $filename) {
     imagepng($canvas, $brandDir . '/' . $filename, 9);
     imagedestroy($canvas);
 }
+
+// 1c. iOS Standalone Splash Screens (#0A1633 background + centered gradient icon) (§4 bis.2)
+$splashDir = $brandDir . '/splash';
+if (!is_dir($splashDir)) {
+    mkdir($splashDir, 0775, true);
+}
+
+$splashSizes = [
+    [750, 1334, 'splash-750x1334.png'],
+    [1170, 2532, 'splash-1170x2532.png'],
+    [1179, 2556, 'splash-1179x2556.png'],
+    [1290, 2796, 'splash-1290x2796.png'],
+];
+
+foreach ($splashSizes as [$sw, $sh, $sFile]) {
+    $splash = createCanvas($sw, $sh, false, [10, 22, 51]); // #0A1633 Bleu nuit
+    imagealphablending($splash, true);
+    $iconSize = (int) round(min($sw, $sh) * 0.24);
+    $ix = (int) round(($sw - $iconSize) / 2);
+    $iy = (int) round(($sh - $iconSize) / 2);
+    imagecopyresampled($splash, $degrade, $ix, $iy, 0, 0, $iconSize, $iconSize, $degW, $degH);
+    imagepng($splash, $splashDir . '/' . $sFile, 9);
+    imagedestroy($splash);
+}
+
 imagedestroy($degrade);
 
 // 2. Load prime-care-icone-transparent.png for favicon-32.png and badge-96.png
@@ -119,4 +146,4 @@ imagepng($og, $brandDir . '/og-image.png', 9);
 imagedestroy($og);
 imagedestroy($complet);
 
-echo "All brand icons generated successfully in {$brandDir}\n";
+echo "All brand icons and iOS splash screens generated successfully in {$brandDir}\n";

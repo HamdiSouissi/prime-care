@@ -11,7 +11,7 @@ use finfo;
 use RuntimeException;
 
 /**
- * Serves user-uploaded images from storage/uploads/ after verifying authentication.
+ * Serves user-uploaded images and prescription documents from storage/uploads/ after verifying authentication.
  */
 final class MediaController extends Controller
 {
@@ -31,5 +31,23 @@ final class MediaController extends Controller
         $mime = (string) $finfo->file($fullPath);
 
         return Response::download($fullPath, $mime, $safeFile, true);
+    }
+
+    public function mealPhoto(Request $request, string $file): Response
+    {
+        $this->authorize('meals', 'view');
+        return $this->show($request, 'meals', $file);
+    }
+
+    public function medicationPhoto(Request $request, string $file): Response
+    {
+        $this->authorize('medications', 'view');
+        return $this->show($request, 'medications', $file);
+    }
+
+    public function prescriptionDocument(Request $request, string $file): Response
+    {
+        $this->authorize('medications', 'view');
+        return $this->show($request, 'prescriptions', $file);
     }
 }

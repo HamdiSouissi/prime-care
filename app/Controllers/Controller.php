@@ -43,6 +43,14 @@ abstract class Controller
     }
 
     /**
+     * Redirect to a path.
+     */
+    protected function redirect(string $path, int $status = 302): Response
+    {
+        return Response::redirect($path, $status);
+    }
+
+    /**
      * Redirect back to a path with flashed old input and validation errors.
      *
      * @param array<string, mixed> $input

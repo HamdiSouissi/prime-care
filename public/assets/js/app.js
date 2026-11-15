@@ -10,6 +10,8 @@ import { initSegmented } from './modules/segmented.js';
 import { initPinPad } from './modules/pin-pad.js';
 import { initTransitions } from './modules/transitions.js';
 import { initPwa } from './modules/pwa.js';
+import { initCharts } from './modules/charts.js';
+import { initMedical } from './modules/medical.js';
 import { triggerHaptic } from './modules/haptics.js';
 
 function initPasswordToggles() {
@@ -163,6 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initPinPad();
   initTransitions();
   initPwa();
+  initCharts();
+  initMedical();
   initPasswordToggles();
   initFieldValidation();
   initInstantSearch();

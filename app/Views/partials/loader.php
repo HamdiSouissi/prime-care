@@ -10,11 +10,13 @@ use App\Core\Session;
  * barre de progression en dégradé #5E5CE6 → #BF5AF2 et signature « by Prime Vision Solutions ».
  */
 $forceShow = Session::getFlash('show_launch_loader', false) ? '1' : '0';
+$minMs = (int) \App\Core\Config::get('app.loader_min_ms', 2000);
 ?>
 <div
   id="pc-launch-loader"
   class="pc-loader"
   data-force-loader="<?= e($forceShow) ?>"
+  data-min-ms="<?= $minMs ?>"
   role="status"
   aria-live="polite"
   aria-label="Chargement de Prime Care"

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration;
 
 use App\Core\Auth;
+use App\Core\Csrf;
 use App\Core\ErrorHandler;
 use App\Core\Request;
 use App\Core\Response;
@@ -13,8 +14,9 @@ use App\Core\Session;
 use Throwable;
 
 /**
- * HTTP Smoke Test (D1): Dispatches every GET route through the real Router and Middlewares
- * across 4 authentication states: unauthenticated, caregiver, viewer, and admin.
+ * HTTP Smoke Test (D1 + Phase 2): Dispatches every GET route and Phase 2 JSON API endpoint
+ * through the real Router and Middlewares across 4 authentication states:
+ * unauthenticated, caregiver, viewer, and admin.
  */
 final class RoutesSmokeTest
 {
@@ -29,15 +31,48 @@ final class RoutesSmokeTest
 
     private static function dispatchGet(Router $router, string $path): Response
     {
+        [$uriOnly, $queryStr] = array_pad(explode('?', $path, 2), 2, '');
+        $getParams = [];
+        if ($queryStr !== '') {
+            parse_str($queryStr, $getParams);
+        }
+
         $req = new Request(
-            [],
+            $getParams,
             [],
             [],
             [
                 'REQUEST_METHOD' => 'GET',
                 'REQUEST_URI' => $path,
                 'REMOTE_ADDR' => '127.0.0.1',
-                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.0',
+                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.1',
+            ]
+        );
+
+        try {
+            return $router->dispatch($req);
+        } catch (Throwable $e) {
+            return ErrorHandler::handleException($e, $req);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private static function dispatchJsonPost(Router $router, string $path, array $payload): Response
+    {
+        $csrf = Csrf::token();
+        $req = new Request(
+            [],
+            array_merge($payload, ['_csrf' => $csrf]),
+            [],
+            [
+                'REQUEST_METHOD' => 'POST',
+                'REQUEST_URI' => $path,
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_ACCEPT' => 'application/json',
+                'HTTP_X_CSRF_TOKEN' => $csrf,
+                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.1',
             ]
         );
 
@@ -56,17 +91,26 @@ final class RoutesSmokeTest
             '/',
             '/more',
             '/about',
+            '/install',
             '/today',
             '/health',
+            '/health/glycemia',
+            '/health/blood_pressure',
+            '/treatments',
+            '/treatments/history',
+            '/meals',
+            '/meals/1',
             '/journal',
-            '/settings',
-            '/coming-soon/glycemia',
+            '/coming-soon/timeclock',
             '/profile',
             '/patient',
             '/users',
             '/users/create',
             '/users/3',
             '/users/3/edit',
+            '/admin/treatments',
+            '/admin/measures',
+            '/settings',
             '/design',
         ];
 
@@ -74,14 +118,21 @@ final class RoutesSmokeTest
             '/',
             '/more',
             '/about',
+            '/install',
             '/today',
             '/health',
+            '/health/glycemia',
+            '/health/blood_pressure',
+            '/treatments',
+            '/treatments/history',
+            '/meals',
+            '/meals/1',
             '/journal',
-            '/settings',
-            '/coming-soon/glycemia',
+            '/coming-soon/timeclock',
             '/profile',
             '/patient',
             '/api/health',
+            '/api/timeline',
         ];
 
         $adminOnlyRoutes = [
@@ -89,6 +140,9 @@ final class RoutesSmokeTest
             '/users/create',
             '/users/3',
             '/users/3/edit',
+            '/admin/treatments',
+            '/admin/measures',
+            '/settings',
             '/design',
         ];
 
@@ -162,9 +216,58 @@ final class RoutesSmokeTest
             }
         }
 
-        $assert($zero500Caregiver, 'D1 Smoke (caregiver): 0 réponse 500 sur toutes les routes GET');
-        $assert($caregiver200Ok, 'D1 Smoke (caregiver): 200 sur toutes les routes autorisées (/, /patient, /profile, /more, /about...)');
-        $assert($caregiver403Ok, 'D1 Smoke (caregiver): 403 sur /users, /users/create, /users/3, /users/3/edit et /design');
+        $assert($zero500Caregiver, 'D1 Smoke (caregiver): 0 réponse 500 sur toutes les routes GET (Phase 1 + Phase 2)');
+        $assert($caregiver200Ok, 'D1 Smoke (caregiver): 200 sur toutes les routes autorisées (/, /today, /health, /treatments, /meals, /journal, /install...)');
+        $assert($caregiver403Ok, 'D1 Smoke (caregiver): 403 sur /users, /admin/treatments, /admin/measures, /settings et /design');
+
+        // Verify Caregiver JSON API endpoints (POST /api/measures, POST /api/notes, POST /api/care-checks)
+        // E2 API: POST /api/measures sans en-tête CSRF retourne 419 + format d'erreur JSON vérifié
+        $noCsrfReq = new Request(
+            [],
+            ['type_code' => 'glycemia', 'value' => '1.14', 'context' => 'fasting'],
+            [],
+            [
+                'REQUEST_METHOD' => 'POST',
+                'REQUEST_URI' => '/api/measures',
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_ACCEPT' => 'application/json',
+                'HTTP_USER_AGENT' => 'PrimeCareSmokeTest/1.1',
+            ]
+        );
+        try {
+            $noCsrfResp = $router->dispatch($noCsrfReq);
+        } catch (Throwable $e) {
+            $noCsrfResp = ErrorHandler::handleException($e, $noCsrfReq);
+        }
+        $noCsrfJson = json_decode($noCsrfResp->body(), true) ?: [];
+        $assert(
+            $noCsrfResp->status() === 419
+            && ($noCsrfJson['ok'] ?? null) === false
+            && isset($noCsrfJson['error']['code'], $noCsrfJson['error']['message']),
+            'E2 API JSON: POST /api/measures sans en-tête CSRF retourne 419 au format JSON {ok: false, error: {code, message}}'
+        );
+
+        $apiMeasureResp = self::dispatchJsonPost($router, '/api/measures', [
+            'type_code' => 'glycemia',
+            'value' => '1.14',
+            'context' => 'fasting',
+            'comment' => 'Test API glycémie',
+        ]);
+        $assert($apiMeasureResp->status() === 201, 'API JSON (caregiver): POST /api/measures retourne 201 Created');
+
+        $apiNoteResp = self::dispatchJsonPost($router, '/api/notes', [
+            'category' => 'general',
+            'content' => 'Note de test smoke API',
+            'is_important' => 0,
+            'is_handover' => 1,
+        ]);
+        $assert($apiNoteResp->status() === 201, 'API JSON (caregiver): POST /api/notes (transmission) retourne 201 Created');
+
+        $apiCareResp = self::dispatchJsonPost($router, '/api/care-checks', [
+            'care_item_id' => 1,
+            'comment' => 'Soin rapide validé',
+        ]);
+        $assert($apiCareResp->status() === 201, 'API JSON (caregiver): POST /api/care-checks retourne 201 Created');
 
         $homeHtml = self::dispatchGet($router, '/')->body();
         $assert(
@@ -205,9 +308,16 @@ final class RoutesSmokeTest
             }
         }
 
+        // Viewer must be blocked (403) from writing via JSON API
+        $viewerWriteMeasure = self::dispatchJsonPost($router, '/api/measures', [
+            'type_code' => 'glycemia',
+            'value' => '1.10',
+        ]);
+        $assert($viewerWriteMeasure->status() === 403, 'API JSON (viewer): POST /api/measures est bloqué en 403');
+
         $assert($zero500Viewer, 'D1 Smoke (viewer): 0 réponse 500 sur toutes les routes GET');
         $assert($viewer200Ok, 'D1 Smoke (viewer): 200 sur toutes les routes de consultation');
-        $assert($viewer403Ok, 'D1 Smoke (viewer): 403 sur /users, /users/create, /users/3, /users/3/edit et /design');
+        $assert($viewer403Ok, 'D1 Smoke (viewer): 403 sur les routes d’administration');
 
         // ---------------------------------------------------------------------
         // 4. Authenticated as Admin (Karim Benali — Admin!2026)
@@ -228,7 +338,7 @@ final class RoutesSmokeTest
         }
 
         $assert($zero500Admin, 'D1 Smoke (admin): 0 réponse 500 sur toutes les routes GET');
-        $assert($admin200All, 'D1 Smoke (admin): 200 partout sur les 16 routes authentifiées (dont /users et /design)');
+        $assert($admin200All, 'D1 Smoke (admin): 200 partout sur les 26 routes authentifiées (dont /admin/treatments, /admin/measures et /settings)');
 
         Auth::logout();
         Session::destroy();

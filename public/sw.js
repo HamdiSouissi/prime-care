@@ -2,7 +2,7 @@
  * Prime Care — Service Worker (Cache-First static assets, Network-First HTML with Offline fallback)
  */
 
-const CACHE_NAME = 'prime-care-v1';
+const CACHE_NAME = 'prime-care-v2';
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_ASSETS = [
@@ -13,6 +13,7 @@ const PRECACHE_ASSETS = [
   '/assets/css/components.css',
   '/assets/css/utilities.css',
   '/assets/css/app.css',
+  '/assets/vendor/apexcharts.min.js',
   '/assets/js/app.js',
   '/assets/fonts/inter-var.woff2',
   '/assets/brand/prime-care-logo-complet.svg',

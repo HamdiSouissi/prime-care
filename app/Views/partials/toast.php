@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use App\Core\Session;
 
-$toastSuccess = Session::flash('toast_success');
-$toastError = Session::flash('toast_error');
-$toastInfo = Session::flash('toast_info');
+$toastSuccess = Session::flash('toast_success') ?? Session::flash('success');
+$toastError = Session::flash('toast_error') ?? Session::flash('error');
+$toastInfo = Session::flash('toast_info') ?? Session::flash('info');
 ?>
 <div id="pc-toast-container" class="pc-toast-container" aria-live="polite" aria-atomic="true">
   <?php if (is_string($toastSuccess) && $toastSuccess !== '') : ?>
@@ -28,7 +28,7 @@ $toastInfo = Session::flash('toast_info');
   <?php if (is_string($toastInfo) && $toastInfo !== '') : ?>
     <div class="pc-toast pc-toast--info">
       <?= icon('info', 'text-brand', 22) ?>
-      <span class="flex-1"><?= e($toastInfo) ?></span>
+      <span class="pc-1"><?= e($toastInfo) ?></span>
     </div>
   <?php endif; ?>
 </div>

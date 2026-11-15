@@ -760,4 +760,1109 @@
     color: #64748B;
     text-align: center;
   }
+
+  /* ==========================================================================
+     7. PHASE 2 — MEDICAL CORE: SHIFT TIMELINE, VITALS, TREATMENTS, MEALS, JOURNAL
+     ========================================================================== */
+  .is-hidden {
+    display: none !important;
+  }
+
+  .text-white { color: #FFFFFF !important; }
+  .text-white-80 { color: rgba(255, 255, 255, 0.84) !important; }
+  .text-white-70 { color: rgba(255, 255, 255, 0.72) !important; }
+
+  .pc-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pc-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .pc-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .pc-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  @media (min-width: 400px) {
+    .pc-grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .pc-grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .pc-grid-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .pc-sheet--tall {
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+  /* Hero Navy card for Vitals Detail (E07) & PWA Install */
+  .pc-card--hero-navy {
+    position: relative;
+    overflow: hidden;
+    background-color: #0A1633;
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    padding: 20px;
+  }
+
+  .pc-card--hero-navy::before {
+    content: "";
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    top: -70px;
+    right: -40px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(94, 92, 230, 0.45) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .pc-card--hero-navy > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .pc-card--subtle {
+    background-color: var(--surface-2);
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .pc-hero-metric {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .pc-hero-metric__val {
+    font-size: 38px;
+    line-height: 42px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #FFFFFF;
+  }
+
+  .pc-hero-metric__unit {
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .pc-metric-lg {
+    font-size: 26px;
+    line-height: 32px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+
+  .pc-metric-unit {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+
+  /* 3-Zone Glycemia Gauge (§8.2) */
+  .pc-gly-gauge__track {
+    position: relative;
+    display: flex;
+    height: 10px;
+    border-radius: 999px;
+    overflow: visible;
+    background-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .pc-gly-gauge__zone {
+    height: 100%;
+  }
+
+  .pc-gly-gauge__zone--low {
+    width: 24%;
+    background-color: #FF3B30;
+    border-radius: 999px 0 0 999px;
+  }
+
+  .pc-gly-gauge__zone--ok {
+    width: 42%;
+    background-color: #34C759;
+  }
+
+  .pc-gly-gauge__zone--high {
+    width: 34%;
+    background-color: #FF9F0A;
+    border-radius: 0 999px 999px 0;
+  }
+
+  .pc-gly-gauge__marker {
+    position: absolute;
+    top: -4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #FFFFFF;
+    border: 3px solid #0A1633;
+    transform: translateX(-50%);
+  }
+
+  .pc-gauge-pos-5  { left: 5%; }
+  .pc-gauge-pos-10 { left: 10%; }
+  .pc-gauge-pos-15 { left: 15%; }
+  .pc-gauge-pos-20 { left: 20%; }
+  .pc-gauge-pos-25 { left: 25%; }
+  .pc-gauge-pos-30 { left: 30%; }
+  .pc-gauge-pos-35 { left: 35%; }
+  .pc-gauge-pos-40 { left: 40%; }
+  .pc-gauge-pos-45 { left: 45%; }
+  .pc-gauge-pos-50 { left: 50%; }
+  .pc-gauge-pos-55 { left: 55%; }
+  .pc-gauge-pos-60 { left: 60%; }
+  .pc-gauge-pos-65 { left: 65%; }
+  .pc-gauge-pos-70 { left: 70%; }
+  .pc-gauge-pos-75 { left: 75%; }
+  .pc-gauge-pos-80 { left: 80%; }
+  .pc-gauge-pos-85 { left: 85%; }
+  .pc-gauge-pos-90 { left: 90%; }
+  .pc-gauge-pos-95 { left: 95%; }
+
+  .pc-gly-gauge__labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.72);
+    margin-top: 6px;
+  }
+
+  /* Progress bar */
+  .pc-progress {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    appearance: none;
+    background-color: var(--surface-2);
+    border: none;
+  }
+
+  .pc-progress::-webkit-progress-bar {
+    background-color: var(--surface-2);
+    border-radius: 999px;
+  }
+
+  .pc-progress::-webkit-progress-value {
+    background: var(--brand-gradient);
+    border-radius: 999px;
+  }
+
+  .pc-progress::-moz-progress-bar {
+    background: var(--brand-gradient);
+    border-radius: 999px;
+  }
+
+  /* Shift Timeline (Caregiver Home §8.1) */
+  .pc-shift-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pc-shift-step {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .pc-shift-step__rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 24px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .pc-shift-step__rail::after {
+    content: "";
+    flex: 1;
+    width: 2px;
+    background-color: var(--border);
+    margin-top: 4px;
+  }
+
+  .pc-shift-step:last-child .pc-shift-step__rail::after {
+    display: none;
+  }
+
+  .pc-shift-step__dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--surface-2);
+    border: 2px solid var(--border);
+    color: var(--text-2);
+    flex-shrink: 0;
+  }
+
+  .pc-shift-step--done .pc-shift-step__dot {
+    background-color: var(--ok);
+    border-color: var(--ok);
+    color: #FFFFFF;
+  }
+
+  .pc-shift-step--current .pc-shift-step__dot {
+    background-color: var(--brand);
+    border-color: var(--brand);
+    color: #FFFFFF;
+  }
+
+  .pc-shift-step__card {
+    flex: 1;
+    min-width: 0;
+    background-color: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 12px 14px;
+  }
+
+  .pc-shift-step--current .pc-shift-step__card {
+    border-color: var(--brand);
+    background-color: var(--surface-1);
+  }
+
+  .pc-shift-step--done .pc-shift-step__card {
+    opacity: 0.82;
+  }
+
+  .pc-shift-step__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .pc-shift-step__time {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-2);
+  }
+
+  .pc-shift-step__title {
+    font-size: 16px;
+    line-height: 21px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .pc-shift-step__subtitle {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+
+  .pc-shift-step__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  /* E04 Today Cards */
+  .pc-today-card {
+    background-color: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pc-today-card--current {
+    border-color: var(--brand);
+  }
+
+  .pc-today-card--done {
+    opacity: 0.85;
+  }
+
+  .pc-today-card__main {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .pc-today-card__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-today-card__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+
+  .pc-today-card__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .pc-today-card__subtitle {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+
+  .pc-today-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-left: 52px;
+  }
+
+  /* Handover Banner (E13 / §8.2) */
+  .pc-handover-banner {
+    background-color: var(--surface-1);
+    border: 1.5px solid rgba(175, 82, 222, 0.45);
+    border-radius: 22px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pc-handover-banner__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .pc-handover-banner__body {
+    font-size: 15px;
+    line-height: 21px;
+    color: var(--text);
+  }
+
+  .pc-handover-banner__auto {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background-color: rgba(175, 82, 222, 0.10);
+    color: var(--text-2);
+    font-size: 12px;
+    line-height: 17px;
+  }
+
+  .pc-handover-banner__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* PWA Install Banner & Steps (§4 bis.2) */
+  .pc-install-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background-color: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 14px 16px;
+  }
+
+  .pc-install-banner__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background-color: var(--brand-soft);
+    color: var(--brand);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pc-install-banner__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-qr-frame {
+    display: inline-flex;
+    padding: 14px;
+    border-radius: 20px;
+    background-color: #FFFFFF;
+    border: 1px solid var(--border);
+  }
+
+  .pc-qr-svg {
+    display: block;
+    max-width: 220px;
+    height: auto;
+  }
+
+  .pc-install-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pc-install-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .pc-install-steps__num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--brand-soft);
+    color: var(--brand);
+    font-weight: 700;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Attention Cards (Admin Home) */
+  .pc-attention-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background-color: var(--surface-1);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .pc-attention-card__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-color: var(--brand);
+  }
+
+  .pc-attention-card--critical {
+    border-color: rgba(255, 59, 48, 0.45);
+    background-color: var(--danger-soft);
+  }
+
+  .pc-attention-card--critical .pc-attention-card__dot {
+    background-color: var(--danger);
+  }
+
+  .pc-attention-card--warn {
+    border-color: rgba(255, 159, 10, 0.45);
+  }
+
+  .pc-attention-card--warn .pc-attention-card__dot {
+    background-color: var(--warn);
+  }
+
+  /* Secondary Vitals Pills (§8.3) */
+  .pc-secondary-pills {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 8px;
+  }
+
+  .pc-vital-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background-color: var(--surface-1);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .pc-vital-pill__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pc-vital-pill__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pc-vital-pill__val {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-2);
+  }
+
+  /* E06 Measure Entry Sheet & Live Status */
+  .pc-measure-entry-box {
+    background-color: var(--surface-2);
+    border-radius: 20px;
+    padding: 14px;
+  }
+
+  .pc-measure-entry-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .pc-measure-entry-field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-measure-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .pc-input--metric {
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    font-variant-numeric: tabular-nums;
+    padding-right: 64px !important;
+    min-height: 56px !important;
+  }
+
+  .pc-measure-unit-badge {
+    position: absolute;
+    right: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-2);
+    pointer-events: none;
+  }
+
+  .pc-live-eval {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .pc-live-eval__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+  }
+
+  .pc-live-eval--neutral {
+    background-color: var(--surface-1);
+    color: var(--text-2);
+  }
+
+  .pc-live-eval--ok {
+    background-color: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .pc-live-eval--warn {
+    background-color: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .pc-live-eval--critical {
+    background-color: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  /* Alert cards in sheets */
+  .pc-alert-card {
+    border-radius: 18px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 19px;
+  }
+
+  .pc-alert-card--critical {
+    background-color: var(--danger-soft);
+    border: 1.5px solid rgba(255, 59, 48, 0.45);
+    color: var(--text);
+  }
+
+  .pc-alert-card--warn {
+    background-color: var(--warn-soft);
+    border: 1.5px solid rgba(255, 159, 10, 0.45);
+    color: var(--text);
+  }
+
+  .pc-alert-card__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--danger);
+    margin-bottom: 6px;
+  }
+
+  .pc-alert-card__steps {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  /* Chip groups & Filter pills */
+  .pc-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .pc-chip-radio {
+    cursor: pointer;
+  }
+
+  .pc-chip-radio input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pc-chip-radio span,
+  .pc-filter-pill,
+  .pc-fav-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 140ms, color 140ms, border-color 140ms;
+  }
+
+  .pc-chip-radio input:checked + span,
+  .pc-filter-pill.is-active {
+    background-color: var(--brand);
+    border-color: var(--brand);
+    color: #FFFFFF;
+  }
+
+  /* Variable Insulin Correction Table (E08) */
+  .pc-corr-table {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .pc-corr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background-color: var(--surface-1);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pc-corr-row.is-matched {
+    border-color: var(--c-meds);
+    background-color: rgba(0, 199, 190, 0.14);
+    color: var(--text);
+  }
+
+  /* 4-Segment Meal Portion Bar (§8.2) & Selector */
+  .pc-portion-selector {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .pc-portion-option {
+    cursor: pointer;
+  }
+
+  .pc-portion-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pc-portion-option span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 44px;
+    padding: 4px 6px;
+    border-radius: 12px;
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-2);
+  }
+
+  .pc-portion-option input:checked + span {
+    background-color: var(--c-meals);
+    border-color: var(--c-meals);
+    color: #FFFFFF;
+  }
+
+  .pc-portion-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    height: 7px;
+  }
+
+  .pc-portion-bar__seg {
+    border-radius: 999px;
+    background-color: var(--surface-2);
+  }
+
+  .pc-portion-bar__seg.is-filled {
+    background-color: var(--c-meals);
+  }
+
+  /* Meals Gallery & Photos (E11) */
+  .pc-meal-card {
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .pc-meal-card__row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .pc-meal-card__thumb {
+    position: relative;
+    width: 78px;
+    height: 78px;
+    border-radius: 16px;
+    overflow: hidden;
+    background-color: var(--surface-2);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pc-meal-card__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pc-meal-card__photo-count {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background-color: rgba(10, 22, 51, 0.78);
+    color: #FFFFFF;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .pc-meal-card__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-meal-photo-frame {
+    display: block;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    aspect-ratio: 4 / 3;
+    background-color: var(--surface-2);
+  }
+
+  .pc-meal-photo-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pc-meal-photo-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 4 / 3;
+    border-radius: 16px;
+    background-color: var(--surface-2);
+    border: 1px dashed var(--border);
+    color: var(--text-3);
+    font-size: 12px;
+  }
+
+  /* Quick Care 1-tap buttons */
+  .pc-care-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .pc-care-quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 120ms, background-color 140ms;
+  }
+
+  .pc-care-quick-btn:active {
+    transform: scale(0.97);
+    background-color: var(--brand-soft);
+  }
+
+  .pc-journal-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  .pc-journal-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pc-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 20px;
+    cursor: pointer;
+  }
+
+  .pc-checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--brand);
+    flex-shrink: 0;
+  }
+
+  /* Self-hosted ApexCharts SVG styles (§8.3 — zero inline styles, light/dark adaptive) */
+  .pc-chart-box {
+    width: 100%;
+    min-height: 205px;
+  }
+
+  .apexcharts-canvas {
+    position: relative;
+    width: 100%;
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .apexcharts-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+  }
+
+  .apexcharts-gridline {
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+
+  .apexcharts-xaxis-label,
+  .apexcharts-yaxis-label {
+    fill: var(--text-3);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .apexcharts-annotation-label {
+    fill: var(--text-2);
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .apexcharts-point {
+    cursor: pointer;
+    transition: r 140ms ease;
+  }
+
+  .apexcharts-tooltip {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .apexcharts-tooltip-hidden {
+    display: none;
+  }
+
+  .apexcharts-tooltip-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .apexcharts-tooltip-date {
+    color: var(--text-2);
+    font-family: var(--font-mono);
+  }
+
+  .apexcharts-tooltip-val {
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+
+  .apexcharts-empty {
+    fill: var(--text-3);
+    font-size: 13px;
+  }
+
+  /* E3 — Phrase de synthèse en tête de l'accueil Admin (Additif B §8) */
+  .pc-admin-headline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--r-card);
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+  }
+
+  .pc-admin-headline__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pc-admin-headline__title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .pc-admin-headline__sub {
+    font-size: 12px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+
+  .pc-admin-headline--ok {
+    border-color: rgba(52, 199, 89, 0.35);
+    background-color: rgba(52, 199, 89, 0.08);
+  }
+
+  .pc-admin-headline--ok .pc-admin-headline__icon {
+    background-color: rgba(52, 199, 89, 0.18);
+    color: var(--c-ok);
+  }
+
+  .pc-admin-headline--ok .pc-admin-headline__title {
+    color: var(--c-ok);
+  }
+
+  .pc-admin-headline--warn {
+    border-color: rgba(255, 149, 0, 0.4);
+    background-color: rgba(255, 149, 0, 0.08);
+  }
+
+  .pc-admin-headline--warn .pc-admin-headline__icon {
+    background-color: rgba(255, 149, 0, 0.18);
+    color: var(--c-warn);
+  }
+
+  .pc-admin-headline--warn .pc-admin-headline__title {
+    color: var(--c-warn);
+  }
+
+  .pc-admin-headline--critical {
+    border-color: rgba(255, 59, 48, 0.45);
+    background-color: rgba(255, 59, 48, 0.09);
+  }
+
+  .pc-admin-headline--critical .pc-admin-headline__icon {
+    background-color: rgba(255, 59, 48, 0.18);
+    color: var(--c-danger);
+  }
+
+  .pc-admin-headline--critical .pc-admin-headline__title {
+    color: var(--c-danger);
+  }
 }
