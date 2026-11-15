@@ -12,6 +12,7 @@ require_once dirname(__DIR__) . '/app/Helpers/bootstrap.php';
 use App\Core\Config;
 use App\Core\Database;
 use Database\Seeds\Phase1Seeder;
+use Database\Seeds\Phase2Seeder;
 
 $args = $argv ?? [];
 $isFresh = in_array('--fresh', $args, true);
@@ -105,5 +106,6 @@ echo $ranCount > 0
 if ($doSeed) {
     echo "Insertion des données de démonstration (--seed)...\n";
     Phase1Seeder::run();
+    Phase2Seeder::run();
     echo "Seed terminé avec succès.\n";
 }

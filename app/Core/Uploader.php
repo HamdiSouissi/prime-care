@@ -20,6 +20,84 @@ final class Uploader
         'image/webp' => 'webp',
     ];
 
+    private const ALLOWED_DOCUMENT_MIMES = [
+        'application/pdf' => 'pdf',
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+
+    /**
+     * Validate and store a prescription or medical document (PDF, JPG, PNG, WebP).
+     * Images are re-encoded via GD to strip EXIF; PDFs are verified via finfo + %PDF header.
+     *
+     * @param array<string, mixed> $file
+     * @return array{filename: string, mime: string, original_name: string, size: int}
+     */
+    public static function uploadDocument(array $file, string $subDir = 'prescriptions'): array
+    {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('Erreur lors du téléversement du document.');
+        }
+
+        $tmpPath = (string) ($file['tmp_name'] ?? '');
+        if ($tmpPath === '' || !is_file($tmpPath)) {
+            throw new RuntimeException('Fichier temporaire introuvable.');
+        }
+
+        $maxBytes = (int) Config::get('security.max_upload_bytes', 5 * 1024 * 1024);
+        $size = (int) ($file['size'] ?? filesize($tmpPath));
+        if ($size <= 0 || $size > $maxBytes) {
+            throw new RuntimeException('La taille du document dépasse la limite autorisée (5 Mo).');
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $finfo->file($tmpPath);
+        if (!isset(self::ALLOWED_DOCUMENT_MIMES[$mime])) {
+            throw new RuntimeException('Format de document non autorisé. Utilisez PDF, JPG ou PNG.');
+        }
+
+        $originalName = preg_replace('/[^a-zA-Z0-9._ -]/', '', basename((string) ($file['name'] ?? 'ordonnance'))) ?: 'ordonnance';
+
+        if (isset(self::ALLOWED_IMAGE_MIMES[$mime])) {
+            $imgRes = self::uploadImage($file, $subDir, 1600, 400);
+            return [
+                'filename' => $imgRes['filename'],
+                'mime' => $imgRes['mime'],
+                'original_name' => $originalName,
+                'size' => $imgRes['size'],
+            ];
+        }
+
+        // Verify %PDF- magic header
+        $head = (string) file_get_contents($tmpPath, false, null, 0, 5);
+        if ($head !== '%PDF-') {
+            throw new RuntimeException('Le fichier PDF fourni est invalide.');
+        }
+
+        $uploadsRoot = (string) Config::get('paths.uploads', dirname(__DIR__, 2) . '/storage/uploads');
+        $safeSubDir = preg_replace('/[^a-zA-Z0-9_-]/', '', $subDir) ?: 'prescriptions';
+        $targetDir = $uploadsRoot . '/' . $safeSubDir;
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0775, true);
+        }
+
+        $randomBase = bin2hex(random_bytes(16));
+        $relFilename = $safeSubDir . '/' . $randomBase . '.pdf';
+        $fullPath = $uploadsRoot . '/' . $relFilename;
+
+        if (!copy($tmpPath, $fullPath)) {
+            throw new RuntimeException('Impossible d’enregistrer le document PDF.');
+        }
+
+        return [
+            'filename' => $relFilename,
+            'mime' => 'application/pdf',
+            'original_name' => $originalName,
+            'size' => (int) filesize($fullPath),
+        ];
+    }
+
     /**
      * Validate, re-encode (stripping EXIF), and store an uploaded image + square thumbnail.
      *
