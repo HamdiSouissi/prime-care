@@ -513,14 +513,13 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
       <?php endif; ?>
 
       <div class="pc-field">
-        <label class="pc-label" for="meal-description-input">Composition du repas</label>
+        <label class="pc-label" for="meal-description-input">Composition du repas (facultative si photo jointe)</label>
         <textarea
           name="description"
           id="meal-description-input"
           class="pc-input"
           rows="2"
-          placeholder="Ex. Filet de cabillaud, riz basmati, courgettes vapeur, compote sans sucre..."
-          required
+          placeholder="Ex. Filet de cabillaud, riz basmati, courgettes vapeur... (ou laissez vide avec une photo)"
         ></textarea>
       </div>
 

@@ -68,7 +68,7 @@ $isViewer = $role === 'viewer';
                 </span>
               </div>
 
-              <p class="text-footnote text-muted mt-1"><?= e((string) $m['description']) ?></p>
+              <p class="text-footnote text-muted mt-1"><?= e((string) ($m['description'] ?: 'Repas photographié')) ?></p>
 
               <!-- Barre de quantité 4 segments (§8.2) -->
               <div class="pc-portion-bar mt-2" aria-label="Quantité consommée : <?= $portion ?> %">

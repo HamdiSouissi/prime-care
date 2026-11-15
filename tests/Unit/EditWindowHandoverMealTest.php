@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Controllers\ApiMedicalController;
+use App\Core\Auth;
+use App\Core\Request;
 use App\Services\EditWindowService;
 use App\Services\HandoverService;
 use App\Services\MealService;
@@ -75,6 +78,49 @@ final class EditWindowHandoverMealTest
         $assert(
             str_starts_with($qrSvg, '<svg') && str_contains($qrSvg, 'fill="#0A1633"') && !str_contains($qrSvg, 'style='),
             'QrCodeService: génère un QR code SVG ISO 18004 côté serveur sans attribut style= ni appel externe'
+        );
+
+        // 5. E4: Meal creation with photo only (empty description -> "Repas photographié") vs neither (422)
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $apiCtrl = new ApiMedicalController();
+
+        $emptyMealReq = new Request([], ['description' => '', 'portion_eaten' => '100'], [], ['REQUEST_METHOD' => 'POST']);
+        $emptyMealRes = $apiCtrl->storeMeal($emptyMealReq);
+        $assert(
+            $emptyMealRes->status() === 422,
+            'E4 MealService/API: repas sans composition ni photo est refusé (422)'
+        );
+
+        $tmpImg = tempnam(sys_get_temp_dir(), 'pc_meal_') . '.jpg';
+        $im = imagecreatetruecolor(240, 180);
+        $bg = imagecolorallocate($im, 10, 22, 51);
+        imagefilledrectangle($im, 0, 0, 240, 180, $bg);
+        imagejpeg($im, $tmpImg, 85);
+        imagedestroy($im);
+
+        $photoOnlyReq = new Request(
+            [],
+            ['description' => '', 'portion_eaten' => '75'],
+            [
+                'photo_avant' => [
+                    'name' => 'plateau.jpg',
+                    'type' => 'image/jpeg',
+                    'tmp_name' => $tmpImg,
+                    'error' => UPLOAD_ERR_OK,
+                    'size' => filesize($tmpImg),
+                ],
+            ],
+            ['REQUEST_METHOD' => 'POST']
+        );
+        $photoOnlyRes = $apiCtrl->storeMeal($photoOnlyReq);
+        @unlink($tmpImg);
+        $photoOnlyJson = json_decode($photoOnlyRes->body(), true) ?: [];
+        $assert(
+            $photoOnlyRes->status() === 201
+            && ($photoOnlyJson['ok'] ?? false) === true
+            && ($photoOnlyJson['data']['description'] ?? '') === 'Repas photographié'
+            && count($photoOnlyJson['data']['photos'] ?? []) === 1,
+            'E4 MealService/API: repas avec photo seule est accepté (201) et affiche « Repas photographié »'
         );
     }
 }

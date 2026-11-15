@@ -280,9 +280,20 @@ final class ApiMedicalController extends Controller
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour enregistrer un repas.', 403);
         }
 
+        $filesByKind = [];
+        foreach (['avant' => 'photo_avant', 'apres' => 'photo_apres', 'autre' => 'photo_autre'] as $k => $field) {
+            $f = $request->file($field);
+            if (is_array($f) && ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $filesByKind[$k] = $f;
+            }
+        }
+
         $description = trim((string) $request->input('description', ''));
+        if ($description === '' && $filesByKind === []) {
+            return Response::jsonError('VALIDATION_ERROR', 'Veuillez indiquer la composition du repas ou ajouter une photo.', 422);
+        }
         if ($description === '') {
-            return Response::jsonError('VALIDATION_ERROR', 'Veuillez indiquer la composition du repas.', 422);
+            $description = 'Repas photographié';
         }
 
         $localDate = trim((string) $request->input('meal_date', ''));
@@ -337,19 +348,12 @@ final class ApiMedicalController extends Controller
         ]);
         $mealId = (int) $pdo->lastInsertId();
 
-        $filesByKind = [];
-        foreach (['avant' => 'photo_avant', 'apres' => 'photo_apres', 'autre' => 'photo_autre'] as $k => $field) {
-            $f = $request->file($field);
-            if (is_array($f) && ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-                $filesByKind[$k] = $f;
-            }
-        }
-
         $savedPhotos = [];
         if ($filesByKind !== []) {
             try {
                 $savedPhotos = MealService::saveMealPhotos($mealId, $filesByKind, $userId, 1);
             } catch (Throwable $e) {
+                $pdo->prepare('DELETE FROM `meals` WHERE `id` = :id')->execute(['id' => $mealId]);
                 return Response::jsonError('UPLOAD_ERROR', $e->getMessage(), 422);
             }
         }

@@ -24,7 +24,7 @@ $isViewer = $role === 'viewer';
     </span>
   </div>
 
-  <p class="text-body my-2"><?= e((string) $meal['description']) ?></p>
+  <p class="text-body my-2"><?= e((string) ($meal['description'] ?: 'Repas photographié')) ?></p>
 
   <!-- Barre 4 segments (§8.2) -->
   <div class="pc-portion-bar my-2" aria-label="Quantité consommée : <?= $portion ?> %">
