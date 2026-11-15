@@ -178,10 +178,19 @@ final class WebPushService
      * Retourne le corps binaire complet prêt à envoyer :
      *   salt (16 octets) || rs (4 octets big-endian = 4096) || idlen (1 octet = 65) || as_public (65 octets) || ciphertext || tag (16 octets)
      *
+     * Les paramètres optionnels `$testSalt`, `$testEphemeralPrivateKey` et `$testEphemeralPublicKey`
+     * permettent d'injecter le vecteur officiel RFC 8291 Appendix A lors des tests unitaires.
+     *
      * @return array{body: string, salt: string, server_public_key: string, cek: string, nonce: string}
      */
-    public static function encryptPayload(string $plaintext, string $userP256dhBase64Url, string $userAuthBase64Url): array
-    {
+    public static function encryptPayload(
+        string $plaintext,
+        string $userP256dhBase64Url,
+        string $userAuthBase64Url,
+        ?string $testSalt = null,
+        OpenSSLAsymmetricKey|string|null $testEphemeralPrivateKey = null,
+        ?string $testEphemeralPublicKey = null
+    ): array {
         $uaPublic = self::base64UrlDecode($userP256dhBase64Url);
         $authSecret = self::base64UrlDecode($userAuthBase64Url);
 
@@ -192,22 +201,48 @@ final class WebPushService
             throw new InvalidArgumentException('Secret d’authentification Web Push (auth) invalide (attendu : >= 16 octets).');
         }
 
-        // 1. Générer une paire de clés éphémère P-256 (as_private, as_public) et un sel de 16 octets
-        $ephemeralKey = openssl_pkey_new([
-            'curve_name' => 'prime256v1',
-            'private_key_type' => OPENSSL_KEYTYPE_EC,
-        ]);
-        if ($ephemeralKey === false) {
-            throw new RuntimeException('Impossible de générer la clé éphémère ECDH P-256.');
-        }
-        $ephDetails = openssl_pkey_get_details($ephemeralKey);
-        if (!is_array($ephDetails) || !isset($ephDetails['ec']['x'], $ephDetails['ec']['y'])) {
-            throw new RuntimeException('Détails de la clé éphémère ECDH invalides.');
+        // 1. Générer (ou injecter pour test RFC 8291 Appendix A) la paire de clés éphémère P-256 (as_private, as_public)
+        if ($testEphemeralPrivateKey !== null) {
+            if ($testEphemeralPrivateKey instanceof OpenSSLAsymmetricKey) {
+                $ephemeralKey = $testEphemeralPrivateKey;
+            } elseif (str_contains($testEphemeralPrivateKey, 'BEGIN')) {
+                $ephemeralKey = openssl_pkey_get_private($testEphemeralPrivateKey);
+            } else {
+                $rawPriv = strlen($testEphemeralPrivateKey) === 32
+                    ? $testEphemeralPrivateKey
+                    : self::base64UrlDecode($testEphemeralPrivateKey);
+                $rawPub = $testEphemeralPublicKey !== null
+                    ? (strlen($testEphemeralPublicKey) === 65 ? $testEphemeralPublicKey : self::base64UrlDecode($testEphemeralPublicKey))
+                    : '';
+                $pem = self::rawPrivateAndPublicToPem($rawPriv, $rawPub);
+                $ephemeralKey = openssl_pkey_get_private($pem);
+            }
+            if ($ephemeralKey === false) {
+                throw new InvalidArgumentException('Clé éphémère de test invalide.');
+            }
+        } else {
+            $ephemeralKey = openssl_pkey_new([
+                'curve_name' => 'prime256v1',
+                'private_key_type' => OPENSSL_KEYTYPE_EC,
+            ]);
+            if ($ephemeralKey === false) {
+                throw new RuntimeException('Impossible de générer la clé éphémère ECDH P-256.');
+            }
         }
 
-        $asX = str_pad((string) $ephDetails['ec']['x'], 32, "\x00", STR_PAD_LEFT);
-        $asY = str_pad((string) $ephDetails['ec']['y'], 32, "\x00", STR_PAD_LEFT);
-        $asPublic = "\x04" . $asX . $asY; // 65 bytes
+        if ($testEphemeralPublicKey !== null) {
+            $asPublic = strlen($testEphemeralPublicKey) === 65
+                ? $testEphemeralPublicKey
+                : self::base64UrlDecode($testEphemeralPublicKey);
+        } else {
+            $ephDetails = openssl_pkey_get_details($ephemeralKey);
+            if (!is_array($ephDetails) || !isset($ephDetails['ec']['x'], $ephDetails['ec']['y'])) {
+                throw new RuntimeException('Détails de la clé éphémère ECDH invalides.');
+            }
+            $asX = str_pad((string) $ephDetails['ec']['x'], 32, "\x00", STR_PAD_LEFT);
+            $asY = str_pad((string) $ephDetails['ec']['y'], 32, "\x00", STR_PAD_LEFT);
+            $asPublic = "\x04" . $asX . $asY; // 65 bytes
+        }
 
         // 2. Convertir le point public du navigateur (ua_public 65B) en PEM SubjectPublicKeyInfo P-256 pour openssl_pkey_derive
         $uaPublicKeyPem = self::uncompressedPointToPem($uaPublic);
@@ -223,7 +258,15 @@ final class WebPushService
         }
 
         // 4. Dérivation des clés selon RFC 8291 §3.3 & §3.4 (HKDF-SHA-256)
-        $salt = random_bytes(16);
+        if ($testSalt !== null) {
+            $salt = strlen($testSalt) === 16 ? $testSalt : self::base64UrlDecode($testSalt);
+        } else {
+            $salt = random_bytes(16);
+        }
+        if (strlen($salt) !== 16) {
+            throw new InvalidArgumentException('Le sel Web Push (salt) doit mesurer exactement 16 octets.');
+        }
+
         $derived = self::deriveAes128GcmKeys($ecdhSecret, $authSecret, $uaPublic, $asPublic, $salt);
         $cek = $derived['cek'];
         $nonce = $derived['nonce'];
@@ -392,8 +435,13 @@ final class WebPushService
      * @param array<string, mixed> $payloadData
      * @return array{ok: bool, status_code: int, expired: bool, error: ?string}
      */
-    public static function sendToSubscription(array $subscriptionRow, array $payloadData, string $urgency = 'normal', int $ttl = 86400): array
-    {
+    public static function sendToSubscription(
+        array $subscriptionRow,
+        array $payloadData,
+        string $urgency = 'normal',
+        int $ttl = 86400,
+        ?int $testSimulateHttpCode = null
+    ): array {
         $endpoint = (string) ($subscriptionRow['endpoint'] ?? '');
         $p256dh = (string) ($subscriptionRow['p256dh'] ?? '');
         $auth = (string) ($subscriptionRow['auth'] ?? '');
@@ -406,13 +454,52 @@ final class WebPushService
 
         // In development/testing or local mock endpoints (.test / localhost), log without external network failure
         $host = (string) parse_url($endpoint, PHP_URL_HOST);
-        if ($host === '' || str_ends_with($host, '.test') || str_ends_with($host, '.example') || $host === 'localhost' || $host === '127.0.0.1') {
-            self::logPushAttempt($endpoint, 201, $jsonPayload, 'Simulated push endpoint (dev/test)');
+        $isSimulatedHost = ($host === '' || str_ends_with($host, '.test') || str_ends_with($host, '.example') || $host === 'localhost' || $host === '127.0.0.1');
+
+        if ($testSimulateHttpCode !== null || $isSimulatedHost) {
+            $simCode = $testSimulateHttpCode;
+            if ($simCode === null) {
+                if (str_contains($endpoint, 'gone-410') || str_contains($endpoint, 'status=410')) {
+                    $simCode = 410;
+                } elseif (str_contains($endpoint, 'notfound-404') || str_contains($endpoint, 'status=404')) {
+                    $simCode = 404;
+                } elseif (str_contains($endpoint, 'fail-503') || str_contains($endpoint, 'status=503')) {
+                    $simCode = 503;
+                } else {
+                    $simCode = 201;
+                }
+            }
+
+            self::logPushAttempt($endpoint, $simCode, $jsonPayload, "Simulated push endpoint (HTTP {$simCode})");
+
+            if ($simCode >= 200 && $simCode < 300) {
+                return [
+                    'ok' => true,
+                    'status_code' => $simCode,
+                    'expired' => false,
+                    'error' => null,
+                ];
+            }
+
+            if ($simCode === 404 || $simCode === 410) {
+                if ($subId > 0) {
+                    $pdo = Database::connection();
+                    $del = $pdo->prepare('DELETE FROM push_subscriptions WHERE id = :id');
+                    $del->execute(['id' => $subId]);
+                }
+                return [
+                    'ok' => false,
+                    'status_code' => $simCode,
+                    'expired' => true,
+                    'error' => "Abonnement push expiré (HTTP {$simCode}) — supprimé.",
+                ];
+            }
+
             return [
-                'ok' => true,
-                'status_code' => 201,
+                'ok' => false,
+                'status_code' => $simCode,
                 'expired' => false,
-                'error' => null,
+                'error' => "HTTP {$simCode} : Service Web Push temporairement indisponible.",
             ];
         }
 
@@ -585,6 +672,23 @@ final class WebPushService
         return "-----BEGIN PUBLIC KEY-----\n"
             . chunk_split(base64_encode($der), 64, "\n")
             . "-----END PUBLIC KEY-----\n";
+    }
+
+    /**
+     * Convertit une clé privée brute P-256 (32 octets) et son point public non compressé (65 octets) en PEM SEC 1 (RFC 5915).
+     */
+    public static function rawPrivateAndPublicToPem(string $privateScalar32B, string $uncompressedPoint65B): string
+    {
+        if (strlen($privateScalar32B) !== 32 || strlen($uncompressedPoint65B) !== 65 || $uncompressedPoint65B[0] !== "\x04") {
+            throw new InvalidArgumentException('Clé privée (32 octets) et point public P-256 (65 octets) requis.');
+        }
+        $der = hex2bin('30770201010420')
+            . $privateScalar32B
+            . hex2bin('a00a06082a8648ce3d030107a144034200')
+            . $uncompressedPoint65B;
+        return "-----BEGIN EC PRIVATE KEY-----\n"
+            . chunk_split(base64_encode($der), 64, "\n")
+            . "-----END EC PRIVATE KEY-----\n";
     }
 
     public static function base64UrlEncode(string $data): string

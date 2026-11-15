@@ -238,7 +238,27 @@ final class Phase3Test
         $assert(
             count($holidays2026) === 11
             && isset($holidays2026['2026-01-01'], $holidays2026['2026-04-06'], $holidays2026['2026-05-01'], $holidays2026['2026-05-14'], $holidays2026['2026-05-25'], $holidays2026['2026-07-14'], $holidays2026['2026-11-11'], $holidays2026['2026-12-25']),
-            'HoursCalculatorService: calcule exactement les 11 jours fériés français (fixes + Pâques, Ascension, Pentecôte)'
+            'HoursCalculatorService: calcule exactement les 11 jours fériés français 2026 (fixes + Pâques, Ascension, Pentecôte)'
+        );
+
+        // Full 11 French holidays check for 2027 (Easter 2027 is March 28 -> Easter Monday 2027-03-29, Ascension 2027-05-06, Pentecost Monday 2027-05-17)
+        $holidays2027 = HoursCalculatorService::frenchHolidaysForYear(2027);
+        $expected2027Dates = [
+            '2027-01-01', // Jour de l'An
+            '2027-03-29', // Lundi de Pâques
+            '2027-05-01', // Fête du Travail
+            '2027-05-06', // Ascension
+            '2027-05-08', // Victoire 1945
+            '2027-05-17', // Lundi de Pentecôte
+            '2027-07-14', // Fête nationale
+            '2027-08-15', // Assomption
+            '2027-11-01', // Toussaint
+            '2027-11-11', // Armistice 1918
+            '2027-12-25', // Noël
+        ];
+        $assert(
+            count($holidays2027) === 11 && array_keys($holidays2027) === $expected2027Dates,
+            'HoursCalculatorService: calcule la liste complète des 11 jours fériés 2027 (incluant Pâques 29/03/2027, Ascension 06/05/2027, Pentecôte 17/05/2027)'
         );
 
         // Normal weekday day shift: Wednesday 2026-11-18 08:00 -> 20:00 Paris (07:00 -> 19:00 UTC) = 12h total, 0h night
@@ -392,6 +412,270 @@ final class Phase3Test
             && $decryptedJson === $plainJson,
             'WebPushService: signe/vérifie le JWT ES256 (r||s 64 octets) et chiffre/déchiffre de bout en bout en aes128gcm (RFC 8291)'
         );
+
+        // RFC 8291 Appendix A Official Test Vector (byte-for-byte equality)
+        $rfcPlaintext = 'When I grow up, I want to be a watermelon';
+        $rfcUaPrivB64 = 'q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94';
+        $rfcUaPubB64 = 'BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4';
+        $rfcAuthB64 = 'BTBZMqHH6r4Tts7J_aSIgg';
+        $rfcSaltB64 = 'DGv6ra1nlYgDCS1FRnbzlw';
+        $rfcAsPrivB64 = 'yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw';
+        $rfcAsPubB64 = 'BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8';
+        $rfcExpectedCekB64 = 'oIhVW04MRdy2XN9CiKLxTg';
+        $rfcExpectedNonceB64 = '4h_95klXJ5E_qnoN';
+        $rfcExpectedCiphertextB64 = '8pfeW0KbunFT06SuDKoJH9Ql87S1QUrdirN6GcG7sFz1y1sqLgVi1VhjVkHsUoEsbI_0LpXMuGvnzQ';
+        $rfcExpectedBodyB64 = 'DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A_yl95bQpu6cVPTpK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN';
+
+        $rfcEncrypted = WebPushService::encryptPayload(
+            $rfcPlaintext,
+            $rfcUaPubB64,
+            $rfcAuthB64,
+            $rfcSaltB64,
+            $rfcAsPrivB64,
+            $rfcAsPubB64
+        );
+        $rfcUaPem = WebPushService::rawPrivateAndPublicToPem(
+            WebPushService::base64UrlDecode($rfcUaPrivB64),
+            WebPushService::base64UrlDecode($rfcUaPubB64)
+        );
+        $rfcDecrypted = WebPushService::decryptPayload(
+            $rfcEncrypted['body'],
+            $rfcUaPem,
+            WebPushService::base64UrlDecode($rfcUaPubB64),
+            WebPushService::base64UrlDecode($rfcAuthB64)
+        );
+        $assert(
+            WebPushService::base64UrlEncode($rfcEncrypted['cek']) === $rfcExpectedCekB64
+            && WebPushService::base64UrlEncode($rfcEncrypted['nonce']) === $rfcExpectedNonceB64
+            && WebPushService::base64UrlEncode(substr($rfcEncrypted['body'], 86)) === $rfcExpectedCiphertextB64
+            && $rfcEncrypted['body'] === WebPushService::base64UrlDecode($rfcExpectedBodyB64)
+            && $rfcDecrypted === $rfcPlaintext,
+            'WebPushService: conformité octet par octet au vecteur officiel RFC 8291 Appendix A (CEK, Nonce, Ciphertext et Corps complet aes128gcm)'
+        );
+
+        // Automatic deletion of an expired subscription (HTTP 410 Gone)
+        $sub410Id = WebPushService::saveSubscription(1, [
+            'endpoint' => 'https://push.primecare.test/gone-410/' . bin2hex(random_bytes(4)),
+            'keys' => [
+                'p256dh' => $rfcUaPubB64,
+                'auth' => $rfcAuthB64,
+            ],
+        ], 'PHPUnit/410-Test');
+        $sub410Row = $pdo->query('SELECT * FROM push_subscriptions WHERE id = ' . $sub410Id)->fetch(PDO::FETCH_ASSOC);
+        $send410Res = WebPushService::sendToSubscription($sub410Row, ['title' => 'Test 410'], 'normal', 86400, 410);
+        $sub410After = $pdo->query('SELECT id FROM push_subscriptions WHERE id = ' . $sub410Id)->fetchColumn();
+        $assert(
+            $send410Res['ok'] === false
+            && $send410Res['status_code'] === 410
+            && $send410Res['expired'] === true
+            && $sub410After === false,
+            'WebPushService: supprime automatiquement de la base un abonnement expiré renvoyant HTTP 410 Gone'
+        );
+
+        // Notification queue exponential backoff (increasing next_try_at) and abandonment after 5 failures with last_error
+        $pdo->exec("DELETE FROM notification_queue WHERE subject = 'Test Backoff 5x'");
+        $sub503Id = WebPushService::saveSubscription(1, [
+            'endpoint' => 'https://push.primecare.test/fail-503/' . bin2hex(random_bytes(4)),
+            'keys' => [
+                'p256dh' => $rfcUaPubB64,
+                'auth' => $rfcAuthB64,
+            ],
+        ], 'PHPUnit/503-Test');
+        $baseTs = strtotime('2026-11-14 12:00:00 UTC');
+        $t0Utc = gmdate('Y-m-d H:i:s', $baseTs);
+        $pdo->prepare(
+            "INSERT INTO notification_queue
+             (alert_id, user_id, channel, recipient, subject, content, status, attempts, max_attempts, next_try_at, created_at, updated_at)
+             VALUES (NULL, 1, 'push', 'endpoint-503', 'Test Backoff 5x', :content, 'pending', 0, 5, :next_at, :c_at, :u_at)"
+        )->execute([
+            'content' => json_encode(['subscription_id' => $sub503Id, 'payload' => ['title' => 'Test 503']]),
+            'next_at' => $t0Utc,
+            'c_at' => $t0Utc,
+            'u_at' => $t0Utc,
+        ]);
+        $queueId = (int) $pdo->lastInsertId();
+
+        $delaysObserved = [];
+        $currentSimTs = $baseTs;
+        for ($i = 1; $i <= 5; $i++) {
+            $simNow = gmdate('Y-m-d H:i:s', $currentSimTs);
+            AlertService::processNotificationQueue(50, $simNow);
+            $qRow = $pdo->query('SELECT status, attempts, next_try_at, last_error FROM notification_queue WHERE id = ' . $queueId)->fetch(PDO::FETCH_ASSOC);
+            if ($i < 5) {
+                $nextTs = strtotime((string) $qRow['next_try_at'] . ' UTC');
+                $delaysObserved[] = $nextTs - $currentSimTs;
+                $currentSimTs = $nextTs;
+            }
+        }
+        $finalQRow = $pdo->query('SELECT status, attempts, last_error FROM notification_queue WHERE id = ' . $queueId)->fetch(PDO::FETCH_ASSOC);
+        $increasingDelays = count($delaysObserved) === 4
+            && $delaysObserved[0] < $delaysObserved[1]
+            && $delaysObserved[1] < $delaysObserved[2]
+            && $delaysObserved[2] < $delaysObserved[3];
+        $assert(
+            $increasingDelays
+            && ($finalQRow['status'] ?? '') === 'failed'
+            && (int) ($finalQRow['attempts'] ?? 0) === 5
+            && !empty($finalQRow['last_error']),
+            'AlertService (notification_queue): recalcule next_try_at avec délais croissants (2, 4, 8, 16 min) et abandonne en status=failed après 5 échecs avec last_error renseigné'
+        );
+
+        // =====================================================================
+        // 5. MODE HORS LIGNE (G1) : client_recorded_at (-20 min, futur > 2 min, > 72 h -> 422 OFFLINE_TOO_OLD) & conflit 409
+        // =====================================================================
+        $makeApiPost = static function (string $uri, array $payload): \App\Core\Request {
+            return new \App\Core\Request(
+                [],
+                $payload,
+                [],
+                [
+                    'REQUEST_METHOD' => 'POST',
+                    'REQUEST_URI' => $uri,
+                    'HTTP_ACCEPT' => 'application/json',
+                    'REMOTE_ADDR' => '127.0.0.1',
+                ],
+                $payload
+            );
+        };
+
+        $user3 = $pdo->query('SELECT * FROM users WHERE id = 3')->fetch(PDO::FETCH_ASSOC);
+        $user4 = $pdo->query('SELECT * FROM users WHERE id = 4')->fetch(PDO::FETCH_ASSOC);
+        $user1 = $pdo->query('SELECT * FROM users WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+
+        \App\Core\Auth::loginUser($user3);
+        $apiMed = new \App\Controllers\ApiMedicalController();
+
+        // 5a. client_recorded_at in the past (-20 min) is preserved as measured_at
+        $past20Ts = time() - 20 * 60;
+        $past20Iso = gmdate('Y-m-d\TH:i:s\Z', $past20Ts);
+        $past20ExpectedUtc = gmdate('Y-m-d H:i:s', $past20Ts);
+        $reqPast = $makeApiPost('/api/measures', [
+            'type_code' => 'glycemia',
+            'value_primary' => '1.18',
+            'context' => 'fasting',
+            'client_uuid' => 'offline-past20-' . bin2hex(random_bytes(4)),
+            'client_recorded_at' => $past20Iso,
+        ]);
+        $resPast = $apiMed->storeMeasure($reqPast);
+        $bodyPast = json_decode($resPast->body(), true);
+        $assert(
+            $resPast->statusCode() === 201
+            && ($bodyPast['data']['measure']['measured_at'] ?? '') === $past20ExpectedUtc,
+            'Offline G1: client_recorded_at dans le passé (-20 min) est conservé comme heure de réalisation (measured_at)'
+        );
+
+        // 5b. client_recorded_at in the future (> 2 min, e.g. +15 min) is clamped to server time
+        $future15Ts = time() + 15 * 60;
+        $future15Iso = gmdate('Y-m-d\TH:i:s\Z', $future15Ts);
+        $beforeServerTs = time();
+        $reqFuture = $makeApiPost('/api/measures', [
+            'type_code' => 'glycemia',
+            'value_primary' => '1.22',
+            'context' => 'postprandial',
+            'client_uuid' => 'offline-future15-' . bin2hex(random_bytes(4)),
+            'client_recorded_at' => $future15Iso,
+        ]);
+        $resFuture = $apiMed->storeMeasure($reqFuture);
+        $afterServerTs = time();
+        $bodyFuture = json_decode($resFuture->body(), true);
+        $recordedFutureTs = strtotime((string) ($bodyFuture['data']['measure']['measured_at'] ?? '') . ' UTC');
+        $assert(
+            $resFuture->statusCode() === 201
+            && $recordedFutureTs >= ($beforeServerTs - 2)
+            && $recordedFutureTs <= ($afterServerTs + 2),
+            'Offline G1: client_recorded_at dans le futur (> 2 min) est ramené à l’heure serveur'
+        );
+
+        // 5c. client_recorded_at older than 72 h (-80 h) is rejected with HTTP 422 OFFLINE_TOO_OLD
+        $old80Iso = gmdate('Y-m-d\TH:i:s\Z', time() - 80 * 3600);
+        $reqOld = $makeApiPost('/api/measures', [
+            'type_code' => 'glycemia',
+            'value_primary' => '1.10',
+            'context' => 'fasting',
+            'client_uuid' => 'offline-old80-' . bin2hex(random_bytes(4)),
+            'client_recorded_at' => $old80Iso,
+        ]);
+        $resOld = $apiMed->storeMeasure($reqOld);
+        $bodyOld = json_decode($resOld->body(), true);
+        $assert(
+            $resOld->statusCode() === 422
+            && ($bodyOld['error']['code'] ?? '') === 'OFFLINE_TOO_OLD',
+            'Offline G1: client_recorded_at > 72 h est refusé avec HTTP 422 et le code OFFLINE_TOO_OLD'
+        );
+
+        // 5d. Conflict on an intake already validated by a colleague returns HTTP 409 CONFLICT
+        $pendingIntakeId = (int) $pdo->query("SELECT mi.id FROM medication_intakes mi INNER JOIN prescriptions p ON p.id = mi.prescription_id WHERE mi.status = 'pending' AND mi.deleted_at IS NULL AND p.medication_id = 1 LIMIT 1")->fetchColumn();
+        if ($pendingIntakeId <= 0) {
+            $prescId = (int) $pdo->query('SELECT id FROM prescriptions WHERE deleted_at IS NULL AND medication_id = 1 LIMIT 1')->fetchColumn();
+            $nowStr = gmdate('Y-m-d H:i:s');
+            $pdo->prepare(
+                "INSERT INTO medication_intakes (patient_id, prescription_id, scheduled_at, status, created_at, updated_at)
+                 VALUES (1, :pid, :sch, 'pending', :c, :u)"
+            )->execute(['pid' => $prescId, 'sch' => $nowStr, 'c' => $nowStr, 'u' => $nowStr]);
+            $pendingIntakeId = (int) $pdo->lastInsertId();
+        }
+        $uuidColleague1 = 'colleague-1-' . bin2hex(random_bytes(4));
+        $uuidColleague2 = 'colleague-2-' . bin2hex(random_bytes(4));
+        $reqGive1 = $makeApiPost("/api/intakes/{$pendingIntakeId}/give", [
+            'client_uuid' => $uuidColleague1,
+            'client_recorded_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        ]);
+        $resGive1 = $apiMed->giveIntake($reqGive1, (string) $pendingIntakeId);
+
+        // Second colleague tries to validate the same intake with a different client_uuid -> 409 CONFLICT
+        \App\Core\Auth::loginUser($user4);
+        $reqGive2 = $makeApiPost("/api/intakes/{$pendingIntakeId}/give", [
+            'client_uuid' => $uuidColleague2,
+            'client_recorded_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        ]);
+        $resGive2 = $apiMed->giveIntake($reqGive2, (string) $pendingIntakeId);
+        $bodyGive2 = json_decode($resGive2->body(), true);
+        $assert(
+            $resGive1->statusCode() === 200
+            && $resGive2->statusCode() === 409
+            && in_array($bodyGive2['error']['code'] ?? '', ['ALREADY_GIVEN', 'CONFLICT'], true)
+            && str_contains((string) ($bodyGive2['error']['message'] ?? ''), 'Déjà donné par'),
+            'Offline G1: conflit sur une prise déjà validée par une collègue renvoie HTTP 409 non bloquant (« Déjà donné par ... »)'
+        );
+
+        // =====================================================================
+        // 6. TESTS G2 (RGPD 403 GDPR_NOTICE_REQUIRED) & G3 (Service Worker liste blanche)
+        // =====================================================================
+
+        // G2: Reset attendance_gdpr_accepted_at to NULL for caregiver #4, verify 403 GDPR_NOTICE_REQUIRED, then accept and punch
+        $pdo->prepare('UPDATE users SET attendance_gdpr_accepted_at = NULL WHERE id = 4')->execute();
+        \App\Core\Auth::loginUser($user4);
+        $attCtrl = new \App\Controllers\AttendanceController();
+        $reqPunchNoGdpr = $makeApiPost('/api/attendance/punch', [
+            'type' => 'in',
+            'method' => 'slide',
+        ]);
+        $resPunchNoGdpr = $attCtrl->punch($reqPunchNoGdpr);
+        $bodyPunchNoGdpr = json_decode($resPunchNoGdpr->body(), true);
+
+        // Now accept GDPR notice and retry punch
+        $reqAcceptGdpr = $makeApiPost('/api/attendance/gdpr-accept', ['accepted' => 1]);
+        $resAcceptGdpr = $attCtrl->acceptGdpr($reqAcceptGdpr);
+        $resPunchAfterGdpr = $attCtrl->punch($reqPunchNoGdpr);
+        $assert(
+            $resPunchNoGdpr->statusCode() === 403
+            && ($bodyPunchNoGdpr['error']['code'] ?? '') === 'GDPR_NOTICE_REQUIRED'
+            && $resAcceptGdpr->statusCode() === 200
+            && $resPunchAfterGdpr->statusCode() === 201,
+            'Attendance G2: refuse tout pointage avec HTTP 403 GDPR_NOTICE_REQUIRED tant que attendance_gdpr_accepted_at est NULL, puis accepte après validation'
+        );
+
+        // G3: Static verification of public/sw.js whitelist ['/', '/today', '/journal'] and Content-Disposition filter
+        $swContent = (string) file_get_contents(dirname(__DIR__, 2) . '/public/sw.js');
+        $assert(
+            str_contains($swContent, "const OFFLINE_NAV_WHITELIST = ['/', '/today', '/journal'];")
+            && str_contains($swContent, 'Content-Disposition')
+            && str_contains($swContent, '/export')
+            && str_contains($swContent, '/media/'),
+            'Service Worker G3: public/sw.js restreint le cache de navigation à la liste blanche exacte [\x27/\x27, \x27/today\x27, \x27/journal\x27] et exclut Content-Disposition, /export et /media/'
+        );
+
+        \App\Core\Auth::loginUser($user1);
 
         // CronService tasks execution
         $cronRes = CronService::runTask('all', 1);

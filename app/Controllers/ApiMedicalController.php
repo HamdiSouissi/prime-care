@@ -169,6 +169,11 @@ final class ApiMedicalController extends Controller
             }
         }
 
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
         $typeId = (int) $request->input('measure_type_id', 0);
         $typeCode = trim((string) $request->input('type_code', ''));
 
@@ -185,7 +190,11 @@ final class ApiMedicalController extends Controller
             return Response::jsonError('INVALID_TYPE', 'Type de mesure introuvable.', 422);
         }
 
-        $rawValue = str_replace(',', '.', trim((string) $request->input('value', '')));
+        $rawValue = str_replace(',', '.', trim((string) (
+            $request->input('value', '') !== ''
+                ? $request->input('value', '')
+                : ($request->input('primary_value', '') !== '' ? $request->input('primary_value', '') : $request->input('value_primary', ''))
+        )));
         if ($rawValue === '' || !is_numeric($rawValue)) {
             return Response::jsonError('VALIDATION_ERROR', 'Veuillez saisir une valeur numérique valide.', 422);
         }
@@ -196,7 +205,11 @@ final class ApiMedicalController extends Controller
             $value = ThresholdService::mgDlToG($value);
         }
 
-        $rawVal2 = str_replace(',', '.', trim((string) $request->input('value2', '')));
+        $rawVal2 = str_replace(',', '.', trim((string) (
+            $request->input('value2', '') !== ''
+                ? $request->input('value2', '')
+                : ($request->input('secondary_value', '') !== '' ? $request->input('secondary_value', '') : $request->input('value_secondary', ''))
+        )));
         $value2 = ($rawVal2 !== '' && is_numeric($rawVal2)) ? (float) $rawVal2 : null;
 
         $rawVal3 = str_replace(',', '.', trim((string) $request->input('value3', '')));
@@ -218,11 +231,6 @@ final class ApiMedicalController extends Controller
         }
 
         $context = trim((string) $request->input('context', 'routine')) ?: 'routine';
-
-        $tsRes = $this->resolveClientTimestamp($request);
-        if (!$tsRes['ok']) {
-            return $tsRes['response'];
-        }
 
         $localDate = trim((string) $request->input('measured_date', ''));
         $localTime = trim((string) $request->input('measured_time', ''));
@@ -316,7 +324,7 @@ final class ApiMedicalController extends Controller
         AuditService::record('measure.create', 'measure', $measureId, null, $afterData, 1, $userId);
         AlertService::onMeasureRecorded($afterData, $measureType, $expectationId > 0 ? $expectationId : null);
 
-        return Response::jsonSuccess($afterData, 201);
+        return Response::jsonSuccess(array_merge($afterData, ['measure' => $afterData]), 201);
     }
 
     /**
