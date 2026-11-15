@@ -696,9 +696,21 @@ final class ReportService
         $svg .= '<line x1="' . $padL . '" y1="' . $yHypo . '" x2="' . ($w - $padR) . '" y2="' . $yHypo . '" stroke="#FF3B30" stroke-width="1.2" stroke-dasharray="4 4"/>';
         $svg .= '<line x1="' . $padL . '" y1="' . $yHyper . '" x2="' . ($w - $padR) . '" y2="' . $yHyper . '" stroke="#FF9500" stroke-width="1.2" stroke-dasharray="4 4"/>';
 
-        // Y-axis labels
-        foreach ([$hypoLine, $targetMin, $targetMax, $hyperLine] as $yVal) {
+        // Y-axis labels (masque le libellé secondaire si deux seuils sont à moins de 12 px l'un de l'autre)
+        $placedPy = [];
+        foreach ([$targetMin, $targetMax, $hyperLine, $hypoLine] as $yVal) {
             $py = $yToPx($yVal);
+            $tooClose = false;
+            foreach ($placedPy as $existingPy) {
+                if (abs($py - $existingPy) < 12.0) {
+                    $tooClose = true;
+                    break;
+                }
+            }
+            if ($tooClose) {
+                continue;
+            }
+            $placedPy[] = $py;
             $lbl = number_format($yVal, 2, ',', '');
             $svg .= '<text x="' . ($padL - 6) . '" y="' . ($py + 4) . '" text-anchor="end" font-size="10" fill="#64748B" font-family="system-ui, sans-serif">' . $lbl . '</text>';
         }

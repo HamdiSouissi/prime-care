@@ -126,7 +126,7 @@ $assert = static function (bool $condition, string $label) use (&$passed, &$fail
 $activeDb = (string) Database::connection()->query('SELECT DATABASE()')->fetchColumn();
 
 echo "=====================================================\n";
-echo " Prime Care — Suite de tests automatisés (Phases 1, 2 & 3)\n";
+echo " Prime Care — Suite de tests automatisés (Phases 1, 2, 3 & 4)\n";
 echo " Environnement : " . Config::get('app.env') . " (Base : {$activeDb})\n";
 echo "=====================================================\n\n";
 

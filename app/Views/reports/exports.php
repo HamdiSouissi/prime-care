@@ -48,9 +48,9 @@ $toYmd = (string) ($period['to_ymd'] ?? date('Y-m-d'));
   </p>
 </section>
 
-<div id="pc-export-feedback" class="pc-banner pc-banner--ok mb-3" role="status" aria-live="polite" hidden>
-  <?= icon('check-circle', '', 18) ?>
-  <span id="pc-export-feedback-text">Export CSV généré et téléchargé avec succès (UTF-8 avec BOM, séparateur ;).</span>
+<div id="pc-export-feedback" class="pc-card flex items-center gap-2 mb-3" style="border-left: 4px solid var(--pc-ok, #34C759);" role="status" aria-live="polite" hidden>
+  <?= icon('check-circle', 'text-ok', 18) ?>
+  <span id="pc-export-feedback-text" class="text-footnote font-semibold">Export CSV généré et téléchargé avec succès (UTF-8 avec BOM, séparateur ;).</span>
 </div>
 
 <!-- Liste des exports CSV disponibles selon le rôle (§3) -->
