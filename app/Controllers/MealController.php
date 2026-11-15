@@ -177,6 +177,9 @@ final class MealController extends Controller
         $modifiedReason = trim((string) $request->input('modified_reason', ''));
         $perm = EditWindowService::checkEditPermission($meal, $userId, $role, $modifiedReason);
         if (!$perm['allowed']) {
+            if ($request->wantsJson()) {
+                return Response::jsonError((string) $perm['code'], (string) $perm['message'], $perm['http_status']);
+            }
             Session::flash('error', (string) $perm['message']);
             return $this->redirect('/meals/' . $mealId);
         }

@@ -73,3 +73,9 @@
   - **Cartes de planning (`.pc-shift-card`, `.pc-shift-card--uncovered`)** : créneaux colorés par aide-soignante (`.pc-avatar--c1`..`c8`), créneaux non couverts en motif hachuré rouge avec badge **« Non couvert »**, et absences signalées **« À remplacer »**.
   - **Centre d’alertes (`.pc-alert-card`, `.pc-alert-badge`)** : cloche d’en-tête avec pastille rouge des alertes ouvertes (`new` + `seen`), cartes bordées selon la gravité (`critical`, `warning`, `info`) avec icône + texte et choix rapides de résolution.
   - **Bandeau hors ligne & file d’attente IndexedDB (`.pc-offline-banner`, `.pc-offline-queue-bar`)** : bandeau ambre *« Hors ligne — données de HHhMM »* et barre de synchronisation des saisies médicales en attente (`client_uuid`).
+- **Composants Phase 4 (Documents, Rapports A4, Audit & Compteurs animés)** :
+  - **Coffre-fort de documents médicaux (`.pc-doc-viewer-frame`, `.pc-doc-preview-img`)** : cartes filtrables par catégorie (`ordonnance`, `compte_rendu`, `analyse_biologique`, `courrier`, `imagerie`, `autre`), badges colorés, visionneuse PDF/image intégrée sans style inline.
+  - **Rapport médical imprimable A4 (`.pc-report-sheet`, `@media print`)** : feuille de synthèse médicale avec courbes SVG vectorielles nettes (`.pc-report-svg`, `.pc-sparkline-svg`) et feuille d’impression dédiée (`@page { size: A4 portrait; margin: 12mm; }`, masquage `.pc-no-print`, fond blanc, tableaux `break-inside: avoid`).
+  - **Comparateur avant / après du journal d’audit (`.pc-audit-diff`, `.pc-audit-del`, `.pc-audit-ins`)** : affichage lisible champ par champ en français avec ancienne valeur barrée (`<del>`) et nouvelle valeur surlignée (`<ins>`), sans jamais exposer de JSON brut.
+  - **Compteurs animés (`[data-count-up]`)** : interpolation fluide sur 400 ms à l’ouverture des cartes *Tendances 7 jours*, respectant strictement `prefers-reduced-motion: reduce`.
+

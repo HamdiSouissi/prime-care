@@ -313,9 +313,33 @@ function initQrScanner() {
     }
   };
 
+  let jsQrPromise = null;
+  const ensureJsQrLoaded = () => {
+    if (typeof window.jsQR === 'function') {
+      return Promise.resolve(window.jsQR);
+    }
+    if (jsQrPromise) {
+      return jsQrPromise;
+    }
+    jsQrPromise = new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = document.body?.dataset?.jsqrSrc || '/assets/vendor/jsQR.min.js';
+      const nonceEl = document.querySelector('script[nonce]');
+      const nonce = nonceEl?.nonce || nonceEl?.getAttribute('nonce');
+      if (nonce) {
+        script.nonce = nonce;
+      }
+      script.onload = () => resolve(window.jsQR || null);
+      script.onerror = () => resolve(null);
+      document.head.appendChild(script);
+    });
+    return jsQrPromise;
+  };
+
   document.querySelectorAll('[data-open-qr-scanner]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       openSheet('qr-punch-sheet');
+      await ensureJsQrLoaded();
       const video = document.getElementById('pc-qr-video');
       const canvas = document.getElementById('pc-qr-canvas');
       const statusEl = document.getElementById('pc-qr-status');

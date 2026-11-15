@@ -10,6 +10,7 @@ namespace App\Core;
 final class Session
 {
     private static bool $started = false;
+    private static string $cliSessionId = '';
 
     /**
      * Start the PHP session with hardened cookie parameters and idle timeout check.
@@ -23,6 +24,9 @@ final class Session
         if (PHP_SAPI === 'cli') {
             if (!isset($_SESSION) || !is_array($_SESSION)) {
                 $_SESSION = [];
+            }
+            if (self::$cliSessionId === '') {
+                self::$cliSessionId = bin2hex(random_bytes(16));
             }
             self::$started = true;
             return;
@@ -72,7 +76,36 @@ final class Session
         self::start();
         if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_ACTIVE) {
             session_regenerate_id(true);
+        } else {
+            self::$cliSessionId = bin2hex(random_bytes(16));
         }
+    }
+
+    /**
+     * Return the active session cookie name (with __Host- prefix in production).
+     */
+    public static function cookieName(): string
+    {
+        $name = (string) Config::get('session.name', 'prime_care_session');
+        $env = (string) Config::get('app.env', 'development');
+        $secure = $env === 'production' || (bool) Config::get('session.secure', false);
+
+        if ($secure && !str_starts_with($name, '__Host-')) {
+            return '__Host-' . $name;
+        }
+        return $name;
+    }
+
+    /**
+     * Return the active session ID.
+     */
+    public static function id(): string
+    {
+        self::start();
+        if (PHP_SAPI === 'cli') {
+            return self::$cliSessionId;
+        }
+        return (string) session_id();
     }
 
     /**

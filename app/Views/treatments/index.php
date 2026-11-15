@@ -28,7 +28,7 @@ $isAdmin = $role === 'admin';
       <?= (int) ($observance['days_7']['given'] ?? 0) ?>/<?= (int) ($observance['days_7']['total'] ?? 0) ?>
       <span class="pc-metric-unit">prises</span>
     </div>
-    <div class="text-caption text-muted">Voir l’historique 7j / 30j &rarr;</div>
+    <div class="text-caption text-muted">Voir l’historique 7j / 30j &rsaquo;</div>
   </a>
 
   <div class="pc-card flex flex-col justify-between gap-2">

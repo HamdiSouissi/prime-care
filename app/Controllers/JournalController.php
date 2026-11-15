@@ -100,7 +100,7 @@ final class JournalController extends Controller
 
     public function markRead(Request $request, string $id): Response
     {
-        $this->authorize('notes', 'view');
+        $this->authorize('notes', 'create');
         HandoverService::markAsRead((int) $id, Auth::id() ?? 0, 1);
         Session::flash('success', 'Transmission marquée comme lue.');
         return $this->redirect((string) $request->input('redirect_to', '/'));

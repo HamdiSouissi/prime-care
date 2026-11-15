@@ -40,7 +40,14 @@ Options -Indexes -MultiViews
     ExpiresByType application/manifest+json "access plus 1 hour"
 </IfModule>
 
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json image/svg+xml application/manifest+json
+</IfModule>
+
 <IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|woff2|svg|png|jpg|jpeg|webp)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
     <FilesMatch "^sw\.js$">
         Header set Cache-Control "no-cache, no-store, must-revalidate"
         Header set Service-Worker-Allowed "/"

@@ -14,6 +14,7 @@ use App\Core\Database;
 use Database\Seeds\Phase1Seeder;
 use Database\Seeds\Phase2Seeder;
 use Database\Seeds\Phase3Seeder;
+use Database\Seeds\Phase4Seeder;
 
 $args = $argv ?? [];
 $isFresh = in_array('--fresh', $args, true);
@@ -105,9 +106,14 @@ echo $ranCount > 0
     : "Aucune nouvelle migration à appliquer.\n";
 
 if ($doSeed) {
+    if ((string) Config::get('app.env', 'development') === 'production') {
+        fwrite(STDERR, "[REFUS] Le seed de démonstration ne peut pas être exécuté en mode production.\n");
+        exit(1);
+    }
     echo "Insertion des données de démonstration (--seed)...\n";
     Phase1Seeder::run();
     Phase2Seeder::run();
     Phase3Seeder::run();
+    Phase4Seeder::run();
     echo "Seed terminé avec succès.\n";
 }

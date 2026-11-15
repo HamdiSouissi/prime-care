@@ -68,7 +68,6 @@ final class AuthController extends Controller
         }
 
         RateLimiter::recordAttempt($email, $ip, true);
-        AuditService::record('auth.login', 'users', Auth::id(), null, ['method' => 'password', 'remember' => $remember]);
 
         Session::flash('show_launch_loader', true);
         Session::flash('toast_success', 'Bienvenue, ' . ((string) (Auth::user()['first_name'] ?? '')) . '.');

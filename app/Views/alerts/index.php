@@ -11,7 +11,7 @@ $canHandle = !empty($canHandle);
 <!-- Barre de filtres du Centre d'alertes (§3.8) -->
 <section class="pc-card mb-3" aria-label="Filtres du centre d’alertes">
   <div class="flex items-center justify-between gap-2 flex-wrap mb-3">
-    <div class="pc-segmented" role="tablist" aria-label="Statut des alertes">
+    <div class="pc-segmented" role="group" aria-label="Statut des alertes">
       <a
         href="/alerts?filter=open&amp;severity=<?= e($severityFilter) ?>"
         class="pc-segmented__btn <?= $statusFilter === 'open' ? 'is-active' : '' ?>"
@@ -65,7 +65,7 @@ $canHandle = !empty($canHandle);
 
   <div class="flex items-center justify-between text-caption text-muted">
     <span>Triées par niveau de gravité puis par date (escalade automatique après 15 min pour les alertes critiques).</span>
-    <a href="/profile#notifications-section" class="font-semibold text-brand">Mes préférences &rarr;</a>
+    <a href="/profile#notifications-section" class="font-semibold text-brand">Mes préférences &rsaquo;</a>
   </div>
 </section>
 

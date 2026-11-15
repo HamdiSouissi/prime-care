@@ -55,14 +55,27 @@ final class Auth
         $user = $stmt->fetch();
 
         if (!is_array($user) || (int) ($user['is_active'] ?? 0) !== 1) {
+            \App\Services\AuditService::record('auth.login_failed', 'users', null, null, [
+                'email' => $normalizedEmail,
+                'reason' => 'account_not_found_or_inactive',
+            ]);
             return false;
         }
 
         if (!self::verifySecret($password, (string) ($user['password_hash'] ?? ''))) {
+            \App\Services\AuditService::record('auth.login_failed', 'users', (int) $user['id'], null, [
+                'email' => $normalizedEmail,
+                'reason' => 'invalid_password',
+            ], 1, (int) $user['id']);
             return false;
         }
 
         self::loginUser($user, $remember, 'password');
+        \App\Services\AuditService::record('auth.login', 'users', (int) $user['id'], null, [
+            'email' => $normalizedEmail,
+            'method' => 'password',
+            'remember' => $remember,
+        ], 1, (int) $user['id']);
         return true;
     }
 
@@ -180,6 +193,19 @@ final class Auth
     }
 
     /**
+     * Return the effective cookie name (with __Host- prefix in production).
+     */
+    public static function cookieName(string $baseName): string
+    {
+        $env = (string) Config::get('app.env', 'development');
+        $secure = $env === 'production' || (bool) Config::get('session.secure', false);
+        if ($secure && !str_starts_with($baseName, '__Host-')) {
+            return '__Host-' . $baseName;
+        }
+        return $baseName;
+    }
+
+    /**
      * Parse the trusted devices cookie into a map of [selector => validator].
      * Any plain integer ID, malformed token, or non-hex string is strictly rejected.
      *
@@ -187,7 +213,12 @@ final class Auth
      */
     public static function parseTrustedDeviceCookie(?string $rawCookie = null): array
     {
-        $raw = $rawCookie ?? (isset($_COOKIE[self::TRUSTED_DEVICE_COOKIE]) ? (string) $_COOKIE[self::TRUSTED_DEVICE_COOKIE] : '');
+        $cookieKey = self::cookieName(self::TRUSTED_DEVICE_COOKIE);
+        $raw = $rawCookie ?? (
+            isset($_COOKIE[$cookieKey])
+                ? (string) $_COOKIE[$cookieKey]
+                : (isset($_COOKIE[self::TRUSTED_DEVICE_COOKIE]) ? (string) $_COOKIE[self::TRUSTED_DEVICE_COOKIE] : '')
+        );
         if ($raw === '') {
             return [];
         }
@@ -391,6 +422,10 @@ final class Auth
 
         if (preg_match('/^\d{4,6}$/', $pin) !== 1 || !self::verifySecret($pin, (string) $user['pin_hash'])) {
             RateLimiter::recordAttempt($rateKey, $ip, false);
+            \App\Services\AuditService::record('auth.login_pin_failed', 'users', $userId, null, [
+                'selector' => $selector,
+                'method' => 'pin',
+            ], 1, $userId);
             if (RateLimiter::tooManyAttempts($rateKey, $ip)) {
                 return [
                     'ok' => false,
@@ -411,6 +446,10 @@ final class Auth
 
         self::loginUser($user, false, 'pin');
         Session::set('trusted_device_selector', $selector);
+        \App\Services\AuditService::record('auth.login_pin', 'users', $userId, null, [
+            'selector' => $selector,
+            'method' => 'pin',
+        ], 1, $userId);
 
         return [
             'ok' => true,
@@ -442,7 +481,15 @@ final class Auth
             self::writeTrustedDeviceCookie($pairs, (int) Config::get('security.trusted_device_days', 90));
         }
 
-        return $stmt->rowCount() > 0;
+        if ($stmt->rowCount() > 0) {
+            \App\Services\AuditService::record('auth.revoke_device', 'trusted_devices', $userId, null, [
+                'selector' => $selector,
+                'scope' => 'single_device',
+            ], 1, self::id() ?? $userId);
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -488,6 +535,13 @@ final class Auth
             if ($changed) {
                 self::writeTrustedDeviceCookie($pairs, (int) Config::get('security.trusted_device_days', 90));
             }
+        }
+
+        if ($count > 0) {
+            \App\Services\AuditService::record('auth.revoke_device', 'trusted_devices', $userId, null, [
+                'revoked_count' => $count,
+                'scope' => 'all_devices',
+            ], 1, self::id() ?? $userId);
         }
 
         return $count;
@@ -741,7 +795,9 @@ final class Auth
 
     private static function setCookie(string $name, string $value, int $days, string $sameSite = 'Lax'): void
     {
+        $effectiveName = self::cookieName($name);
         if (PHP_SAPI === 'cli' || headers_sent()) {
+            $_COOKIE[$effectiveName] = $value;
             $_COOKIE[$name] = $value;
             return;
         }
@@ -751,7 +807,7 @@ final class Auth
             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
         $secure = $env === 'production' || (bool) Config::get('session.secure', false) || $isHttps;
 
-        setcookie($name, $value, [
+        setcookie($effectiveName, $value, [
             'expires' => time() + ($days * 86400),
             'path' => '/',
             'domain' => '',
@@ -759,16 +815,18 @@ final class Auth
             'httponly' => true,
             'samesite' => $sameSite,
         ]);
+        $_COOKIE[$effectiveName] = $value;
         $_COOKIE[$name] = $value;
     }
 
     private static function clearCookie(string $name, string $sameSite = 'Lax'): void
     {
-        unset($_COOKIE[$name]);
+        $effectiveName = self::cookieName($name);
+        unset($_COOKIE[$effectiveName], $_COOKIE[$name]);
         if (PHP_SAPI === 'cli' || headers_sent()) {
             return;
         }
-        setcookie($name, '', [
+        setcookie($effectiveName, '', [
             'expires' => time() - 42000,
             'path' => '/',
             'httponly' => true,

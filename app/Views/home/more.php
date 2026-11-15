@@ -190,16 +190,42 @@ $openAlertsCount = AlertService::countOpenAlerts(1);
       <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
     </a>
 
-    <a href="/coming-soon/documents" class="pc-list-item">
+    <a href="/documents" class="pc-list-item">
       <span class="pc-list-icon pc-list-icon--docs">
         <?= icon('file-text', '', 18) ?>
       </span>
       <div class="pc-list-body">
-        <div class="pc-list-title">Coffre-fort de documents médicaux</div>
-        <div class="pc-list-subtitle">Disponible en Phase 4</div>
+        <div class="pc-list-title">Documents médicaux (E22)</div>
+        <div class="pc-list-subtitle">Ordonnances, comptes rendus, analyses biologiques &amp; imagerie</div>
       </div>
-      <span class="pc-badge pc-badge--brand">Phase 4</span>
+      <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
     </a>
+
+    <?php if (in_array($role, ['admin', 'coordinator', 'viewer'], true)): ?>
+      <a href="/reports" class="pc-list-item">
+        <span class="pc-list-icon pc-list-icon--vitals">
+          <?= icon('printer', '', 18) ?>
+        </span>
+        <div class="pc-list-body">
+          <div class="pc-list-title">Rapports &amp; Synthèse médicale (E23)</div>
+          <div class="pc-list-subtitle">Rapport imprimable A4 pour consultation médicale (7j à 90j)</div>
+        </div>
+        <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+      </a>
+    <?php endif; ?>
+
+    <?php if (in_array($role, ['admin', 'viewer'], true)): ?>
+      <a href="/reports/exports" class="pc-list-item">
+        <span class="pc-list-icon pc-list-icon--ok">
+          <?= icon('download', '', 18) ?>
+        </span>
+        <div class="pc-list-body">
+          <div class="pc-list-title">Exports CSV &amp; Données</div>
+          <div class="pc-list-subtitle">Téléchargement au format tableur (UTF-8 BOM, séparateur ;)</div>
+        </div>
+        <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+      </a>
+    <?php endif; ?>
   </div>
 </section>
 
@@ -252,16 +278,29 @@ $openAlertsCount = AlertService::countOpenAlerts(1);
         <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
       </a>
 
-      <a href="/design" class="pc-list-item">
-        <span class="pc-list-icon pc-list-icon--notes">
-          <?= icon('palette', '', 18) ?>
+      <a href="/audit" class="pc-list-item">
+        <span class="pc-list-icon pc-list-icon--info">
+          <?= icon('shield-check', '', 18) ?>
         </span>
         <div class="pc-list-body">
-          <div class="pc-list-title">Design System Prime Care</div>
-          <div class="pc-list-subtitle">Proposition B — Bleu nuit, composants &amp; loader</div>
+          <div class="pc-list-title">Journal d’audit (E26)</div>
+          <div class="pc-list-subtitle">Traçabilité médico-légale et différences avant / après</div>
         </div>
         <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
       </a>
+
+      <?php if ((string) \App\Core\Config::get('app.env', 'development') !== 'production'): ?>
+        <a href="/design" class="pc-list-item">
+          <span class="pc-list-icon pc-list-icon--notes">
+            <?= icon('palette', '', 18) ?>
+          </span>
+          <div class="pc-list-body">
+            <div class="pc-list-title">Design System Prime Care</div>
+            <div class="pc-list-subtitle">Proposition B — Bleu nuit, composants &amp; loader</div>
+          </div>
+          <span class="pc-list-chevron"><?= icon('chevron-right', '', 18) ?></span>
+        </a>
+      <?php endif; ?>
     </div>
   </section>
 <?php endif; ?>

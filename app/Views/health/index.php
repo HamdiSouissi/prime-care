@@ -53,7 +53,7 @@ $isAdmin = $role === 'admin';
           </div>
         <?php else: ?>
           <div class="my-2 text-subhead text-muted">Aucune mesure</div>
-          <div class="text-caption text-brand">Enregistrer un relevé &rarr;</div>
+          <div class="text-caption text-brand">Enregistrer un relevé &rsaquo;</div>
         <?php endif; ?>
       </a>
     <?php endforeach; ?>

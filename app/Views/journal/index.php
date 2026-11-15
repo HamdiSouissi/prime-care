@@ -102,7 +102,7 @@ $isViewer = $role === 'viewer';
     </a>
   </div>
 
-  <div class="pc-chip-group" role="tablist" aria-label="Filtrer par type d’événement">
+  <div class="pc-chip-group" role="group" aria-label="Filtrer par type d’événement">
     <?php
     $filters = [
         'all' => 'Tout',

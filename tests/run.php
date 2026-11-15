@@ -9,6 +9,7 @@ use App\Core\Database;
 use Database\Seeds\Phase1Seeder;
 use Database\Seeds\Phase2Seeder;
 use Database\Seeds\Phase3Seeder;
+use Database\Seeds\Phase4Seeder;
 
 // C4: Force testing environment so tests NEVER touch the main database
 Config::set('app.env', 'testing');
@@ -89,6 +90,7 @@ function prepareTestDatabase(): void
     Phase1Seeder::run();
     Phase2Seeder::run();
     Phase3Seeder::run();
+    Phase4Seeder::run();
 }
 
 prepareTestDatabase();
@@ -100,6 +102,7 @@ use Tests\Unit\EditWindowHandoverMealTest;
 use Tests\Unit\HelperEscapeTest;
 use Tests\Unit\IntakeAndInsulinTest;
 use Tests\Unit\Phase3Test;
+use Tests\Unit\Phase4Test;
 use Tests\Unit\PolicyTest;
 use Tests\Unit\RateLimiterTest;
 use Tests\Unit\RouterTest;
@@ -123,7 +126,7 @@ $assert = static function (bool $condition, string $label) use (&$passed, &$fail
 $activeDb = (string) Database::connection()->query('SELECT DATABASE()')->fetchColumn();
 
 echo "=====================================================\n";
-echo " Prime Care — Suite de tests automatisés (Phases 1, 2 & 3)\n";
+echo " Prime Care — Suite de tests automatisés (Phases 1, 2, 3 & 4)\n";
 echo " Environnement : " . Config::get('app.env') . " (Base : {$activeDb})\n";
 echo "=====================================================\n\n";
 
@@ -143,7 +146,8 @@ $suites = [
     'IntakeService & InsulinService (Statuts, Anti-double-prise 409, Grille responsable)' => [IntakeAndInsulinTest::class, 'run'],
     'EditWindowService, MealService, HandoverService & QrCodeService' => [EditWindowHandoverMealTest::class, 'run'],
     'Phase 3 — Planning, Pointage, Heures (DST/Fériés), Alertes & Web Push VAPID' => [Phase3Test::class, 'run'],
-    'HTTP Routes & API Smoke Test (D1 + Phase 2 + Phase 3)' => [RoutesSmokeTest::class, 'run'],
+    'Phase 4 — Documents, Rapports, Exports CSV, Audit, RGPD, Production & Sécurité' => [Phase4Test::class, 'run'],
+    'HTTP Routes & API Smoke Test (D1 + Phase 2 + Phase 3 + Phase 4)' => [RoutesSmokeTest::class, 'run'],
 ];
 
 foreach ($suites as $name => $callable) {

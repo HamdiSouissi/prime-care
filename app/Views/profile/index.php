@@ -523,6 +523,20 @@ $vapidPublicKey = (string) ($vapidPublicKey ?? '');
   </form>
 </section>
 
+<!-- 5b. RGPD — Portabilité de mes données personnelles (§5.2) -->
+<section class="pc-card">
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h2 class="text-headline">Mes données personnelles (RGPD)</h2>
+      <p class="text-caption text-muted">Téléchargez l’archive JSON de vos informations personnelles, pointages, gardes et activité.</p>
+    </div>
+    <a href="/profile/export-data" class="pc-btn pc-btn--secondary pc-btn--sm">
+      <?= icon('download', 16) ?>
+      <span>Exporter mes données</span>
+    </a>
+  </div>
+</section>
+
 <!-- 6. Déconnexion -->
 <form method="POST" action="/logout" data-loading-form data-logout-form>
   <?= csrf_field() ?>

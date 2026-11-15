@@ -672,7 +672,7 @@ $nowLocalInput = \App\Services\ScheduleService::utcToLocalParis(gmdate('Y-m-d H:
         <div class="flex items-center justify-between mb-1">
           <span class="text-caption font-semibold uppercase text-brand">Récapitulatif automatique du poste</span>
           <span class="text-caption font-mono text-muted">
-            <?= e((string) ($shiftAutoSummary['from_local'] ?? '08:00')) ?> &rarr; <?= e((string) ($shiftAutoSummary['to_local'] ?? date('H:i'))) ?>
+            <?= e((string) ($shiftAutoSummary['from_local'] ?? '08:00')) ?> &rsaquo; <?= e((string) ($shiftAutoSummary['to_local'] ?? date('H:i'))) ?>
           </span>
         </div>
         <div class="text-footnote font-semibold">

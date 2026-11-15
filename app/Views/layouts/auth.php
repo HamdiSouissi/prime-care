@@ -30,11 +30,8 @@ $cspNonce = $cspNonce ?? View::cspNonce();
   <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/brand/apple-touch-icon.png">
-  <link rel="stylesheet" href="<?= e(asset('css/tokens.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/base.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/components.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/utilities.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
+  <link rel="stylesheet" href="<?= e(asset('css/app.min.css')) ?>">
+  <link rel="preload" href="/assets/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
   <?= View::partial('loader') ?>

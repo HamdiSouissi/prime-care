@@ -14,11 +14,7 @@ $cspNonce = View::cspNonce();
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($pageTitle) ?> — Prime Care</title>
-  <link rel="stylesheet" href="<?= e(asset('css/tokens.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/base.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/components.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/utilities.css')) ?>">
-  <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
+  <link rel="stylesheet" href="<?= e(asset('css/app.min.css')) ?>">
 </head>
 <body class="pc-print-body">
   <?= $content ?>

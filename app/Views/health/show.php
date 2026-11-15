@@ -217,7 +217,7 @@ if ($isGlycemia && $latest !== null) {
       <?php endif; ?>
       <span class="text-caption text-muted">Page <?= $page ?> / <?= $totalPages ?></span>
       <?php if ($page < $totalPages): ?>
-        <a href="/health/<?= e($code) ?>?days=<?= $days ?>&amp;alert=<?= e($filterAlert) ?>&amp;page=<?= $page + 1 ?>" class="pc-btn pc-btn--ghost pc-btn--sm">Suivant &rarr;</a>
+        <a href="/health/<?= e($code) ?>?days=<?= $days ?>&amp;alert=<?= e($filterAlert) ?>&amp;page=<?= $page + 1 ?>" class="pc-btn pc-btn--ghost pc-btn--sm">Suivant &rsaquo;</a>
       <?php else: ?>
         <span></span>
       <?php endif; ?>

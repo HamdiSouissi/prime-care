@@ -34,7 +34,8 @@ $openAlertsCount = isset($openAlertsCount) ? (int) $openAlertsCount : AlertServi
     </div>
 
     <div class="pc-navbar__right">
-      <a href="/alerts" class="pc-navbar__bell" aria-label="Centre d’alertes (<?= $openAlertsCount ?> ouverte<?= $openAlertsCount > 1 ? 's' : '' ?>)">
+      <a href="/alerts" class="pc-navbar__bell">
+        <span class="sr-only">Centre d’alertes</span>
         <?= icon('bell', '', 20) ?>
         <?php if ($openAlertsCount > 0): ?>
           <span class="pc-alert-badge" data-alert-badge><?= $openAlertsCount > 99 ? '99+' : $openAlertsCount ?></span>
@@ -44,11 +45,12 @@ $openAlertsCount = isset($openAlertsCount) ? (int) $openAlertsCount : AlertServi
       <?php if ($navbarActionHtml !== ''): ?>
         <?= $navbarActionHtml ?>
       <?php elseif ($currentUser !== null): ?>
-        <a href="/profile" class="pc-avatar pc-avatar--sm <?= e($avatarClass) ?>" aria-label="Mon profil">
+        <a href="/profile" class="pc-avatar pc-avatar--sm <?= e($avatarClass) ?>">
+          <span class="sr-only">Mon profil</span>
           <?php if (!empty($currentUser['avatar_path'])): ?>
             <img src="/media/<?= e((string) $currentUser['avatar_path']) ?>" alt="<?= e((string) $currentUser['first_name']) ?>">
           <?php else: ?>
-            <?= e(initials((string) ($currentUser['first_name'] ?? 'P'), (string) ($currentUser['last_name'] ?? 'C'))) ?>
+            <span aria-hidden="true"><?= e(initials((string) ($currentUser['first_name'] ?? 'P'), (string) ($currentUser['last_name'] ?? 'C'))) ?></span>
           <?php endif; ?>
         </a>
       <?php endif; ?>

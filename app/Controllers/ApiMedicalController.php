@@ -705,7 +705,7 @@ final class ApiMedicalController extends Controller
         $role = Auth::role() ?? 'viewer';
         $userId = Auth::id() ?? 0;
 
-        if (!Policy::allows($role, 'notes', 'view')) {
+        if (!Policy::allows($role, 'notes', 'create')) {
             return Response::jsonError('FORBIDDEN', 'Accès refusé.', 403);
         }
 

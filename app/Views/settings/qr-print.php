@@ -33,7 +33,7 @@ $qrSvg = (string) ($qrSvg ?? '');
     </div>
 
     <p class="text-subhead font-semibold">
-      1. Ouvrez Prime Care sur votre téléphone &rarr; 2. Appuyez sur « Scanner QR domicile »
+      1. Ouvrez Prime Care sur votre téléphone &rsaquo; 2. Appuyez sur « Scanner QR domicile »
     </p>
 
     <div class="pc-qr-print-fallback">

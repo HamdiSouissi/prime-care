@@ -28,14 +28,17 @@ final class Uploader
     ];
 
     /**
-     * Validate and store a prescription or medical document (PDF, JPG, PNG, WebP).
-     * Images are re-encoded via GD to strip EXIF; PDFs are verified via finfo + %PDF header.
+     * Validate and store a prescription or medical document (PDF, JPG, PNG — up to 10 MB).
+     * Images are re-encoded via GD to strip EXIF; PDFs are verified via finfo + %PDF- header.
      *
      * @param array<string, mixed> $file
-     * @return array{filename: string, mime: string, original_name: string, size: int}
+     * @return array{filename: string, mime: string, original_name: string, size: int, sha256: string}
      */
-    public static function uploadDocument(array $file, string $subDir = 'prescriptions'): array
-    {
+    public static function uploadDocument(
+        array $file,
+        string $subDir = 'documents',
+        int $maxBytes = 10485760
+    ): array {
         if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             throw new RuntimeException('Erreur lors du téléversement du document.');
         }
@@ -45,10 +48,10 @@ final class Uploader
             throw new RuntimeException('Fichier temporaire introuvable.');
         }
 
-        $maxBytes = (int) Config::get('security.max_upload_bytes', 5 * 1024 * 1024);
         $size = (int) ($file['size'] ?? filesize($tmpPath));
         if ($size <= 0 || $size > $maxBytes) {
-            throw new RuntimeException('La taille du document dépasse la limite autorisée (5 Mo).');
+            $maxMb = (int) round($maxBytes / (1024 * 1024));
+            throw new RuntimeException("La taille du document dépasse la limite autorisée ({$maxMb} Mo).");
         }
 
         $finfo = new finfo(FILEINFO_MIME_TYPE);
@@ -57,29 +60,50 @@ final class Uploader
             throw new RuntimeException('Format de document non autorisé. Utilisez PDF, JPG ou PNG.');
         }
 
-        $originalName = preg_replace('/[^a-zA-Z0-9._ -]/', '', basename((string) ($file['name'] ?? 'ordonnance'))) ?: 'ordonnance';
-
-        if (isset(self::ALLOWED_IMAGE_MIMES[$mime])) {
-            $imgRes = self::uploadImage($file, $subDir, 1600, 400);
-            return [
-                'filename' => $imgRes['filename'],
-                'mime' => $imgRes['mime'],
-                'original_name' => $originalName,
-                'size' => $imgRes['size'],
-            ];
-        }
-
-        // Verify %PDF- magic header
-        $head = (string) file_get_contents($tmpPath, false, null, 0, 5);
-        if ($head !== '%PDF-') {
-            throw new RuntimeException('Le fichier PDF fourni est invalide.');
-        }
+        $originalName = preg_replace('/[^a-zA-Z0-9._ -]/', '', basename((string) ($file['name'] ?? 'document'))) ?: 'document';
 
         $uploadsRoot = (string) Config::get('paths.uploads', dirname(__DIR__, 2) . '/storage/uploads');
-        $safeSubDir = preg_replace('/[^a-zA-Z0-9_-]/', '', $subDir) ?: 'prescriptions';
+        $safeSubDir = preg_replace('/[^a-zA-Z0-9_-]/', '', $subDir) ?: 'documents';
         $targetDir = $uploadsRoot . '/' . $safeSubDir;
         if (!is_dir($targetDir)) {
             mkdir($targetDir, 0775, true);
+        }
+
+        if (isset(self::ALLOWED_IMAGE_MIMES[$mime])) {
+            $sourceImg = self::loadImage($tmpPath, $mime);
+            $orientedImg = self::applyExifOrientation($sourceImg, $tmpPath, $mime);
+            $reencoded = self::resizeProportional($orientedImg, 2000);
+
+            $randomBase = bin2hex(random_bytes(16));
+            $ext = $mime === 'image/png' ? 'png' : 'jpg';
+            $outMime = $mime === 'image/png' ? 'image/png' : 'image/jpeg';
+            $relFilename = $safeSubDir . '/' . $randomBase . '.' . $ext;
+            $fullPath = $uploadsRoot . '/' . $relFilename;
+
+            if ($ext === 'png') {
+                imagepng($reencoded, $fullPath, 7);
+            } else {
+                imagejpeg($reencoded, $fullPath, 88);
+            }
+
+            imagedestroy($reencoded);
+            imagedestroy($orientedImg);
+
+            $sha256 = (string) hash_file('sha256', $fullPath);
+
+            return [
+                'filename' => $relFilename,
+                'mime' => $outMime,
+                'original_name' => $originalName,
+                'size' => (int) filesize($fullPath),
+                'sha256' => $sha256,
+            ];
+        }
+
+        // Verify %PDF- magic header even if finfo says application/pdf
+        $head = (string) file_get_contents($tmpPath, false, null, 0, 5);
+        if ($head !== '%PDF-') {
+            throw new RuntimeException('Le fichier PDF fourni est invalide (en-tête %PDF- manquant).');
         }
 
         $randomBase = bin2hex(random_bytes(16));
@@ -90,11 +114,14 @@ final class Uploader
             throw new RuntimeException('Impossible d’enregistrer le document PDF.');
         }
 
+        $sha256 = (string) hash_file('sha256', $fullPath);
+
         return [
             'filename' => $relFilename,
             'mime' => 'application/pdf',
             'original_name' => $originalName,
             'size' => (int) filesize($fullPath),
+            'sha256' => $sha256,
         ];
     }
 

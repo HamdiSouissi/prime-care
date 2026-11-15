@@ -21,6 +21,7 @@ final class Config
     {
         if (is_array($source)) {
             self::$items = $source;
+            self::enforceProductionSafety();
             return;
         }
 
@@ -28,6 +29,19 @@ final class Config
             /** @var array<string, mixed> $loaded */
             $loaded = require $source;
             self::$items = $loaded;
+            self::enforceProductionSafety();
+        }
+    }
+
+    /**
+     * Force app.debug = false whenever app.env === 'production', regardless of configuration file values.
+     */
+    private static function enforceProductionSafety(): void
+    {
+        if (isset(self::$items['app']) && is_array(self::$items['app'])) {
+            if ((string) (self::$items['app']['env'] ?? '') === 'production') {
+                self::$items['app']['debug'] = false;
+            }
         }
     }
 
@@ -36,6 +50,10 @@ final class Config
      */
     public static function get(string $key, mixed $default = null): mixed
     {
+        if ($key === 'app.debug' && (string) (self::$items['app']['env'] ?? '') === 'production') {
+            return false;
+        }
+
         $segments = explode('.', $key);
         $current = self::$items;
 
@@ -65,5 +83,6 @@ final class Config
         }
 
         $current = $value;
+        self::enforceProductionSafety();
     }
 }

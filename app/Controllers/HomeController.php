@@ -30,12 +30,14 @@ final class HomeController extends Controller
     {
         $this->authorize('dashboard', 'view');
 
+        $userId = Auth::id() ?? 0;
+        $role = Auth::role() ?? 'viewer';
+        $cronInfo = \App\Services\CronService::getLastRunInfo(1, 900);
+        $cronStale = ($role === 'admin' && (bool) ($cronInfo['is_stale'] ?? false));
+
         // Idempotent schedule generation & periodic alerts safety net (debounced to 5 min)
         ScheduleService::generateUpcoming48h();
         \App\Services\CronService::runFallbackIfNeeded(1);
-
-        $userId = Auth::id() ?? 0;
-        $role = Auth::role() ?? 'viewer';
 
         $patientModel = new Patient();
         $patient = $patientModel->current(1);
@@ -48,16 +50,20 @@ final class HomeController extends Controller
             $teamCount = count($userModel->allTeamMembers());
         }
 
+        $isManagerOrViewer = in_array($role, ['admin', 'coordinator', 'viewer'], true);
         $todayLocal = ScheduleService::utcToLocalParis(gmdate('Y-m-d H:i:s'), 'Y-m-d');
         $dayProgram = ShiftTimelineService::getDayProgram($todayLocal, 1);
         $unreadHandover = HandoverService::getLatestUnreadHandover($userId, 1);
         $attention = AttentionService::getCurrentAttentionPoints($userId, 1);
-        $observance = IntakeService::getObservanceSummary(1);
-        $adminMetrics = ShiftTimelineService::getAdminKeyMetrics(1);
+        $observance = $isManagerOrViewer ? IntakeService::getObservanceSummary(1) : [];
+        $adminMetrics = $isManagerOrViewer ? ShiftTimelineService::getAdminKeyMetrics(1) : [];
         $rotation = InsulinService::getRotationSuggestion(1);
         $clockState = \App\Services\AttendanceService::getUserClockState($userId, 1);
         $nextShift = \App\Services\PlanningService::getNextOrCurrentShiftForUser($userId, 1);
         $openAlertsCount = \App\Services\AlertService::countOpenAlerts(1);
+        $trends7d = $isManagerOrViewer
+            ? \App\Services\ReportService::getAdmin7DayTrends(1)
+            : [];
 
         return $this->view('home/index', [
             'pageTitle' => 'Accueil',
@@ -76,6 +82,8 @@ final class HomeController extends Controller
             'attention' => $attention,
             'observance' => $observance,
             'adminMetrics' => $adminMetrics,
+            'trends7d' => $trends7d,
+            'cronStale' => $cronStale,
             'rotation' => $rotation,
             'clockState' => $clockState,
             'nextShift' => $nextShift,
@@ -120,8 +128,8 @@ final class HomeController extends Controller
 
     public function comingSoon(Request $request, string $module = 'timeclock'): Response
     {
-        // Redirect any Phase 2 module to its live screen so zero Phase 2 'Coming Soon' remains
-        $phase2Redirects = [
+        // Phase 4 §1: No 'Coming Soon' screen remains in the application
+        $redirects = [
             'today' => '/today',
             'health' => '/health',
             'vitals' => '/health',
@@ -134,58 +142,14 @@ final class HomeController extends Controller
             'meals' => '/meals',
             'journal' => '/journal',
             'settings' => '/settings',
-        ];
-        if (isset($phase2Redirects[$module])) {
-            return Response::redirect($phase2Redirects[$module]);
-        }
-
-        $catalog = [
-            'timeclock' => [
-                'title' => 'Pointage & Planning',
-                'phase' => 'Phase 3 — Équipe, alertes & hors ligne',
-                'icon' => 'clock',
-                'color' => 'var(--c-team)',
-                'bg' => 'var(--brand-soft)',
-                'description' => 'Le pointage d’arrivée/départ par QR code au domicile + vérification GPS, le planning d’équipe et le récapitulatif des heures seront livrés en Phase 3.',
-                'tab' => 'home',
-            ],
-            'planning' => [
-                'title' => 'Planning & Absences',
-                'phase' => 'Phase 3 — Équipe, alertes & hors ligne',
-                'icon' => 'calendar-days',
-                'color' => 'var(--c-team)',
-                'bg' => 'var(--brand-soft)',
-                'description' => 'La planification des gardes, le suivi des absences et la validation des pointages arriveront en Phase 3.',
-                'tab' => 'more',
-            ],
-            'alerts' => [
-                'title' => 'Alertes Web Push & E-mail',
-                'phase' => 'Phase 3 — Équipe, alertes & hors ligne',
-                'icon' => 'bell',
-                'color' => 'var(--danger)',
-                'bg' => 'rgba(255,59,48,.12)',
-                'description' => 'Les notifications Web Push (VAPID) et e-mail automatiques ainsi que le centre d’alertes seront activés en Phase 3.',
-                'tab' => 'more',
-            ],
-            'documents' => [
-                'title' => 'Documents médicaux',
-                'phase' => 'Phase 4 — Pilotage & Production',
-                'icon' => 'file-text',
-                'color' => 'var(--c-docs)',
-                'bg' => 'rgba(0,122,255,.12)',
-                'description' => 'Le coffre-fort d’ordonnances, comptes rendus hospitaliers, rapport médical imprimable et exports CSV sera activé en Phase 4.',
-                'tab' => 'more',
-            ],
+            'timeclock' => '/attendance',
+            'planning' => '/planning',
+            'alerts' => '/alerts',
+            'documents' => '/documents',
+            'reports' => '/reports',
+            'audit' => '/audit',
         ];
 
-        $meta = $catalog[$module] ?? $catalog['timeclock'];
-
-        return $this->view('home/coming-soon', [
-            'pageTitle' => $meta['title'],
-            'activeTab' => $meta['tab'],
-            'backUrl' => '/',
-            'backLabel' => 'Accueil',
-            'moduleMeta' => $meta,
-        ]);
+        return Response::redirect($redirects[$module] ?? '/documents');
     }
 }

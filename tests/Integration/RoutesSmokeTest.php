@@ -88,8 +88,13 @@ final class RoutesSmokeTest
     public static function run(callable $assert): void
     {
         $router = self::buildProductionRouter();
+        $pdo = Database::connection();
 
-        $protectedGetRoutes = [
+        $realDocId = (int) ($pdo->query('SELECT id FROM documents WHERE deleted_at IS NULL ORDER BY id ASC LIMIT 1')->fetchColumn() ?: 1);
+        $allExportTypes = array_keys(\App\Services\ExportService::EXPORT_CATALOG);
+        $exportRoutes = array_map(static fn(string $t): string => '/reports/export/' . $t, $allExportTypes);
+
+        $protectedGetRoutes = array_merge([
             '/',
             '/more',
             '/about',
@@ -108,7 +113,13 @@ final class RoutesSmokeTest
             '/attendance',
             '/attendance/hours',
             '/alerts',
-            '/coming-soon/timeclock',
+            '/documents',
+            '/documents/' . $realDocId,
+            '/documents/' . $realDocId . '/file',
+            '/documents/' . $realDocId . '/download',
+            '/reports',
+            '/reports/exports',
+            '/audit',
             '/profile',
             '/patient',
             '/users',
@@ -120,7 +131,7 @@ final class RoutesSmokeTest
             '/settings',
             '/settings/attendance/qr-print',
             '/design',
-        ];
+        ], $exportRoutes);
 
         $publicCareRoutes = [
             '/',
@@ -139,7 +150,10 @@ final class RoutesSmokeTest
             '/planning',
             '/planning?view=month',
             '/alerts',
-            '/coming-soon/timeclock',
+            '/documents',
+            '/documents/' . $realDocId,
+            '/documents/' . $realDocId . '/file',
+            '/documents/' . $realDocId . '/download',
             '/profile',
             '/patient',
             '/api/health',
@@ -154,6 +168,7 @@ final class RoutesSmokeTest
             '/users/3/edit',
             '/admin/treatments',
             '/admin/measures',
+            '/audit',
             '/settings',
             '/settings/attendance/qr-print',
             '/design',
@@ -180,7 +195,7 @@ final class RoutesSmokeTest
             }
         }
 
-        foreach (['/login', '/login/pin', '/forgot-password', '/api/health'] as $guestUri) {
+        foreach (['/login', '/login/pin', '/forgot-password', '/api/health', '/healthz', '/legal/mentions', '/legal/privacy', '/legal/attendance-notice'] as $guestUri) {
             $resp = self::dispatchGet($router, $guestUri);
             if ($resp->status() >= 500) {
                 $zero500Unauth = false;
@@ -412,7 +427,7 @@ final class RoutesSmokeTest
             if ($resp->status() !== 200) {
                 $admin200All = false;
             }
-            if (!str_starts_with($uri, '/api/') && !str_starts_with($uri, '/attendance/export-csv')) {
+            if (!str_starts_with($uri, '/api/') && !str_starts_with($uri, '/attendance/export-csv') && !str_ends_with($uri, '/file') && !str_ends_with($uri, '/download') && !str_starts_with($uri, '/reports/export/')) {
                 if (preg_match('/\sstyle\s*=/i', $resp->body())) {
                     $zeroInlineStyle = false;
                 }
@@ -421,7 +436,89 @@ final class RoutesSmokeTest
 
         $assert($zero500Admin, 'D1 Smoke (admin): 0 réponse 500 sur toutes les routes GET');
         $assert($admin200All, 'D1 Smoke (admin): 200 partout sur les 34 routes authentifiées (dont /planning, /attendance, /attendance/hours, /alerts, /settings/attendance/qr-print)');
-        $assert($zeroInlineStyle, 'C5 CSP stricte: 0 attribut style= en ligne dans le HTML généré sur l’ensemble des vues Phases 1, 2 & 3');
+        $assert($zeroInlineStyle, 'C5 CSP stricte: 0 attribut style= en ligne dans le HTML généré sur l’ensemble des vues Phases 1, 2, 3 & 4');
+
+        // ---------------------------------------------------------------------
+        // 5. H1 — End-to-End HTTP test for parameterized routes & all 9 CSV exports across all 4 profiles
+        // ---------------------------------------------------------------------
+        $profilesMatrix = [
+            'admin' => [
+                'email' => 'admin@primecare.test',
+                'password' => 'Admin!2026',
+                'allowed' => ['measures', 'intakes', 'meals', 'notes', 'care_checks', 'attendances', 'hours', 'alerts', 'audit'],
+            ],
+            'coordinator' => [
+                'email' => 'coord@primecare.test',
+                'password' => 'Coord!2026',
+                'allowed' => ['measures', 'intakes', 'meals', 'notes', 'care_checks', 'attendances', 'hours', 'alerts'],
+            ],
+            'viewer' => [
+                'email' => 'medecin@primecare.test',
+                'password' => 'Lecture!2026',
+                'allowed' => ['measures', 'intakes', 'meals', 'notes', 'care_checks'],
+            ],
+            'caregiver' => [
+                'email' => 'fatou@primecare.test',
+                'password' => 'Soin!2026',
+                'allowed' => [],
+            ],
+        ];
+
+        $e2eExportsOk = true;
+        $paramRoutesZero500 = true;
+
+        foreach ($profilesMatrix as $roleName => $prof) {
+            Auth::logout();
+            Auth::attempt($prof['email'], $prof['password']);
+
+            foreach (['/documents/' . $realDocId, '/documents/' . $realDocId . '/file', '/documents/' . $realDocId . '/download'] as $docUri) {
+                $docResp = self::dispatchGet($router, $docUri);
+                if ($docResp->status() !== 200) {
+                    $paramRoutesZero500 = false;
+                }
+            }
+
+            foreach ($allExportTypes as $exportType) {
+                $auditBefore = (int) $pdo->query("SELECT COUNT(*) FROM audit_logs WHERE action = 'export'")->fetchColumn();
+                $expResp = self::dispatchGet($router, '/reports/export/' . $exportType . '?period=30d');
+                $auditAfter = (int) $pdo->query("SELECT COUNT(*) FROM audit_logs WHERE action = 'export'")->fetchColumn();
+                $st = $expResp->status();
+
+                if ($st === 404 || $st >= 500) {
+                    $e2eExportsOk = false;
+                    $paramRoutesZero500 = false;
+                }
+
+                $shouldAllow = in_array($exportType, $prof['allowed'], true);
+                if ($shouldAllow) {
+                    $hdrs = $expResp->headers();
+                    $body = $expResp->body();
+                    if (
+                        $st !== 200
+                        || !str_starts_with($hdrs['Content-Disposition'] ?? '', 'attachment; filename="prime_care_' . $exportType . '_')
+                        || !str_contains($hdrs['Cache-Control'] ?? '', 'no-store')
+                        || !str_starts_with($body, "\xEF\xBB\xBF")
+                        || !str_contains($body, ';')
+                        || $auditAfter !== $auditBefore + 1
+                    ) {
+                        $e2eExportsOk = false;
+                    }
+                } else {
+                    if ($st !== 403 || $auditAfter !== $auditBefore) {
+                        $e2eExportsOk = false;
+                    }
+                }
+            }
+        }
+
+        $assert(
+            $paramRoutesZero500,
+            'H1 Smoke routes paramétrées: /documents/{id}, /documents/{id}/file, /documents/{id}/download et /reports/export/{type} renvoient 0 erreur 500 sur les 4 profils'
+        );
+        $assert(
+            $e2eExportsOk,
+            'H1 Exports CSV HTTP E2E: les 9 types × 4 profils via le routeur renvoient 200 (attachment, no-store, BOM UTF-8, ;, audit_logs) ou 403 (jamais 404 ni 500)'
+        );
 
         Auth::logout();
         Session::destroy();

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // Prime Care — Scheduled Background Runner (Cron)
 // Crontab: */5 * * * * php /chemin/cron/run.php
-// Usage:   php cron/run.php [all|schedule:generate|alerts:scan|notifications:send|alerts:daily|cleanup]
+// Usage:   php cron/run.php [all|schedule:generate|alerts:scan|notifications:send|alerts:daily|cleanup|retention:purge]
 
 require_once dirname(__DIR__) . '/app/Helpers/bootstrap.php';
 
@@ -37,7 +37,6 @@ $task = $argv[1] ?? 'all';
 
 try {
     $res = CronService::runTask($task, 1);
-    @file_put_contents($cacheDir . '/cron_last_run.txt', (string) time());
 
     foreach ($res as $taskName => $summary) {
         echo sprintf(

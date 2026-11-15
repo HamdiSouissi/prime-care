@@ -331,4 +331,27 @@ final class ProfileController extends Controller
         Session::flash('toast_success', 'Tous les jetons d’appareil et de connexion par PIN ont été révoqués.');
         return Response::redirect('/profile');
     }
+
+    /**
+     * GET/POST /profile/export-data — RGPD Art. 20 personal data archive for the logged-in user (Phase 4 §5.2).
+     */
+    public function exportData(Request $request): Response
+    {
+        $this->authorize('profile', 'view');
+        $user = Auth::user();
+        if ($user === null) {
+            return Response::redirect('/login');
+        }
+
+        $res = \App\Services\ExportService::exportUserPersonalDataArchive((int) $user['id'], 1);
+        $content = (string) @file_get_contents($res['file_path']);
+        @unlink($res['file_path']);
+
+        return new Response($content, 200, [
+            'Content-Type' => $res['mime'],
+            'Content-Disposition' => 'attachment; filename="' . $res['filename'] . '"',
+            'Cache-Control' => 'no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
 }

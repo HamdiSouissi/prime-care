@@ -14,6 +14,13 @@ final class DesignController extends Controller
 {
     public function index(Request $request): Response
     {
+        if ((string) \App\Core\Config::get('app.env', 'development') === 'production') {
+            return Response::html(
+                \App\Core\View::render('errors/404', ['pageTitle' => 'Page introuvable'], 'layouts/error'),
+                404
+            );
+        }
+
         $this->authorize('design', 'view');
 
         return $this->view('design/index', [
