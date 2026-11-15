@@ -7,6 +7,7 @@ require_once __DIR__ . '/../app/Helpers/bootstrap.php';
 use App\Core\Config;
 use App\Core\Database;
 use Database\Seeds\Phase1Seeder;
+use Database\Seeds\Phase2Seeder;
 
 // C4: Force testing environment so tests NEVER touch the main database
 Config::set('app.env', 'testing');
@@ -28,7 +29,7 @@ spl_autoload_register(static function (string $class): void {
 });
 
 /**
- * Prepare the isolated test database (--fresh + migrations + seed).
+ * Prepare the isolated test database (--fresh + migrations 001..006 + Phase1 & Phase2 seeders).
  */
 function prepareTestDatabase(): void
 {
@@ -85,6 +86,7 @@ function prepareTestDatabase(): void
     }
 
     Phase1Seeder::run();
+    Phase2Seeder::run();
 }
 
 prepareTestDatabase();
@@ -92,10 +94,14 @@ prepareTestDatabase();
 use Tests\Integration\RoutesSmokeTest;
 use Tests\Unit\AuthTest;
 use Tests\Unit\CsrfTest;
+use Tests\Unit\EditWindowHandoverMealTest;
 use Tests\Unit\HelperEscapeTest;
+use Tests\Unit\IntakeAndInsulinTest;
 use Tests\Unit\PolicyTest;
 use Tests\Unit\RateLimiterTest;
 use Tests\Unit\RouterTest;
+use Tests\Unit\ScheduleServiceTest;
+use Tests\Unit\ThresholdServiceTest;
 use Tests\Unit\ValidatorTest;
 
 $passed = 0;
@@ -114,7 +120,7 @@ $assert = static function (bool $condition, string $label) use (&$passed, &$fail
 $activeDb = (string) Database::connection()->query('SELECT DATABASE()')->fetchColumn();
 
 echo "=====================================================\n";
-echo " Prime Care — Suite de tests automatisés (Phase 1)\n";
+echo " Prime Care — Suite de tests automatisés (Phases 1 & 2)\n";
 echo " Environnement : " . Config::get('app.env') . " (Base : {$activeDb})\n";
 echo "=====================================================\n\n";
 
@@ -129,7 +135,11 @@ $suites = [
     'RateLimiter Account vs Shared IP (C2)' => [RateLimiterTest::class, 'run'],
     'Policy (RBAC)' => [PolicyTest::class, 'run'],
     'Helpers & Escaping e()' => [HelperEscapeTest::class, 'run'],
-    'HTTP Routes Smoke Test (D1)' => [RoutesSmokeTest::class, 'run'],
+    'ThresholdService (Seuils, Contextes, Plausibilité, g/L <-> mg/dL)' => [ThresholdServiceTest::class, 'run'],
+    'ScheduleService (DST Europe/Paris -> UTC & Idempotence 48h)' => [ScheduleServiceTest::class, 'run'],
+    'IntakeService & InsulinService (Statuts, Anti-double-prise 409, Grille responsable)' => [IntakeAndInsulinTest::class, 'run'],
+    'EditWindowService, MealService, HandoverService & QrCodeService' => [EditWindowHandoverMealTest::class, 'run'],
+    'HTTP Routes & API Smoke Test (D1 + Phase 2)' => [RoutesSmokeTest::class, 'run'],
 ];
 
 foreach ($suites as $name => $callable) {

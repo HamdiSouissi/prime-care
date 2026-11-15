@@ -34,21 +34,52 @@
 # 1. Copier le fichier de configuration et ajuster les accès MySQL
 cp config/config.example.php config/config.php
 
-# 2. (Optionnel) Régénérer les icônes PWA PNG à partir des SVG de marque
+# 2. (Optionnel) Régénérer les icônes PWA PNG et splash screens iOS à partir des PNG de marque
 php bin/make-icons.php
 
-# 3. Exécuter les migrations et injecter les données de démonstration (Phase 1)
+# 3. Exécuter les migrations (001 à 006) et injecter les 14 jours de données de démonstration (Phases 1 & 2)
 php bin/migrate.php --fresh --seed
 
-# 4. Vérifier l'état des migrations
+# 4. Générer les occurrences de prises et mesures attendues sur 48h (idempotent)
+php cron/run.php schedule:generate
+
+# 5. Vérifier l'état des migrations
 php bin/migrate.php --status
 
-# 5. Lancer la suite de tests automatisés
+# 6. Lancer la suite de tests automatisés
 php tests/run.php
 
-# 6. Démarrer le serveur de développement local
-PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8080 -t public public/router.php
+# 7. Démarrer le serveur de développement local
+PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8080 -t public public/index.php
 ```
+
+### Tâche planifiée (Crontab de production)
+
+Pour générer automatiquement les prises de médicaments (`medication_intakes`) et mesures attendues (`measure_expectations`) sur les prochaines 48 heures (avec verrou fichier anti-concurrence dans `storage/cache/cron.lock`) :
+
+```cron
+*/5 * * * * php /chemin/vers/prime-care/cron/run.php schedule:generate >> /chemin/vers/prime-care/storage/logs/cron.log 2>&1
+```
+
+> En complément, l'ouverture de l'écran **Accueil (`/`)** ou **Aujourd'hui (`/today`)** déclenche automatiquement un filet de sécurité idempotent si le cron n'a pas tourné récemment.
+
+### Tester l’installation mobile PWA en HTTPS (iOS & Android)
+
+Les navigateurs mobiles (Chrome Android pour `beforeinstallprompt` / WebAPK et Safari iOS pour le Service Worker) exigent une origine sécurisée (`https://`) lorsqu’on accède au serveur depuis un téléphone physique :
+
+1. **Option 1 — Cloudflare Quick Tunnel (sans compte, en 5 secondes)** :
+   ```bash
+   cloudflared tunnel --url http://localhost:8080
+   ```
+   Ouvrez l'URL `https://xxxx.trycloudflare.com/install` sur le téléphone ou scannez le QR code affiché sur `/install`.
+2. **Option 2 — Tailscale Funnel / Serve** :
+   ```bash
+   tailscale serve --bg 8080
+   ```
+3. **Option 3 — Certificat local `mkcert` sur réseau Wi-Fi local** :
+   ```bash
+   mkcert -install && mkcert 192.168.1.XX localhost
+   ```
 
 ---
 
