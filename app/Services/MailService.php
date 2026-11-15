@@ -31,8 +31,10 @@ final class MailService
             . '<body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,sans-serif;background:#F4F7FC;color:#0F172A;">'
             . '<div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:24px;overflow:hidden;border:1px solid #E2E8F0;">'
             . '<div style="background:#0A1633;padding:22px 28px;text-align:center;">'
-            . '<img src="' . htmlspecialchars($logoPngUrl, ENT_QUOTES, 'UTF-8') . '" alt="PRIME CARE" width="176" style="height:auto;display:inline-block;">'
-            . '<div style="color:rgba(255,255,255,0.75);font-size:12px;margin-top:6px;">Suivi de soins à domicile · M. Henri Benali</div>'
+            . '<div style="background:#FFFFFF;padding:8px 16px;border-radius:14px;display:inline-block;">'
+            . '<img src="' . htmlspecialchars($logoPngUrl, ENT_QUOTES, 'UTF-8') . '" alt="PRIME CARE" width="160" style="height:auto;display:block;">'
+            . '</div>'
+            . '<div style="color:rgba(255,255,255,0.82);font-size:12px;margin-top:10px;">Suivi de soins à domicile · M. Henri Benali</div>'
             . '</div>'
             . '<div style="padding:28px;">'
             . $bodyHtml

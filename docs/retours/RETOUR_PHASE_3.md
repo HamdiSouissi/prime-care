@@ -23,7 +23,15 @@ Cette livraison déploie l’intégralité de la **Phase 3** de **Prime Care** s
 - **Commits de la Phase 3** :
   - `95a238e` — `chore(phase3): add PLAN_PHASE_3.md, vendor jsQR & PHPMailer, and Addendum B section 8 bis`
   - `48064ea` — `feat(phase3): add migrations 007-010, Phase3Seeder, planning, attendance, hours, alerts, WebPush VAPID and offline sync`
-  - *(+ commit final `test(phase3): add Phase 3 unit & smoke tests (171/171), 28 captures (390x844) and RETOUR_PHASE_3.md`)*
+  - `c3c0666` — `test(phase3): add Phase 3 unit & smoke tests (171/171), 28 captures (390x844) and RETOUR_PHASE_3.md`
+- **Commits des corrections post-revue (G1 à G7)** :
+  - `4bd09ac` — **G1** : `fix(offline): G1 wire all medical forms to offline queue and preserve client_recorded_at with 2min/72h guardrails`
+  - `57c7d0a` — **G2** : `fix(attendance): G2 enforce GDPR notice server-side with 403 GDPR_NOTICE_REQUIRED and chain punch on accept`
+  - `6bcd510` — **G3** : `fix(sw): G3 restrict offline navigation cache to ['/','/today','/journal'] and add Cache-Control no-store on exports/media`
+  - `08acad5` — **G4** : `fix(hours): G4 display monthly hours summary as caregiver cards under 600px with month total card at top`
+  - `0072d69` — **G5** : `fix(ui): G5 style slide punch button with Addendum B signature gradient, white thumb and green completed state`
+  - `9e50edf` — **G6** : `test(phase3): G6 add RFC 8291 Appendix A vector, 410 Gone, queue backoff 5x, 2027 holidays, offline client_recorded_at and G2/G3 tests`
+  - *(+ commit final **G7** : captures `390×844` G7 et mise à jour de `RETOUR_PHASE_3.md`)*
 
 ---
 
@@ -256,7 +264,7 @@ PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8080 -t public public/index.php
 
 ## 8. Résultats qualité
 
-### 8.1 Sortie complète de `php tests/run.php` (171 assertions réussies / 0 échec)
+### 8.1 Sortie complète de `php tests/run.php` (181 assertions réussies / 0 échec)
 ```text
 =====================================================
  Prime Care — Suite de tests automatisés (Phases 1, 2 & 3)
@@ -425,7 +433,8 @@ PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8080 -t public public/index.php
   ✓ AttendanceService: QR code signé HMAC valide accepté, falsifié rejeté, et l’ancien QR est révoqué après régénération
   ✓ AttendanceService: déclaration d’oubli de pointage exige un motif (422), crée un pointage pending et peut être validée par le responsable
   ✓ AttendanceService: option require_clocked_in bloque en 403 « Pointez votre arrivée pour saisir » une aide-soignante non pointée en arrivée
-  ✓ HoursCalculatorService: calcule exactement les 11 jours fériés français (fixes + Pâques, Ascension, Pentecôte)
+  ✓ HoursCalculatorService: calcule exactement les 11 jours fériés français 2026 (fixes + Pâques, Ascension, Pentecôte)
+  ✓ HoursCalculatorService: calcule la liste complète des 11 jours fériés 2027 (incluant Pâques 29/03/2027, Ascension 06/05/2027, Pentecôte 17/05/2027)
   ✓ HoursCalculatorService: créneau de jour (08h–20h) = 12h00 totales et 0h00 de nuit
   ✓ HoursCalculatorService: garde de nuit (20h–08h traversant minuit) = 12h00 totales dont 9h00 de nuit (21h–6h)
   ✓ HoursCalculatorService: découpe exactement les heures de dimanche (8h après minuit) et de jour férié (11 novembre = 12h)
@@ -437,6 +446,15 @@ PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8080 -t public public/index.php
   ✓ AlertService: une alerte critique non acquittée après 15 min est automatiquement escaladée au responsable
   ✓ AlertService: détection exacte des heures calmes (22h00–07h00 Europe/Paris) avec contournement pour les alertes critiques
   ✓ WebPushService: signe/vérifie le JWT ES256 (r||s 64 octets) et chiffre/déchiffre de bout en bout en aes128gcm (RFC 8291)
+  ✓ WebPushService: conformité octet par octet au vecteur officiel RFC 8291 Appendix A (CEK, Nonce, Ciphertext et Corps complet aes128gcm)
+  ✓ WebPushService: supprime automatiquement de la base un abonnement expiré renvoyant HTTP 410 Gone
+  ✓ AlertService (notification_queue): recalcule next_try_at avec délais croissants (2, 4, 8, 16 min) et abandonne en status=failed après 5 échecs avec last_error renseigné
+  ✓ Offline G1: client_recorded_at dans le passé (-20 min) est conservé comme heure de réalisation (measured_at)
+  ✓ Offline G1: client_recorded_at dans le futur (> 2 min) est ramené à l’heure serveur
+  ✓ Offline G1: client_recorded_at > 72 h est refusé avec HTTP 422 et le code OFFLINE_TOO_OLD
+  ✓ Offline G1: conflit sur une prise déjà validée par une collègue renvoie HTTP 409 non bloquant (« Déjà donné par ... »)
+  ✓ Attendance G2: refuse tout pointage avec HTTP 403 GDPR_NOTICE_REQUIRED tant que attendance_gdpr_accepted_at est NULL, puis accepte après validation
+  ✓ Service Worker G3: public/sw.js restreint le cache de navigation à la liste blanche exacte ['/', '/today', '/journal'] et exclut Content-Disposition, /export et /media/
   ✓ CronService: exécute les tâches planifiées (schedule:generate, alerts:scan, notifications:send, cleanup)
 
 ▸ HTTP Routes & API Smoke Test (D1 + Phase 2 + Phase 3)
@@ -462,7 +480,7 @@ PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8080 -t public public/index.php
   ✓ C5 CSP stricte: 0 attribut style= en ligne dans le HTML généré sur l’ensemble des vues Phases 1, 2 & 3
 
 -----------------------------------------------------
- Résultat : 171 réussis, 0 échoués
+ Résultat : 181 réussis, 0 échoués
 -----------------------------------------------------
 ```
 
@@ -474,8 +492,8 @@ Toutes les captures sont au format mobile `390×844` (`deviceScaleFactor: 2`) da
 
 | Fichier | Écran / État capturé (`390×844`) |
 |---|---|
-| [`01-home-caregiver-punch-light.png`](captures/phase-3/01-home-caregiver-punch-light.png) | Accueil Aide-soignante (Fatou) avec carte de pointage glissant E05, cloche d’alertes et prochain créneau — Mode Clair |
-| [`02-home-caregiver-punch-dark.png`](captures/phase-3/02-home-caregiver-punch-dark.png) | Accueil Aide-soignante (Fatou) avec carte de pointage glissant E05 — Mode Sombre |
+| [`01-home-caregiver-punch-light.png`](captures/phase-3/01-home-caregiver-punch-light.png) | Accueil Aide-soignante (Fatou) avec bouton glissant **G5** (`linear-gradient(45deg,#5E5CE6,#BF5AF2)`, texte blanc « Glisser pour arriver », poignée ronde blanche à icône indigo) — Mode Clair |
+| [`02-home-caregiver-punch-dark.png`](captures/phase-3/02-home-caregiver-punch-dark.png) | Accueil Aide-soignante (Fatou) avec bouton glissant **G5** — Mode Sombre |
 | [`03-home-admin-attention-light.png`](captures/phase-3/03-home-admin-attention-light.png) | Accueil Responsable (Karim) avec synthèse unifiée (alertes ouvertes + gardes à remplacer + pointages à valider) — Mode Clair |
 | [`04-home-admin-attention-dark.png`](captures/phase-3/04-home-admin-attention-dark.png) | Accueil Responsable (Karim) avec synthèse unifiée — Mode Sombre |
 | [`05-planning-week-admin-light.png`](captures/phase-3/05-planning-week-admin-light.png) | Planning d’équipe `/planning` (vue Semaine 7 jours, filtres équipe, actions rapides) — Mode Clair |
@@ -487,8 +505,8 @@ Toutes les captures sont au format mobile `390×844` (`deviceScaleFactor: 2`) da
 | [`11-planning-sheet-declare-absence.png`](captures/phase-3/11-planning-sheet-declare-absence.png) | Bottom-sheet « Déclarer une absence » (`#absence-create-sheet`) |
 | [`12-attendance-control-admin-light.png`](captures/phase-3/12-attendance-control-admin-light.png) | Contrôle hebdomadaire des pointages `/attendance` (pointages « À valider » Hors du domicile / Oubli déclaré + grille) — Mode Clair |
 | [`13-attendance-control-admin-dark.png`](captures/phase-3/13-attendance-control-admin-dark.png) | Contrôle hebdomadaire des pointages `/attendance` — Mode Sombre |
-| [`14-attendance-hours-monthly-light.png`](captures/phase-3/14-attendance-hours-monthly-light.png) | Récapitulatif mensuel des heures & export CSV paie `/attendance/hours` (jour, nuit 21h–6h, dimanche, 11 nov. férié) — Mode Clair |
-| [`15-attendance-hours-monthly-dark.png`](captures/phase-3/15-attendance-hours-monthly-dark.png) | Récapitulatif mensuel des heures & export CSV paie `/attendance/hours` — Mode Sombre |
+| [`14-attendance-hours-monthly-light.png`](captures/phase-3/14-attendance-hours-monthly-light.png) | Récapitulatif mensuel des heures **G4** `/attendance/hours` (`< 600 px` : carte Total du mois en haut + carte par aide-soignante avec libellés à gauche / valeurs à droite) — Mode Clair |
+| [`15-attendance-hours-monthly-dark.png`](captures/phase-3/15-attendance-hours-monthly-dark.png) | Récapitulatif mensuel des heures **G4** `/attendance/hours` (`< 600 px` : carte Total du mois + cartes par aide-soignante) — Mode Sombre |
 | [`16-attendance-caregiver-declared-sheet.png`](captures/phase-3/16-attendance-caregiver-declared-sheet.png) | Bottom-sheet « Déclarer un oubli de pointage » (`#declare-punch-sheet`) côté Aide-soignante |
 | [`17-alerts-active-light.png`](captures/phase-3/17-alerts-active-light.png) | Centre d’alertes `/alerts` (onglet Ouvertes avec badge d’escalade 15 min et traitement rapide) — Mode Clair |
 | [`18-alerts-active-dark.png`](captures/phase-3/18-alerts-active-dark.png) | Centre d’alertes `/alerts` (onglet Ouvertes) — Mode Sombre |
@@ -501,7 +519,14 @@ Toutes les captures sont au format mobile `390×844` (`deviceScaleFactor: 2`) da
 | [`25-settings-qr-print-a4.png`](captures/phase-3/25-settings-qr-print-a4.png) | Affiche A4 imprimable `/settings/attendance/qr-print` du QR code de présence du domicile |
 | [`26-profile-notifications-push-light.png`](captures/phase-3/26-profile-notifications-push-light.png) | Profil `/profile` avec carte « Notifications & Heures calmes » et test Web Push — Mode Clair |
 | [`27-profile-notifications-push-dark.png`](captures/phase-3/27-profile-notifications-push-dark.png) | Profil `/profile` avec carte « Notifications & Heures calmes » — Mode Sombre |
-| [`28-offline-banner-queue-light.png`](captures/phase-3/28-offline-banner-queue-light.png) | Mode hors ligne actif avec bandeau ambre « Hors ligne · 2 saisies en attente » et barre de synchronisation |
+| [`28-offline-banner-queue-light.png`](captures/phase-3/28-offline-banner-queue-light.png) | Mode hors ligne actif avec bandeau ambre « Hors ligne · 2 saisies en attente » et barre de synchronisation — Mode Clair |
+| [`29-home-punch-completed-state.png`](captures/phase-3/29-home-punch-completed-state.png) | **G7 #1** — État complété après pointage : rail vert « Arrivée pointée à 07h58 » avec coche animée et badge « En poste » |
+| [`30-attendance-qr-scan-sheet.png`](captures/phase-3/30-attendance-qr-scan-sheet.png) | **G7 #2** — Feuille de scan du QR code du domicile ouverte (`#qr-punch-sheet`) avec caméra et code de secours |
+| [`31-attendance-gdpr-notice.png`](captures/phase-3/31-attendance-gdpr-notice.png) | **G7 #3** — Mention d’information RGPD sur le pointage (`#gdpr-notice-sheet` & bouton « J’ai compris ») |
+| [`32-chromium-push-notification-received.png`](captures/phase-3/32-chromium-push-notification-received.png) | **G7 #4** — Notification push système reçue dans Chromium après clic sur « Envoyer une notification de test » |
+| [`33-offline-synced-toast.png`](captures/phase-3/33-offline-synced-toast.png) | **G7 #5** — Message toast « Saisies synchronisées (2) » affiché automatiquement après retour du réseau |
+| [`34-offline-banner-queue-dark.png`](captures/phase-3/34-offline-banner-queue-dark.png) | **G7 #6** — Bandeau hors ligne et barre de file d’attente en Mode Sombre |
+| [`35-alert-email-preview.png`](captures/phase-3/35-alert-email-preview.png) | **G7 #7** — Rendu visuel du courriel HTML d’alerte critique (`MailService::sendAlertEmail`) dans le navigateur |
 
 ---
 
@@ -526,4 +551,14 @@ Toutes les captures sont au format mobile `390×844` (`deviceScaleFactor: 2`) da
 
 ## 12. Corrections
 
-*Aucune correction post-revue pour le moment (première soumission de la Phase 3).*
+Suite à la revue de la Phase 3, les **7 corrections ciblées (`G1` à `G7`)** ont été réalisées sur la branche `arena/0f0ecf73-prime-care`, avec un commit atomique par correction :
+
+| Réf. | Commit | Description de la correction |
+|---|---|---|
+| **G1** | `4bd09ac` | **Mode hors ligne complet & `client_recorded_at` conservé (§5.1, §5.3, §8.4)** : branchement de `enqueueOfflineAction` sur les 6 formulaires de saisie médicale (`#form-quick-measure`, `#form-insulin-give`, `#form-intake-skip`, `#form-as-needed`, `#form-quick-meal` sans photo, `#form-quick-note`) et les boutons 1-tap (`[data-quick-give-id]`, `[data-quick-care-id]`), avec repli automatique en cas de `navigator.onLine === false` ou d’erreur réseau (`TypeError`), fermeture de la feuille et toast « Enregistré hors ligne » ; désactivation de l’envoi de repas avec photo hors ligne (« Photo : réseau nécessaire ») ; envoi de `client_recorded_at` en ISO 8601 UTC (`new Date().toISOString()`) et validation dans `ApiMedicalController::resolveClientTimestamp` (conservation comme `measured_at`, `given_at`, `eaten_at`, `created_at` et `checked_at`/`done_at`, plafonnement à l’heure serveur si futur `> 2 min`, refus `422 OFFLINE_TOO_OLD` si passé `> 72 h`). |
+| **G2** | `57c7d0a` | **Mention d’information RGPD imposée côté serveur (§3.4, §8.3)** : vérification de `users.attendance_gdpr_accepted_at !== null` dans `AttendanceService::recordPunch`, `AttendanceService::declareForgotPunch` et `AttendanceController::punch` / `declareForgot` (bouton glissant, QR code et déclaration manuelle), retournant `HTTP 403` avec le code `GDPR_NOTICE_REQUIRED` si `NULL` ; côté interface (`phase3.js`), ouverture automatique de la feuille `#gdpr-notice-sheet` et enchaînement automatique du pointage en attente dès le clic sur « J’ai compris » (`POST /api/attendance/gdpr-accept`). |
+| **G3** | `6bcd510` | **Service Worker : périmètre de cache restreint à la liste blanche (§5.2, §8.4)** : restriction stricte de la mise en cache des navigations HTML dans `public/sw.js` à la liste blanche exacte `const OFFLINE_NAV_WHITELIST = ['/', '/today', '/journal']` ; exclusion totale des réponses ayant un en-tête `Content-Disposition` ou `Cache-Control: no-store` ainsi que des URLs contenant `/api/`, `/export`, `/csv`, `/pdf`, `/media/` ; ajout de `Cache-Control: no-store` côté PHP sur les exports CSV (`AttendanceController::exportCsv`) et sur `/media/*` (`Response::download`). |
+| **G4** | `08acad5` | **Récapitulatif des heures en cartes sous `600 px` (§3.6, §6)** : dans `app/Views/attendance/hours.php` et `public/assets/css/app.css`, ajout d’une carte récapitulative du total du mois en haut (`.pc-hours-total-card`), affichage d’une carte par aide-soignante (`.pc-hours-card` avec libellés à gauche et valeurs à droite : planifiées, pointées, nuit, dimanche, fériés, écart) en dessous de `600 px`, et affichage du tableau à partir de `600 px` sans aucun débordement horizontal de `320 px` à `1280 px`. |
+| **G5** | `0072d69` | **Bouton glissant de pointage conforme à l’Addendum B (§6, §8.2)** : rail `.pc-slide-punch` / `.pc-slider-punch` en dégradé signature `linear-gradient(45deg, #5E5CE6, #BF5AF2)` avec texte blanc centré (« Glisser pour arriver » / « Glisser pour partir »), poignée ronde blanche avec icône indigo `#5E5CE6`, coche animée et passage en état vert « Arrivée pointée à 07h58 » après validation. |
+| **G6** | `9e50edf` | **Tests unitaires complets sur §7 (`tests/Unit/Phase3Test.php`)** : ajout des tests pour le vecteur officiel **RFC 8291 Appendix A** octet par octet (via paramètres optionnels de test dans `WebPushService::encryptPayload`), la suppression automatique d’un abonnement expiré (`410 Gone`), les délais croissants (`next_try_at`) et l’abandon après 5 échecs avec `last_error` dans `notification_queue`, la liste complète des 11 jours fériés 2027 (`29/03/2027`, `06/05/2027`, `17/05/2027`), les garde-fous hors ligne `client_recorded_at` (`-20 min` conservé, futur `> 2 min` ramené à l’heure serveur, `> 72 h` refusé `422 OFFLINE_TOO_OLD`, conflit `409` non bloquant), ainsi que les tests automatisés pour **G2** (`403 GDPR_NOTICE_REQUIRED`) et **G3** (vérification statique de `public/sw.js`). |
+| **G7** | *(commit final)* | **Captures `390×844` complémentaires et mise à jour de `RETOUR_PHASE_3.md`** : reprise des captures du bouton glissant après G5 (`01`, `02`) et du récapitulatif des heures après G4 (`14`, `15`), ajout des 7 nouvelles captures `29` à `35` (état pointé « Arrivée pointée à 07h58 », feuille scan QR, notice RGPD pointage, notification push système reçue dans Chromium, toast « Saisies synchronisées », bandeau hors ligne sombre, rendu visuel du courriel HTML d’alerte) et mise à jour complète du présent rapport. |

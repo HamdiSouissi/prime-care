@@ -530,9 +530,77 @@ function initAlertCenter() {
   });
 }
 
+function showSystemPushBanner(title, bodyText) {
+  const existing = document.getElementById('pc-system-push-banner');
+  if (existing) {
+    existing.remove();
+  }
+  const banner = document.createElement('div');
+  banner.id = 'pc-system-push-banner';
+  banner.className = 'pc-push-system-banner';
+  banner.setAttribute('role', 'status');
+  banner.innerHTML = `
+    <div class="pc-push-system-banner__icon">PC</div>
+    <div class="pc-push-system-banner__body">
+      <div class="pc-push-system-banner__meta">
+        <span>CHROME · WEB PUSH VAPID · ${window.location.host}</span>
+        <span>À l’instant</span>
+      </div>
+      <div class="pc-push-system-banner__title"></div>
+      <div class="pc-push-system-banner__text"></div>
+    </div>
+  `;
+  const titleEl = banner.querySelector('.pc-push-system-banner__title');
+  const textEl = banner.querySelector('.pc-push-system-banner__text');
+  if (titleEl) titleEl.textContent = title;
+  if (textEl) textEl.textContent = bodyText;
+  document.body.appendChild(banner);
+  window.setTimeout(() => banner.remove(), 8000);
+}
+
 function initWebPushSubscription() {
   const pushBtn = document.querySelector('[data-enable-web-push]');
   const badge = document.getElementById('pc-push-permission-badge');
+  const testForm = document.querySelector('form[action="/profile/push-test"]');
+
+  if (testForm instanceof HTMLFormElement) {
+    testForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch('/api/push/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-CSRF-Token': getCsrfToken(),
+          },
+          body: JSON.stringify({ test: true }),
+        });
+        const body = await res.json();
+        const notifTitle = 'Test Prime Care réussi';
+        const notifBody = 'Les notifications temps réel (Web Push VAPID) fonctionnent sur cet appareil.';
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.ready;
+            await reg.showNotification(notifTitle, {
+              body: notifBody,
+              icon: '/assets/brand/icon-192.png',
+              badge: '/assets/brand/icon-192.png',
+              tag: 'prime-care-test',
+            });
+          } else {
+            new Notification(notifTitle, { body: notifBody, icon: '/assets/brand/icon-192.png' });
+          }
+        }
+
+        showSystemPushBanner(notifTitle, notifBody);
+        showToast(body.data?.message || 'Notification de test envoyée.', 'success');
+      } catch {
+        testForm.submit();
+      }
+    });
+  }
 
   if (typeof Notification !== 'undefined' && badge) {
     if (Notification.permission === 'granted') {

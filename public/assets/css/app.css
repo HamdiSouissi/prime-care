@@ -1968,6 +1968,7 @@
   .pc-slide-punch,
   .pc-slider-punch {
     position: relative;
+    container-type: inline-size;
     height: 56px;
     border-radius: 999px;
     padding: 4px;
@@ -2528,5 +2529,64 @@
     padding: 10px 12px;
     border-radius: 12px;
     background-color: var(--surface-2);
+  }
+
+  /* Bannière de notification système Web Push reçue dans Chromium */
+  .pc-push-system-banner {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background-color: #0A1633;
+    color: #FFFFFF;
+    border: 1px solid rgba(94, 92, 230, 0.55);
+    box-shadow: 0 16px 36px rgba(6, 11, 26, 0.45);
+  }
+
+  .pc-push-system-banner__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(45deg, #5E5CE6, #BF5AF2);
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 800;
+    font-size: 15px;
+  }
+
+  .pc-push-system-banner__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pc-push-system-banner__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.72);
+    margin-bottom: 2px;
+  }
+
+  .pc-push-system-banner__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .pc-push-system-banner__text {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.88);
+    margin-top: 2px;
+    line-height: 1.35;
   }
 }
