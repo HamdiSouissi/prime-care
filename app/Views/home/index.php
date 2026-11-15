@@ -179,7 +179,7 @@ $homeApexConfig = [
   $vMode = (string) ($clockState['settings']['verification_mode'] ?? 'gps');
   $gdprAccepted = !empty($clockState['gdpr_accepted']);
   ?>
-  <section class="pc-card pc-punch-card" aria-labelledby="home-punch-heading" data-punch-widget data-verification-mode="<?= e($vMode) ?>" data-next-type="<?= $isClockedIn ? 'out' : 'in' ?>">
+  <section class="pc-card pc-punch-card" aria-labelledby="home-punch-heading" data-punch-widget data-verification-mode="<?= e($vMode) ?>" data-next-type="<?= $isClockedIn ? 'out' : 'in' ?>" data-gdpr-accepted="<?= $gdprAccepted ? '1' : '0' ?>">
     <div class="flex items-center justify-between gap-2 mb-3">
       <div class="flex items-center gap-2">
         <span class="pc-list-icon <?= $isClockedIn ? 'pc-list-icon--ok' : 'pc-list-icon--team' ?>">
@@ -211,9 +211,13 @@ $homeApexConfig = [
 
     <?php if (!$gdprAccepted): ?>
       <div class="pc-gdpr-notice mb-3" id="pc-gdpr-notice">
-        <div class="text-caption">
-          <strong>Information RGPD (Pointage) :</strong> Lors du pointage uniquement, votre position ou le scan du QR code du domicile est vérifié afin d’attester la présence auprès de M. Henri Benali (aucun suivi en continu).
+        <div class="text-caption mb-2">
+          <strong>Information RGPD (Pointage) :</strong> Lors du pointage uniquement, votre position ponctuelle ou le scan du QR code du domicile est vérifié afin d’attester la présence auprès de M. Henri Benali (aucun suivi en continu). Conservation limitée à la durée légale de gestion des heures.
         </div>
+        <button type="button" class="pc-btn pc-btn--primary pc-btn--sm" data-accept-gdpr-btn>
+          <?= icon('check', '', 14) ?>
+          <span>J’ai compris</span>
+        </button>
       </div>
     <?php endif; ?>
 
@@ -294,7 +298,6 @@ $homeApexConfig = [
         <?= csrf_field() ?>
         <input type="hidden" name="type" value="<?= $isClockedIn ? 'out' : 'in' ?>">
         <input type="hidden" name="method" value="slide">
-        <input type="hidden" name="accept_gdpr" value="1">
         <input type="hidden" name="latitude" value="" data-punch-lat>
         <input type="hidden" name="longitude" value="" data-punch-lon>
         <input type="hidden" name="accuracy_m" value="" data-punch-acc>
@@ -311,6 +314,36 @@ $homeApexConfig = [
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Feuille de mention d'information RGPD pour le premier pointage (G2) -->
+  <div class="pc-sheet-backdrop" id="gdpr-notice-sheet" hidden aria-hidden="true">
+    <div class="pc-sheet" role="dialog" aria-modal="true" aria-labelledby="gdpr-notice-title">
+      <div class="pc-sheet__handle" aria-hidden="true"></div>
+      <div class="pc-sheet__header">
+        <h2 class="pc-sheet__title" id="gdpr-notice-title">Information sur le pointage (RGPD)</h2>
+        <button type="button" class="pc-sheet__close" data-sheet-close aria-label="Fermer">
+          <?= icon('x', '', 20) ?>
+        </button>
+      </div>
+      <div class="pc-sheet__body pc-stack gap-3">
+        <div class="pc-gdpr-notice">
+          <p class="text-subhead font-semibold mb-1">Traitement ponctuel des données de présence</p>
+          <p class="text-caption text-muted">
+            Conformément au RGPD, l’application Prime Care vérifie votre présence au domicile de M. Henri Benali <strong>uniquement à l’instant précis où vous pointez</strong> votre arrivée ou votre départ (par position GPS ponctuelle ou scan du QR code de l’entrée).
+          </p>
+          <ul class="text-caption text-muted mt-2 pc-stack gap-1">
+            <li>• Aucun suivi géolocalisé en continu n’est effectué pendant ou en dehors de vos gardes.</li>
+            <li>• Finalité : suivi des heures travaillées, gardes de nuit, dimanches et jours fériés.</li>
+            <li>• Destinataires : le responsable du maintien à domicile et la coordinatrice.</li>
+          </ul>
+        </div>
+        <button type="button" class="pc-btn pc-btn--primary pc-btn--block" data-accept-gdpr-btn>
+          <?= icon('check', '', 18) ?>
+          <span>J’ai compris</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -334,7 +367,6 @@ $homeApexConfig = [
           <?= csrf_field() ?>
           <input type="hidden" name="type" value="<?= $isClockedIn ? 'out' : 'in' ?>">
           <input type="hidden" name="method" value="qr">
-          <input type="hidden" name="accept_gdpr" value="1">
           <label class="pc-label" for="qr-payload-input">Ou saisir le code de secours figurant sous le QR :</label>
           <input type="text" id="qr-payload-input" name="qr_payload" class="pc-input font-mono" placeholder="PRIMECARE-HOME:..." required>
           <button type="submit" class="pc-btn pc-btn--primary pc-btn--block">

@@ -92,6 +92,56 @@ function initSlidePunch() {
     });
   }
 
+  let pendingGdprCallback = null;
+
+  const bindGdprAcceptButtons = () => {
+    document.querySelectorAll('[data-accept-gdpr-btn]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (btn instanceof HTMLButtonElement) {
+          btn.disabled = true;
+        }
+        try {
+          const res = await fetch('/api/attendance/gdpr-accept', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              'X-CSRF-Token': getCsrfToken(),
+            },
+            body: JSON.stringify({ accepted: true }),
+          });
+          const body = await res.json();
+          if (btn instanceof HTMLButtonElement) {
+            btn.disabled = false;
+          }
+          if (res.ok && body.ok) {
+            widget?.setAttribute('data-gdpr-accepted', '1');
+            const inlineNotice = document.getElementById('pc-gdpr-notice');
+            if (inlineNotice) {
+              inlineNotice.classList.add('is-hidden');
+            }
+            closeSheet();
+            if (typeof pendingGdprCallback === 'function') {
+              const nextFn = pendingGdprCallback;
+              pendingGdprCallback = null;
+              await nextFn();
+            } else {
+              showToast('Mention d’information RGPD validée.', 'success');
+            }
+          } else {
+            showToast(body.error?.message || 'Erreur lors de la validation RGPD.', 'error');
+          }
+        } catch {
+          if (btn instanceof HTMLButtonElement) {
+            btn.disabled = false;
+          }
+          showToast('Erreur réseau lors de la validation RGPD.', 'error');
+        }
+      });
+    });
+  };
+  bindGdprAcceptButtons();
+
   // Pointer drag interaction using discrete CSS classes (CSP-safe: zero inline style mutations)
   let dragging = false;
   let startX = 0;
@@ -103,6 +153,17 @@ function initSlidePunch() {
       'pc-slide-punch--step-3',
       'pc-slide-punch--done'
     );
+  };
+
+  const applyCompletedPunchUi = (localTime, type) => {
+    slideEl.classList.remove('pc-slide-punch--step-1', 'pc-slide-punch--step-2', 'pc-slide-punch--step-3');
+    slideEl.classList.add('pc-slide-punch--done', 'pc-slide-punch--completed');
+    const labelEl = slideEl.querySelector('[data-slide-punch-label]');
+    if (labelEl) {
+      labelEl.textContent = type === 'out'
+        ? `Départ pointé à ${localTime}`
+        : `Arrivée pointée à ${localTime}`;
+    }
   };
 
   const submitSlidePunch = async () => {
@@ -125,16 +186,23 @@ function initSlidePunch() {
         body: JSON.stringify({
           type: punchType,
           method: 'slide',
-          accept_gdpr: 1,
           latitude: coords?.latitude ?? null,
           longitude: coords?.longitude ?? null,
           accuracy_m: coords?.accuracy_m ?? null,
         }),
       });
       const body = await res.json();
+      if (res.status === 403 && body.error?.code === 'GDPR_NOTICE_REQUIRED') {
+        clearStepClasses();
+        pendingGdprCallback = () => submitSlidePunch();
+        openSheet('gdpr-notice-sheet');
+        return;
+      }
       if (body.ok) {
+        const localTime = body.data?.local_time || '';
+        applyCompletedPunchUi(localTime, punchType);
         showToast(body.data?.message || 'Pointage enregistré.', 'success');
-        window.setTimeout(() => window.location.reload(), 450);
+        window.setTimeout(() => window.location.reload(), 900);
       } else {
         clearStepClasses();
         showToast(body.error?.message || 'Erreur lors du pointage.', 'error');
@@ -179,6 +247,55 @@ function initSlidePunch() {
     dragging = false;
     clearStepClasses();
   };
+
+  // Intercept QR manual form and forgot-punch form for GDPR 403 chaining too
+  const bindPunchFormGdprChain = (formEl, endpoint) => {
+    if (!(formEl instanceof HTMLFormElement)) {
+      return;
+    }
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitViaApi = async () => {
+        const fd = new FormData(formEl);
+        const payload = {};
+        fd.forEach((v, k) => {
+          if (typeof v === 'string' && k !== '_csrf') {
+            payload[k] = v;
+          }
+        });
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              'X-CSRF-Token': getCsrfToken(),
+            },
+            body: JSON.stringify(payload),
+          });
+          const body = await res.json();
+          if (res.status === 403 && body.error?.code === 'GDPR_NOTICE_REQUIRED') {
+            pendingGdprCallback = () => submitViaApi();
+            openSheet('gdpr-notice-sheet');
+            return;
+          }
+          if (body.ok) {
+            closeSheet();
+            showToast(body.data?.message || 'Pointage enregistré.', 'success');
+            window.setTimeout(() => window.location.reload(), 500);
+          } else {
+            showToast(body.error?.message || 'Erreur lors du pointage.', 'error');
+          }
+        } catch {
+          showToast('Erreur réseau lors du pointage.', 'error');
+        }
+      };
+      await submitViaApi();
+    });
+  };
+
+  bindPunchFormGdprChain(document.getElementById('pc-qr-manual-form'), '/api/attendance/punch');
+  bindPunchFormGdprChain(document.querySelector('#forgot-punch-sheet form'), '/api/attendance/declare');
 
   thumb.addEventListener('pointerup', endDrag);
   thumb.addEventListener('pointercancel', endDrag);

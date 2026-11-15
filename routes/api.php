@@ -53,6 +53,8 @@ $router->group([
         // Phase 3 Attendance, Planning, Alerts & Web Push JSON API endpoints
         $authApi->post('/attendance/punch', [AttendanceController::class, 'punch'], 'api.attendance.punch');
         $authApi->post('/attendance/declare', [AttendanceController::class, 'declareForgot'], 'api.attendance.declare');
+        $authApi->post('/attendance/gdpr-accept', [AttendanceController::class, 'acceptGdpr'], 'api.attendance.gdpr_accept');
+        $authApi->post('/attendance/gdpr', [AttendanceController::class, 'acceptGdpr'], 'api.attendance.gdpr');
         $authApi->post('/shifts', [PlanningController::class, 'storeShift'], 'api.shifts.store');
         $authApi->post('/shifts/{id:\d+}/update', [PlanningController::class, 'updateShift'], 'api.shifts.update');
         $authApi->post('/shifts/duplicate', [PlanningController::class, 'duplicateWeek'], 'api.shifts.duplicate');

@@ -157,6 +157,14 @@ final class AttendanceController extends Controller
     }
 
     /**
+     * Alias API explicite pour POST /api/attendance/punch
+     */
+    public function apiPunch(Request $request): Response
+    {
+        return $this->punch($request);
+    }
+
+    /**
      * POST /attendance/punch & POST /api/attendance/punch
      */
     public function punch(Request $request): Response
@@ -166,6 +174,18 @@ final class AttendanceController extends Controller
 
         if (!Policy::allows($role, 'timeclock', 'punch')) {
             return Response::jsonError('FORBIDDEN', 'Vous n’avez pas les droits pour pointer.', 403);
+        }
+
+        if (!AttendanceService::hasAcceptedGdprNotice($userId)) {
+            if ($request->wantsJson() || str_starts_with($request->path(), '/api/')) {
+                return Response::jsonError(
+                    'GDPR_NOTICE_REQUIRED',
+                    'Veuillez valider la mention d’information RGPD avant votre premier pointage.',
+                    403
+                );
+            }
+            Session::flash('error', 'Veuillez valider la mention d’information RGPD avant votre premier pointage.');
+            return $this->redirect((string) $request->input('redirect_to', '/'));
         }
 
         try {
@@ -184,8 +204,8 @@ final class AttendanceController extends Controller
                 ->format('H\hi');
 
             $msg = $type === 'in'
-                ? "Arrivée enregistrée à {$localTime}."
-                : "Départ enregistré à {$localTime}.";
+                ? "Arrivée pointée à {$localTime}"
+                : "Départ pointé à {$localTime}";
             if ($status === 'pending' && $reason !== '') {
                 $msg .= " ({$reason} — soumis à validation)";
             }
@@ -197,7 +217,7 @@ final class AttendanceController extends Controller
                 'prompt_handover' => ($type === 'out'),
             ];
 
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() || str_starts_with($request->path(), '/api/')) {
                 return Response::jsonSuccess($payload, 201);
             }
 
@@ -206,8 +226,13 @@ final class AttendanceController extends Controller
                 Session::flash('prompt_handover', '1');
             }
             return $this->redirect((string) $request->input('redirect_to', '/'));
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 403) {
+                return Response::jsonError('GDPR_NOTICE_REQUIRED', $e->getMessage(), 403);
+            }
+            return Response::jsonError('PUNCH_ERROR', $e->getMessage(), 422);
         } catch (InvalidArgumentException $e) {
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() || str_starts_with($request->path(), '/api/')) {
                 return Response::jsonError('PUNCH_ERROR', $e->getMessage(), 422);
             }
             Session::flash('error', $e->getMessage());
@@ -227,6 +252,18 @@ final class AttendanceController extends Controller
             return Response::jsonError('FORBIDDEN', 'Accès refusé.', 403);
         }
 
+        if (!AttendanceService::hasAcceptedGdprNotice($userId)) {
+            if ($request->wantsJson() || str_starts_with($request->path(), '/api/')) {
+                return Response::jsonError(
+                    'GDPR_NOTICE_REQUIRED',
+                    'Veuillez valider la mention d’information RGPD avant votre premier pointage.',
+                    403
+                );
+            }
+            Session::flash('error', 'Veuillez valider la mention d’information RGPD avant votre premier pointage.');
+            return $this->redirect((string) $request->input('redirect_to', '/'));
+        }
+
         try {
             $att = AttendanceService::declareForgotPunch(
                 $userId,
@@ -236,7 +273,7 @@ final class AttendanceController extends Controller
             );
 
             $msg = 'Oubli de pointage déclaré et transmis au responsable pour validation.';
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() || str_starts_with($request->path(), '/api/')) {
                 return Response::jsonSuccess([
                     'attendance' => $att,
                     'message' => $msg,
@@ -245,8 +282,13 @@ final class AttendanceController extends Controller
 
             Session::flash('success', $msg);
             return $this->redirect((string) $request->input('redirect_to', '/'));
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 403) {
+                return Response::jsonError('GDPR_NOTICE_REQUIRED', $e->getMessage(), 403);
+            }
+            return Response::jsonError('DECLARE_ERROR', $e->getMessage(), 422);
         } catch (InvalidArgumentException $e) {
-            if ($request->wantsJson()) {
+            if ($request->wantsJson() || str_starts_with($request->path(), '/api/')) {
                 return Response::jsonError('DECLARE_ERROR', $e->getMessage(), 422);
             }
             Session::flash('error', $e->getMessage());

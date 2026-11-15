@@ -353,6 +353,18 @@ final class AttendanceService
     }
 
     /**
+     * Vérifie si l'utilisateur a validé la mention d'information RGPD relative au pointage.
+     */
+    public static function hasAcceptedGdprNotice(int $userId): bool
+    {
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('SELECT attendance_gdpr_accepted_at FROM users WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $userId]);
+        $val = $stmt->fetchColumn();
+        return $val !== false && $val !== null && trim((string) $val) !== '';
+    }
+
+    /**
      * Enregistre l'acceptation de la notice d'information RGPD pour le pointage.
      */
     public static function acceptGdprNotice(int $userId): void
@@ -372,9 +384,26 @@ final class AttendanceService
     }
 
     /**
+     * Alias de `recordPunch` pour compatibilité avec l'API `AttendanceService::punch`.
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public static function punch(
+        int $userId,
+        array $input,
+        string $ipAddress = '127.0.0.1',
+        int $patientId = 1,
+        ?string $overrideServerUtc = null
+    ): array {
+        return self::recordPunch($userId, $input, $ipAddress, $patientId, $overrideServerUtc);
+    }
+
+    /**
      * Enregistre un pointage en temps réel (bouton glissant / confirmation accessible ou scan QR code).
      * L'heure `recorded_at` est TOUJOURS l'heure du serveur UTC.
-     * Ne bloque jamais l'aide-soignante : en cas de position hors rayon ou refusée, le pointage est créé en `pending`.
+     * Vérifie obligatoirement que `attendance_gdpr_accepted_at !== null` (sinon RuntimeException 403 GDPR_NOTICE_REQUIRED).
+     * Ne bloque jamais l'aide-soignante pour le GPS : en cas de position hors rayon ou refusée, le pointage est créé en `pending`.
      *
      * @param array<string, mixed> $input
      * @return array<string, mixed>
@@ -386,12 +415,15 @@ final class AttendanceService
         int $patientId = 1,
         ?string $overrideServerUtc = null
     ): array {
+        if (!self::hasAcceptedGdprNotice($userId)) {
+            throw new \RuntimeException(
+                'Vous devez prendre connaissance de la mention d’information RGPD avant votre premier pointage.',
+                403
+            );
+        }
+
         $pdo = Database::connection();
         $serverNowUtc = $overrideServerUtc ?? gmdate('Y-m-d H:i:s');
-
-        if (!empty($input['accept_gdpr'])) {
-            self::acceptGdprNotice($userId);
-        }
 
         $state = self::getUserClockState($userId, $patientId);
         $type = isset($input['type']) && in_array($input['type'], ['in', 'out'], true)
@@ -528,6 +560,13 @@ final class AttendanceService
         string $ipAddress = '127.0.0.1',
         int $patientId = 1
     ): array {
+        if (!self::hasAcceptedGdprNotice($userId)) {
+            throw new \RuntimeException(
+                'Vous devez prendre connaissance de la mention d’information RGPD avant votre premier pointage.',
+                403
+            );
+        }
+
         $pdo = Database::connection();
         $serverNowUtc = gmdate('Y-m-d H:i:s');
 
