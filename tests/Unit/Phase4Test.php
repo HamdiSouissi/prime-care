@@ -196,6 +196,40 @@ final class Phase4Test
             'Documents §1: il ne reste plus aucun écran « Bientôt disponible » dans l’application'
         );
 
+        // 1.7 EXIF supprimé sur un JPEG déposé dans Documents (H3 / §7)
+        $img = imagecreatetruecolor(120, 80);
+        imagefilledrectangle($img, 0, 0, 119, 79, 0x3F2E88);
+        ob_start();
+        imagejpeg($img, null, 90);
+        $rawJpeg = (string) ob_get_clean();
+        imagedestroy($img);
+        $exifPayload = "Exif\x00\x00II*\x00\x08\x00\x00\x00GPS-SECRET-COORDS-48.79036-2.45557";
+        $app1Segment = "\xFF\xE1" . pack('n', strlen($exifPayload) + 2) . $exifPayload;
+        $jpegWithExif = substr($rawJpeg, 0, 2) . $app1Segment . substr($rawJpeg, 2);
+        $tmpExifJpg = tempnam(sys_get_temp_dir(), 'pc_doc_exif_') . '.jpg';
+        file_put_contents($tmpExifJpg, $jpegWithExif);
+        $exifRes = DocumentService::storeDocument([
+            'category' => 'imagerie',
+            'title' => 'Cliché JPEG avec EXIF',
+            'document_date' => '2026-11-14',
+        ], [
+            'name' => 'cliche_exif.jpg',
+            'type' => 'image/jpeg',
+            'tmp_name' => $tmpExifJpg,
+            'error' => UPLOAD_ERR_OK,
+            'size' => strlen($jpegWithExif),
+        ], 1, 1);
+        @unlink($tmpExifJpg);
+        $savedDocJpgPath = dirname(__DIR__, 2) . '/storage/uploads/' . $exifRes['document']['file_path'];
+        $savedDocJpgBytes = is_file($savedDocJpgPath) ? (string) file_get_contents($savedDocJpgPath) : '';
+        DocumentService::deleteDocument((int) $exifRes['document']['id'], 1, 1);
+        $assert(
+            str_starts_with($savedDocJpgBytes, "\xFF\xD8\xFF")
+            && !str_contains($savedDocJpgBytes, 'GPS-SECRET-COORDS')
+            && !str_contains($savedDocJpgBytes, "Exif\x00\x00"),
+            'Documents §1 (H3): les métadonnées EXIF sont supprimées sur un JPEG déposé dans Documents'
+        );
+
         // =====================================================================
         // 2. RAPPORT MÉDICAL (E23, §2.1 & §2.3) & RAPPORT RH (§2.2)
         // =====================================================================
@@ -219,6 +253,81 @@ final class Phase4Test
             && is_array($obs['by_medication'])
             && count($obs['by_medication']) > 0,
             'Rapport médical §2.1: calcule le taux d’observance global et par médicament'
+        );
+
+        // 2.1.b Période vide du rapport sans erreur ni division par zéro (H3 / §7)
+        $emptyReport = ReportService::buildMedicalReport('2020-01-01 00:00:00', '2020-01-07 23:59:59', 1);
+        Auth::attempt('admin@primecare.test', 'Admin!2026');
+        $emptyReportHttp = (new ReportController())->index(new Request(['period' => 'custom', 'from' => '2020-01-01', 'to' => '2020-01-07']));
+        $assert(
+            $emptyReport['glycemia']['count'] === 0
+            && $emptyReport['glycemia']['avg'] === null
+            && $emptyReport['observance']['total_scheduled'] === 0
+            && $emptyReport['observance']['total_given'] === 0
+            && $emptyReportHttp->status() === 200,
+            'Rapport médical §2.1 (H3): une période vide retourne 200 sans erreur ni division par zéro'
+        );
+
+        // 2.1.c Rapport sur un jeu de données connu avec valeurs attendues en dur (H3 / §7)
+        $glyTypeId = (int) $pdo->query("SELECT id FROM measure_types WHERE code = 'glycemia' LIMIT 1")->fetchColumn();
+        $firstPrescRow = $pdo->query("SELECT id, medication_id FROM prescriptions WHERE deleted_at IS NULL AND as_needed = 0 LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+        $prescId = (int) ($firstPrescRow['id'] ?? 1);
+        $medId = (int) ($firstPrescRow['medication_id'] ?? 1);
+        $knownFrom = '2024-05-01 00:00:00';
+        $knownTo = '2024-05-04 23:59:59';
+        $insKnownM = $pdo->prepare(
+            "INSERT INTO measures (patient_id, measure_type_id, value, unit_recorded, context, measured_at, alert_level, threshold_level, recorded_by, created_at, updated_at, created_by)
+             VALUES (1, :mt, :val, 'g/L', :ctx, :at1, 'ok', :tl, 3, :at2, :at3, 3)"
+        );
+        // 4 glycémies connues : 0.60 (hypo < 0.70, hors cible), 1.00 (à jeun dans cible 0.80-1.30), 1.20 (à jeun dans cible), 2.80 (hyper > 2.50, hors cible)
+        // Moyenne = (0.60 + 1.00 + 1.20 + 2.80) / 4 = 1.40 ; Min = 0.60 ; Max = 2.80 ; Cible = 2/4 = 50.0% ; Hypo = 1 ; Hyper = 1
+        $knownMeasures = [
+            ['val' => 0.60, 'ctx' => 'fasting', 'tl' => 'crit_low', 'at' => '2024-05-01 07:00:00'],
+            ['val' => 1.00, 'ctx' => 'fasting', 'tl' => 'ok', 'at' => '2024-05-02 07:00:00'],
+            ['val' => 1.20, 'ctx' => 'fasting', 'tl' => 'ok', 'at' => '2024-05-03 07:00:00'],
+            ['val' => 2.80, 'ctx' => 'post_meal', 'tl' => 'crit_high', 'at' => '2024-05-04 12:00:00'],
+        ];
+        $knownMeasureIds = [];
+        foreach ($knownMeasures as $km) {
+            $insKnownM->execute(['mt' => $glyTypeId, 'val' => $km['val'], 'ctx' => $km['ctx'], 'tl' => $km['tl'], 'at1' => $km['at'], 'at2' => $km['at'], 'at3' => $km['at']]);
+            $knownMeasureIds[] = (int) $pdo->lastInsertId();
+        }
+        // 4 prises programmées connues : 3 given + 1 skipped => observance = 75.0%
+        $insKnownI = $pdo->prepare(
+            "INSERT INTO medication_intakes (patient_id, prescription_id, scheduled_at, status, given_at, given_dose, reason, given_by, created_at, updated_at)
+             VALUES (1, :pid, :sf1, :st, :ta, 1.0, :sr, 3, :sf2, :sf3)"
+        );
+        $knownIntakes = [
+            ['sf' => '2024-05-01 08:00:00', 'st' => 'given', 'ta' => '2024-05-01 08:05:00', 'sr' => null],
+            ['sf' => '2024-05-02 08:00:00', 'st' => 'given', 'ta' => '2024-05-02 08:05:00', 'sr' => null],
+            ['sf' => '2024-05-03 08:00:00', 'st' => 'given', 'ta' => '2024-05-03 08:05:00', 'sr' => null],
+            ['sf' => '2024-05-04 08:00:00', 'st' => 'skipped', 'ta' => null, 'sr' => 'refused'],
+        ];
+        $knownIntakeIds = [];
+        foreach ($knownIntakes as $ki) {
+            $insKnownI->execute(['pid' => $prescId, 'sf1' => $ki['sf'], 'st' => $ki['st'], 'ta' => $ki['ta'], 'sr' => $ki['sr'], 'sf2' => $ki['sf'], 'sf3' => $ki['sf']]);
+            $knownIntakeIds[] = (int) $pdo->lastInsertId();
+        }
+
+        $knownRep = ReportService::buildMedicalReport($knownFrom, $knownTo, 1);
+        $pdo->exec('DELETE FROM measures WHERE id IN (' . implode(',', $knownMeasureIds) . ')');
+        $pdo->exec('DELETE FROM medication_intakes WHERE id IN (' . implode(',', $knownIntakeIds) . ')');
+
+        $kGly = $knownRep['glycemia'];
+        $kObs = $knownRep['observance'];
+        $assert(
+            $kGly['count'] === 4
+            && $kGly['avg'] === 1.4
+            && $kGly['min'] === 0.6
+            && $kGly['max'] === 2.8
+            && $kGly['in_target_pct'] === 50.0
+            && $kGly['hypo_count'] === 1
+            && $kGly['hyper_count'] === 1
+            && $kObs['total_scheduled'] === 4
+            && $kObs['total_given'] === 3
+            && $kObs['total_skipped'] === 1
+            && $kObs['global_rate_pct'] === 75.0,
+            'Rapport médical §2.1 (H3): jeu de données connu vérifie exactement moyenne=1,40, min=0,60, max=2,80, cible=50,0%, hypo=1, hyper=1, observance=75,0%'
         );
 
         $trends7d = ReportService::getAdmin7DayTrends(1);
@@ -492,30 +601,262 @@ final class Phase4Test
             'Sécurité §6.3 (Fixation de session): l’identifiant de session est régénéré à la connexion'
         );
 
-        // 7.2 Série IDOR complète : une aide-soignante tente d'accéder aux ressources d'un autre utilisateur ou réservées à l'admin
-        $idorBlockedCount = 0;
-        $idorChecks = [
-            static fn() => (new AuditController())->index(new Request()),
-            static fn() => (new SettingsController())->index(new Request()),
-            static fn() => (new DocumentController())->delete(new Request(), (string) $uploadedDocId),
-            static fn() => (new ReportController())->index(new Request()),
-            static fn() => (new ReportController())->downloadExport(new Request(), 'audit'),
-        ];
-        foreach ($idorChecks as $fn) {
+        // 7.2 Série IDOR complète sur les 12 ressources adressées par identifiant avec de vraies requêtes HTTP + invariance en base (H3)
+        $router = new \App\Core\Router();
+        \App\Core\Router::setInstance($router);
+        require dirname(__DIR__, 2) . '/routes/web.php';
+        require dirname(__DIR__, 2) . '/routes/api.php';
+
+        $httpGet = static function (string $uri) use ($router): Response {
+            [$pathOnly, $qStr] = array_pad(explode('?', $uri, 2), 2, '');
+            $q = [];
+            if ($qStr !== '') {
+                parse_str($qStr, $q);
+            }
+            $req = new Request($q, [], [], [
+                'REQUEST_METHOD' => 'GET',
+                'REQUEST_URI' => $uri,
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_USER_AGENT' => 'PrimeCareIdorTest/1.0',
+            ]);
             try {
-                $r = $fn();
-                if ($r->status() === 403) {
-                    $idorBlockedCount++;
-                }
+                return $router->dispatch($req);
             } catch (Throwable $e) {
-                if ($e->getCode() === 403) {
-                    $idorBlockedCount++;
-                }
+                return \App\Core\ErrorHandler::handleException($e, $req);
+            }
+        };
+
+        $httpPost = static function (string $uri, array $post = [], array $files = [], bool $json = true) use ($router): Response {
+            $csrf = \App\Core\Csrf::token();
+            $server = [
+                'REQUEST_METHOD' => 'POST',
+                'REQUEST_URI' => $uri,
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_X_CSRF_TOKEN' => $csrf,
+                'HTTP_USER_AGENT' => 'PrimeCareIdorTest/1.0',
+            ];
+            if ($json) {
+                $server['HTTP_ACCEPT'] = 'application/json';
+            }
+            $req = new Request([], array_merge($post, ['_csrf' => $csrf]), $files, $server);
+            try {
+                return $router->dispatch($req);
+            } catch (Throwable $e) {
+                return \App\Core\ErrorHandler::handleException($e, $req);
+            }
+        };
+
+        $nowIdorUtc = gmdate('Y-m-d H:i:s');
+
+        // (1) Ressource : Mesure — aide-soignante (Fatou #3) modifie/supprime la mesure d'une collègue (Marie #4) ; lecteur (#5) modifie une mesure
+        $pdo->prepare(
+            "INSERT INTO measures (patient_id, measure_type_id, value, unit_recorded, context, measured_at, alert_level, threshold_level, recorded_by, created_at, updated_at, created_by)
+             VALUES (1, :mt, 1.15, 'g/L', 'fasting', :n1, 'ok', 'ok', 4, :n2, :n3, 4)"
+        )->execute(['mt' => $glyTypeId, 'n1' => $nowIdorUtc, 'n2' => $nowIdorUtc, 'n3' => $nowIdorUtc]);
+        $idorMeasureId = (int) $pdo->lastInsertId();
+
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $mUpdCaregiver = $httpPost('/health/measures/' . $idorMeasureId . '/update', ['value' => '2.99'], [], true);
+        $mDelCaregiver = $httpPost('/health/measures/' . $idorMeasureId . '/delete', [], [], true);
+        Auth::attempt('medecin@primecare.test', 'Lecture!2026');
+        $mUpdViewer = $httpPost('/health/measures/' . $idorMeasureId . '/update', ['value' => '3.10'], [], true);
+
+        $mRowAfter = $pdo->query("SELECT value, deleted_at FROM measures WHERE id = {$idorMeasureId}")->fetch(\PDO::FETCH_ASSOC);
+        $pdo->exec("DELETE FROM measures WHERE id = {$idorMeasureId}");
+        $idorMeasureOk = ($mUpdCaregiver->status() === 403)
+            && ($mDelCaregiver->status() === 403)
+            && ($mUpdViewer->status() === 403)
+            && ((float) ($mRowAfter['value'] ?? 0) === 1.15)
+            && ($mRowAfter['deleted_at'] === null);
+        $assert($idorMeasureOk, 'Sécurité §6.3 (H3 IDOR Mesure): aide-soignante ne peut ni modifier ni supprimer la mesure d’une collègue et lecteur ne peut pas modifier (403 + base intacte)');
+
+        // (2) Ressource : Prise — lecteur (#5) valide une prise
+        $pdo->prepare(
+            "INSERT INTO medication_intakes (patient_id, prescription_id, scheduled_at, status, created_at, updated_at)
+             VALUES (1, :pid, :n1, 'pending', :n2, :n3)"
+        )->execute(['pid' => $prescId, 'n1' => $nowIdorUtc, 'n2' => $nowIdorUtc, 'n3' => $nowIdorUtc]);
+        $idorIntakeId = (int) $pdo->lastInsertId();
+
+        Auth::attempt('medecin@primecare.test', 'Lecture!2026');
+        $iGiveWeb = $httpPost('/treatments/intakes/' . $idorIntakeId . '/give', [], [], true);
+        $iGiveApi = $httpPost('/api/intakes/' . $idorIntakeId . '/give', [], [], true);
+        $iStatusAfter = (string) $pdo->query("SELECT status FROM medication_intakes WHERE id = {$idorIntakeId}")->fetchColumn();
+        $pdo->exec("DELETE FROM medication_intakes WHERE id = {$idorIntakeId}");
+        $assert(
+            $iGiveWeb->status() === 403 && $iGiveApi->status() === 403 && $iStatusAfter === 'pending',
+            'Sécurité §6.3 (H3 IDOR Prise): lecteur bloqué en 403 sur la validation d’une prise et statut pending inchangé en base'
+        );
+
+        // (3) Ressource : Repas — aide-soignante (#3) modifie le repas d'une collègue (#4) ; lecteur (#5) supprime un repas
+        $pdo->prepare(
+            "INSERT INTO meals (patient_id, meal_type, eaten_at, description, portion_eaten, recorded_by, created_at, updated_at, created_by)
+             VALUES (1, 'lunch', :n1, 'Repas initial de Marie', '100', 4, :n2, :n3, 4)"
+        )->execute(['n1' => $nowIdorUtc, 'n2' => $nowIdorUtc, 'n3' => $nowIdorUtc]);
+        $idorMealId = (int) $pdo->lastInsertId();
+
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $mealUpdCaregiver = $httpPost('/meals/' . $idorMealId . '/update', ['description' => 'Repas altéré par Fatou'], [], true);
+        Auth::attempt('medecin@primecare.test', 'Lecture!2026');
+        $mealDelViewer = $httpPost('/meals/' . $idorMealId . '/delete', [], [], true);
+        $mealRowAfter = $pdo->query("SELECT description, deleted_at FROM meals WHERE id = {$idorMealId}")->fetch(\PDO::FETCH_ASSOC);
+        $pdo->exec("DELETE FROM meals WHERE id = {$idorMealId}");
+        $assert(
+            $mealUpdCaregiver->status() === 403
+            && $mealDelViewer->status() === 403
+            && ($mealRowAfter['description'] ?? '') === 'Repas initial de Marie'
+            && $mealRowAfter['deleted_at'] === null,
+            'Sécurité §6.3 (H3 IDOR Repas): aide-soignante ne peut pas modifier le repas d’une collègue et lecteur ne peut pas supprimer un repas (403 + base intacte)'
+        );
+
+        // (4) Ressource : Note — lecteur (#5) marque lue la note d'un autre
+        $pdo->prepare(
+            "INSERT INTO notes (patient_id, category, priority, title, content, is_handover, recorded_by, created_at, updated_at, created_by)
+             VALUES (1, 'general', 'normal', 'Relève Marie', 'Contenu transmission', 1, 4, :n1, :n2, 4)"
+        )->execute(['n1' => $nowIdorUtc, 'n2' => $nowIdorUtc]);
+        $idorNoteId = (int) $pdo->lastInsertId();
+
+        Auth::attempt('medecin@primecare.test', 'Lecture!2026');
+        $noteReadWeb = $httpPost('/journal/notes/' . $idorNoteId . '/read', ['user_id' => 3], [], true);
+        $noteReadApi = $httpPost('/api/notes/' . $idorNoteId . '/read', ['user_id' => 3], [], true);
+        $noteReadsCount = (int) $pdo->query("SELECT COUNT(*) FROM note_reads WHERE note_id = {$idorNoteId}")->fetchColumn();
+        $pdo->exec("DELETE FROM notes WHERE id = {$idorNoteId}");
+        $assert(
+            $noteReadWeb->status() === 403 && $noteReadApi->status() === 403 && $noteReadsCount === 0,
+            'Sécurité §6.3 (H3 IDOR Note): lecteur bloqué en 403 lorsqu’il tente de marquer lue la note d’un autre (0 écriture dans note_reads)'
+        );
+
+        // (5) Ressource : Document — aide-soignante, coordinatrice et lecteur déposent / suppriment
+        $docsCountBeforeIdor = (int) $pdo->query('SELECT COUNT(*) FROM documents WHERE deleted_at IS NULL')->fetchColumn();
+        $docTargetDeletedAtBefore = $pdo->query("SELECT deleted_at FROM documents WHERE id = {$uploadedDocId}")->fetchColumn();
+        $docIdorAll403 = true;
+        foreach (['fatou@primecare.test' => 'Soin!2026', 'coord@primecare.test' => 'Coord!2026', 'medecin@primecare.test' => 'Lecture!2026'] as $em => $pw) {
+            Auth::attempt($em, $pw);
+            $rStore = $httpPost('/documents', ['title' => 'Tentative dépôt non autorisée', 'category' => 'autre'], [], true);
+            $rDelete = $httpPost('/documents/' . $uploadedDocId . '/delete', [], [], true);
+            if ($rStore->status() !== 403 || $rDelete->status() !== 403) {
+                $docIdorAll403 = false;
             }
         }
+        $docsCountAfterIdor = (int) $pdo->query('SELECT COUNT(*) FROM documents WHERE deleted_at IS NULL')->fetchColumn();
+        $docTargetDeletedAtAfter = $pdo->query("SELECT deleted_at FROM documents WHERE id = {$uploadedDocId}")->fetchColumn();
         $assert(
-            $idorBlockedCount === count($idorChecks),
-            'Sécurité §6.3 (IDOR): toutes les tentatives d’accès transversal / élévation de privilèges par une aide-soignante sont bloquées en 403'
+            $docIdorAll403 && $docsCountAfterIdor === $docsCountBeforeIdor && $docTargetDeletedAtAfter === $docTargetDeletedAtBefore,
+            'Sécurité §6.3 (H3 IDOR Document): aide-soignante, coordinatrice et lecteur bloqués en 403 sur le dépôt et la suppression de documents (base intacte)'
+        );
+
+        // (6) Ressource : Créneau — aide-soignante (#3) modifie / supprime le créneau d'une collègue (#4)
+        $pdo->prepare(
+            "INSERT INTO shifts (patient_id, user_id, start_at, end_at, status, notes, created_by, created_at, updated_at)
+             VALUES (1, 4, '2026-12-10 08:00:00', '2026-12-10 20:00:00', 'planned', 'Garde Marie', 1, :n1, :n2)"
+        )->execute(['n1' => $nowIdorUtc, 'n2' => $nowIdorUtc]);
+        $idorShiftId = (int) $pdo->lastInsertId();
+
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $shUpdResp = $httpPost('/planning/shifts/' . $idorShiftId . '/update', ['user_id' => 3, 'notes' => 'Détourné'], [], true);
+        $shDelResp = $httpPost('/planning/shifts/' . $idorShiftId . '/delete', [], [], true);
+        $shRowAfter = $pdo->query("SELECT user_id, notes, deleted_at FROM shifts WHERE id = {$idorShiftId}")->fetch(\PDO::FETCH_ASSOC);
+        $pdo->exec("DELETE FROM shifts WHERE id = {$idorShiftId}");
+        $assert(
+            $shUpdResp->status() === 403
+            && $shDelResp->status() === 403
+            && (int) ($shRowAfter['user_id'] ?? 0) === 4
+            && ($shRowAfter['notes'] ?? '') === 'Garde Marie'
+            && $shRowAfter['deleted_at'] === null,
+            'Sécurité §6.3 (H3 IDOR Créneau): aide-soignante bloquée en 403 sur la modification et la suppression du créneau d’une collègue (base intacte)'
+        );
+
+        // (7) Ressource : Pointage — aide-soignante (#3) valide / rejette le pointage d'une collègue (#4)
+        $pdo->prepare(
+            "INSERT INTO attendances (patient_id, user_id, type, recorded_at, method, status, reason, created_at, updated_at)
+             VALUES (1, 4, 'in', :n1, 'declared', 'pending', 'Oubli déclaré Marie', :n2, :n3)"
+        )->execute(['n1' => $nowIdorUtc, 'n2' => $nowIdorUtc, 'n3' => $nowIdorUtc]);
+        $idorAttId = (int) $pdo->lastInsertId();
+
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $attValResp = $httpPost('/attendance/' . $idorAttId . '/validate', [], [], true);
+        $attRejResp = $httpPost('/attendance/' . $idorAttId . '/reject', ['validation_note' => 'Rejet illégitime'], [], true);
+        $attStatusAfter = (string) $pdo->query("SELECT status FROM attendances WHERE id = {$idorAttId}")->fetchColumn();
+        $pdo->exec("DELETE FROM attendances WHERE id = {$idorAttId}");
+        $assert(
+            $attValResp->status() === 403 && $attRejResp->status() === 403 && $attStatusAfter === 'pending',
+            'Sécurité §6.3 (H3 IDOR Pointage): aide-soignante bloquée en 403 sur la validation et le rejet du pointage d’une collègue (statut pending intact)'
+        );
+
+        // (8) Ressource : Alerte — lecteur (#5) traite une alerte
+        $pdo->prepare(
+            "INSERT INTO alerts (patient_id, type, level, title, message, dedupe_key, status, created_at, updated_at)
+             VALUES (1, 'vital_critical', 'critical', 'Test IDOR Alerte', 'Message', 'idor_alert_key_test', 'new', :n1, :n2)"
+        )->execute(['n1' => $nowIdorUtc, 'n2' => $nowIdorUtc]);
+        $idorAlertId = (int) $pdo->lastInsertId();
+
+        Auth::attempt('medecin@primecare.test', 'Lecture!2026');
+        $alHandleWeb = $httpPost('/alerts/' . $idorAlertId . '/handle', ['handled_note' => 'Traité par lecteur'], [], true);
+        $alHandleApi = $httpPost('/api/alerts/' . $idorAlertId . '/handle', ['handled_note' => 'Traité par lecteur'], [], true);
+        $alStatusAfter = (string) $pdo->query("SELECT status FROM alerts WHERE id = {$idorAlertId}")->fetchColumn();
+        $pdo->exec("DELETE FROM alerts WHERE id = {$idorAlertId}");
+        $assert(
+            $alHandleWeb->status() === 403 && $alHandleApi->status() === 403 && $alStatusAfter === 'new',
+            'Sécurité §6.3 (H3 IDOR Alerte): lecteur bloqué en 403 sur le traitement d’une alerte et statut new intact en base'
+        );
+
+        // (9) Ressource : Utilisateur — aide-soignante (#3) modifie un autre utilisateur (#4)
+        $u4Before = $pdo->query('SELECT first_name, role, is_active FROM users WHERE id = 4')->fetch(\PDO::FETCH_ASSOC);
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $uUpdResp = $httpPost('/users/4/update', ['first_name' => 'Pirate', 'last_name' => 'Test', 'email' => 'marie@primecare.test', 'role' => 'admin'], [], true);
+        $uToggleResp = $httpPost('/users/4/toggle-status', [], [], true);
+        $u4After = $pdo->query('SELECT first_name, role, is_active FROM users WHERE id = 4')->fetch(\PDO::FETCH_ASSOC);
+        $assert(
+            $uUpdResp->status() === 403
+            && $uToggleResp->status() === 403
+            && $u4After === $u4Before,
+            'Sécurité §6.3 (H3 IDOR Utilisateur): aide-soignante bloquée en 403 sur la modification d’un autre utilisateur (base intacte)'
+        );
+
+        // (10) Ressource : Média — utilisateur non connecté ouvre une photo de repas ou un document
+        Auth::logout();
+        $unauthMealPhoto = $httpGet('/media/meals/repas_test.jpg');
+        $unauthDocMedia = $httpGet('/media/' . $resUpload1['document']['file_path']);
+        $unauthDocFile = $httpGet('/documents/' . $uploadedDocId . '/file');
+        $assert(
+            in_array($unauthMealPhoto->status(), [302, 401, 403], true)
+            && in_array($unauthDocMedia->status(), [302, 401, 403], true)
+            && in_array($unauthDocFile->status(), [302, 401, 403], true)
+            && $unauthDocMedia->body() === ''
+            && $unauthDocFile->body() === '',
+            'Sécurité §6.3 (H3 IDOR Média): utilisateur non connecté bloqué (302 vers /login, 0 octet servi) sur les photos de repas et les documents'
+        );
+
+        // (11) Ressource : Export — aide-soignante ouvre l'export de l'audit ; lecteur ouvre l'export des pointages
+        $expAuditBefore = (int) $pdo->query("SELECT COUNT(*) FROM audit_logs WHERE action = 'export'")->fetchColumn();
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $caregiverExpAudit = $httpGet('/reports/export/audit');
+        Auth::attempt('medecin@primecare.test', 'Lecture!2026');
+        $viewerExpAtt = $httpGet('/reports/export/attendances');
+        $expAuditAfter = (int) $pdo->query("SELECT COUNT(*) FROM audit_logs WHERE action = 'export'")->fetchColumn();
+        $assert(
+            $caregiverExpAudit->status() === 403
+            && $viewerExpAtt->status() === 403
+            && $expAuditAfter === $expAuditBefore,
+            'Sécurité §6.3 (H3 IDOR Export): aide-soignante (audit) et lecteur (pointages) bloqués en 403 sans trace d’export créée'
+        );
+
+        // (12) Ressource : Export RGPD — un utilisateur (#3 Fatou) demande les données d'un autre (?user_id=1) et ne reçoit que les siennes
+        Auth::attempt('fatou@primecare.test', 'Soin!2026');
+        $rgpdIdorResp = $httpGet('/profile/export-data?user_id=1');
+        $tmpRgpdZip = tempnam(sys_get_temp_dir(), 'pc_rgpd_idor_') . '.zip';
+        file_put_contents($tmpRgpdZip, $rgpdIdorResp->body());
+        $zip = new \ZipArchive();
+        $compteCsvContent = '';
+        if ($zip->open($tmpRgpdZip) === true) {
+            $compteCsvContent = (string) $zip->getFromName('01_mon_compte.csv');
+            $zip->close();
+        }
+        @unlink($tmpRgpdZip);
+        $assert(
+            $rgpdIdorResp->status() === 200
+            && str_contains($compteCsvContent, 'fatou@primecare.test')
+            && !str_contains($compteCsvContent, 'admin@primecare.test'),
+            'Sécurité §6.3 (H3 IDOR Export RGPD): demander /profile/export-data?user_id=1 en tant que Fatou ne retourne que les données de Fatou'
         );
 
         // 7.3 Limite de débit sur les routes API d'écriture (120 requêtes / minute / utilisateur -> 429)
