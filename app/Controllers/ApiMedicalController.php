@@ -58,17 +58,66 @@ final class ApiMedicalController extends Controller
         return substr($raw, 0, 36);
     }
 
-    private function parseClientTimestamp(Request $request, string $fallbackUtc): string
+    /**
+     * Valide et convertit `client_recorded_at` (ISO 8601 UTC complet) en horodatage UTC `Y-m-d H:i:s` :
+     * - Si absent : retourne l'heure serveur ($fallbackUtc) ;
+     * - Si dans le futur (> 2 min après l'heure serveur) : ramené à l'heure serveur ;
+     * - Si plus ancien que 72 h : refusé en HTTP 422 `OFFLINE_TOO_OLD`.
+     *
+     * @return array{ok: bool, utc: string, is_client_time: bool, response?: Response}
+     */
+    private function resolveClientTimestamp(Request $request, ?string $fallbackUtc = null): array
     {
-        $raw = trim((string) $request->input('client_recorded_at', ''));
+        $serverNowUtc = $fallbackUtc ?? gmdate('Y-m-d H:i:s');
+        $raw = trim((string) ($request->input('client_recorded_at', '') ?: $request->input('recorded_at', '')));
         if ($raw === '') {
-            return $fallbackUtc;
+            return [
+                'ok' => true,
+                'utc' => $serverNowUtc,
+                'is_client_time' => false,
+            ];
         }
+
         try {
-            $dt = new DateTimeImmutable($raw);
-            return $dt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+            $utcTz = new DateTimeZone('UTC');
+            $dt = (new DateTimeImmutable($raw, $utcTz))->setTimezone($utcTz);
+            $serverDt = new DateTimeImmutable($serverNowUtc, $utcTz);
+            $diffSec = $dt->getTimestamp() - $serverDt->getTimestamp();
+
+            // Valeur de plus de 72 h dans le passé -> refusée (422 OFFLINE_TOO_OLD)
+            if ($diffSec < -(72 * 3600)) {
+                return [
+                    'ok' => false,
+                    'utc' => $serverNowUtc,
+                    'is_client_time' => true,
+                    'response' => Response::jsonError(
+                        'OFFLINE_TOO_OLD',
+                        'Saisie hors ligne trop ancienne (> 72 h).',
+                        422
+                    ),
+                ];
+            }
+
+            // Valeur dans le futur (> 2 min) -> ramenée à l'heure serveur
+            if ($diffSec > 120) {
+                return [
+                    'ok' => true,
+                    'utc' => $serverNowUtc,
+                    'is_client_time' => true,
+                ];
+            }
+
+            return [
+                'ok' => true,
+                'utc' => $dt->format('Y-m-d H:i:s'),
+                'is_client_time' => true,
+            ];
         } catch (Throwable) {
-            return $fallbackUtc;
+            return [
+                'ok' => true,
+                'utc' => $serverNowUtc,
+                'is_client_time' => false,
+            ];
         }
     }
 
@@ -170,12 +219,19 @@ final class ApiMedicalController extends Controller
 
         $context = trim((string) $request->input('context', 'routine')) ?: 'routine';
 
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
         $localDate = trim((string) $request->input('measured_date', ''));
         $localTime = trim((string) $request->input('measured_time', ''));
-        if ($localDate !== '' && $localTime !== '') {
+        if ($tsRes['is_client_time']) {
+            $measuredAtUtc = $tsRes['utc'];
+        } elseif ($localDate !== '' && $localTime !== '') {
             $measuredAtUtc = ScheduleService::localParisToUtc($localDate, $localTime);
         } else {
-            $measuredAtUtc = $this->parseClientTimestamp($request, gmdate('Y-m-d H:i:s'));
+            $measuredAtUtc = $tsRes['utc'];
         }
 
         $patStmt = $pdo->query('SELECT * FROM `patients` WHERE `id` = 1 LIMIT 1');
@@ -256,8 +312,9 @@ final class ApiMedicalController extends Controller
             'recorded_by' => $userId,
         ];
 
+        $expectationId = (int) $request->input('expectation_id', 0);
         AuditService::record('measure.create', 'measure', $measureId, null, $afterData, 1, $userId);
-        AlertService::onMeasureRecorded($afterData, $measureType);
+        AlertService::onMeasureRecorded($afterData, $measureType, $expectationId > 0 ? $expectationId : null);
 
         return Response::jsonSuccess($afterData, 201);
     }
@@ -277,7 +334,12 @@ final class ApiMedicalController extends Controller
             return $clockResp;
         }
 
-        $res = IntakeService::giveIntake((int) $id, $userId, $request->all());
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
+        $res = IntakeService::giveIntake((int) $id, $userId, $request->all(), $tsRes['utc']);
         if (!$res['ok']) {
             return Response::jsonError(
                 (string) ($res['code'] ?? 'INTAKE_ERROR'),
@@ -304,10 +366,16 @@ final class ApiMedicalController extends Controller
             return $clockResp;
         }
 
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
         $reason = (string) $request->input('reason', '');
         $comment = (string) $request->input('comment', '');
+        $clientUuid = $this->extractClientUuid($request);
 
-        $res = IntakeService::skipIntake((int) $id, $userId, $reason, $comment);
+        $res = IntakeService::skipIntake((int) $id, $userId, $reason, $comment, $tsRes['utc'], $clientUuid);
         if (!$res['ok']) {
             return Response::jsonError(
                 (string) ($res['code'] ?? 'SKIP_ERROR'),
@@ -334,12 +402,17 @@ final class ApiMedicalController extends Controller
             return $clockResp;
         }
 
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
         $prescriptionId = (int) $request->input('prescription_id', 0);
         if ($prescriptionId <= 0) {
             return Response::jsonError('VALIDATION_ERROR', 'Veuillez sélectionner un médicament « si besoin ».', 422);
         }
 
-        $res = IntakeService::giveAsNeeded($prescriptionId, $userId, $request->all());
+        $res = IntakeService::giveAsNeeded($prescriptionId, $userId, $request->all(), $tsRes['utc']);
         if (!$res['ok']) {
             return Response::jsonError(
                 (string) ($res['code'] ?? 'AS_NEEDED_ERROR'),
@@ -403,12 +476,20 @@ final class ApiMedicalController extends Controller
             $description = 'Repas photographié';
         }
 
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+
         $localDate = trim((string) $request->input('meal_date', ''));
         $localTime = trim((string) $request->input('meal_time', ''));
-        if ($localDate !== '' && $localTime !== '') {
+        if ($tsRes['is_client_time']) {
+            $eatenAtUtc = $tsRes['utc'];
+            $localTime = ScheduleService::utcToLocalParis($eatenAtUtc, 'H:i');
+        } elseif ($localDate !== '' && $localTime !== '') {
             $eatenAtUtc = ScheduleService::localParisToUtc($localDate, $localTime);
         } else {
-            $eatenAtUtc = $this->parseClientTimestamp($request, gmdate('Y-m-d H:i:s'));
+            $eatenAtUtc = $tsRes['utc'];
             $localTime = ScheduleService::utcToLocalParis($eatenAtUtc, 'H:i');
         }
 
@@ -561,7 +642,11 @@ final class ApiMedicalController extends Controller
             $summaryJson = json_encode($summaryArr, JSON_UNESCAPED_UNICODE);
         }
 
-        $nowUtc = $this->parseClientTimestamp($request, gmdate('Y-m-d H:i:s'));
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+        $nowUtc = $tsRes['utc'];
 
         $ins = $pdo->prepare(
             'INSERT INTO `notes`
@@ -677,7 +762,11 @@ final class ApiMedicalController extends Controller
             return Response::jsonError('INVALID_CARE_ITEM', 'Soin rapide introuvable.', 422);
         }
 
-        $nowUtc = $this->parseClientTimestamp($request, gmdate('Y-m-d H:i:s'));
+        $tsRes = $this->resolveClientTimestamp($request);
+        if (!$tsRes['ok']) {
+            return $tsRes['response'];
+        }
+        $nowUtc = $tsRes['utc'];
         $comment = trim((string) $request->input('comment', '')) ?: null;
 
         $ins = $pdo->prepare(
@@ -703,6 +792,7 @@ final class ApiMedicalController extends Controller
             'care_item_id' => $careItemId,
             'label' => (string) $item['label'],
             'checked_at' => $nowUtc,
+            'done_at' => $nowUtc,
             'time_local' => ScheduleService::utcToLocalParis($nowUtc, 'H:i'),
         ];
 

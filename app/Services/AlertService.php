@@ -337,6 +337,17 @@ final class AlertService
             'Résolue automatiquement (prise validée)',
             $patientId
         );
+        self::autoResolveByDedupeKey(
+            "intake_late_{$intakeId}",
+            'Résolue automatiquement (prise validée)',
+            $patientId
+        );
+        self::autoResolveBySource(
+            'medication_intake',
+            $intakeId,
+            'Résolue automatiquement (prise validée)',
+            $patientId
+        );
     }
 
     /**

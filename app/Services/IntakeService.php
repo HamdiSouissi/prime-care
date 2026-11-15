@@ -402,7 +402,8 @@ final class IntakeService
         int $userId,
         string $reason,
         ?string $comment = null,
-        ?string $nowUtc = null
+        ?string $nowUtc = null,
+        ?string $clientUuid = null
     ): array {
         $cleanReason = trim($reason);
         if ($cleanReason === '') {
@@ -416,7 +417,7 @@ final class IntakeService
 
         $effectiveNowUtc = $nowUtc ?? gmdate('Y-m-d H:i:s');
 
-        return Database::transaction(static function (PDO $pdo) use ($intakeId, $userId, $cleanReason, $comment, $effectiveNowUtc): array {
+        return Database::transaction(static function (PDO $pdo) use ($intakeId, $userId, $cleanReason, $comment, $effectiveNowUtc, $clientUuid): array {
             $stmt = $pdo->prepare(
                 'SELECT mi.*, m.name AS medication_name, u.first_name AS giver_first_name
                  FROM `medication_intakes` mi
@@ -435,6 +436,22 @@ final class IntakeService
                     'http_status' => 404,
                     'code' => 'INTAKE_NOT_FOUND',
                     'message' => 'Prise introuvable.',
+                ];
+            }
+
+            if ($clientUuid !== null && ($row['client_uuid'] ?? null) === $clientUuid && $row['status'] === 'skipped') {
+                return [
+                    'ok' => true,
+                    'http_status' => 200,
+                    'message' => 'Prise « Non donné » déjà synchronisée (idempotente).',
+                    'data' => [
+                        'id' => $intakeId,
+                        'status' => 'skipped',
+                        'client_uuid' => $clientUuid,
+                        'given_at' => $row['given_at'],
+                        'reason' => $row['reason'],
+                        'medication_name' => $row['medication_name'],
+                    ],
                 ];
             }
 
@@ -458,6 +475,7 @@ final class IntakeService
             $upd = $pdo->prepare(
                 'UPDATE `medication_intakes`
                  SET `status` = \'skipped\',
+                     `client_uuid` = COALESCE(`client_uuid`, :client_uuid),
                      `given_at` = :given_at,
                      `reason` = :reason,
                      `comment` = :comment,
@@ -469,6 +487,7 @@ final class IntakeService
                    AND `version` = :current_version'
             );
             $upd->execute([
+                'client_uuid' => $clientUuid,
                 'given_at' => $effectiveNowUtc,
                 'reason' => $reasonLabel,
                 'comment' => $comment !== null && trim($comment) !== '' ? trim($comment) : null,

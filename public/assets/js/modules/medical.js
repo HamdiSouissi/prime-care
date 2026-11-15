@@ -217,6 +217,7 @@ export function initMedical() {
       }
       if (form instanceof HTMLFormElement) {
         form.action = `/treatments/intakes/${intakeId}/give`;
+        form.setAttribute('data-api-form', `/api/intakes/${intakeId}/give`);
       }
       if (heading) {
         heading.textContent = title;
@@ -239,6 +240,7 @@ export function initMedical() {
       }
       if (form instanceof HTMLFormElement) {
         form.action = `/treatments/intakes/${intakeId}/skip`;
+        form.setAttribute('data-api-form', `/api/intakes/${intakeId}/skip`);
       }
       if (label) {
         label.textContent = `Motif obligatoire pour « ${title} » :`;
@@ -256,9 +258,10 @@ export function initMedical() {
         return;
       }
       const clientUuid = generateClientUuid();
+      const clientRecordedAt = new Date().toISOString();
       const endpoint = `/api/intakes/${intakeId}/give`;
       if (navigator.onLine === false) {
-        enqueueOfflineAction(endpoint, { client_uuid: clientUuid }, `Prise #${intakeId}`);
+        enqueueOfflineAction(endpoint, { client_uuid: clientUuid, client_recorded_at: clientRecordedAt }, `Prise #${intakeId}`);
         return;
       }
       giveBtn.disabled = true;
@@ -269,7 +272,7 @@ export function initMedical() {
           Accept: 'application/json',
           'X-CSRF-Token': getCsrfToken(),
         },
-        body: JSON.stringify({ client_uuid: clientUuid }),
+        body: JSON.stringify({ client_uuid: clientUuid, client_recorded_at: clientRecordedAt }),
       })
         .then(async (res) => ({ status: res.status, body: await res.json() }))
         .then(({ status, body }) => {
@@ -284,7 +287,7 @@ export function initMedical() {
         })
         .catch(() => {
           giveBtn.disabled = false;
-          enqueueOfflineAction(endpoint, { client_uuid: clientUuid }, `Prise #${intakeId}`);
+          enqueueOfflineAction(endpoint, { client_uuid: clientUuid, client_recorded_at: clientRecordedAt }, `Prise #${intakeId}`);
         });
       return;
     }
@@ -298,9 +301,13 @@ export function initMedical() {
         return;
       }
       const clientUuid = generateClientUuid();
+      const clientRecordedAt = new Date().toISOString();
       if (navigator.onLine === false) {
-        enqueueOfflineAction('/api/care-checks', { care_item_id: careItemId, client_uuid: clientUuid }, 'Soin rapide');
-        closeSheet();
+        enqueueOfflineAction(
+          '/api/care-checks',
+          { care_item_id: careItemId, client_uuid: clientUuid, client_recorded_at: clientRecordedAt },
+          'Soin rapide'
+        );
         return;
       }
       careBtn.disabled = true;
@@ -311,7 +318,7 @@ export function initMedical() {
           Accept: 'application/json',
           'X-CSRF-Token': getCsrfToken(),
         },
-        body: JSON.stringify({ care_item_id: careItemId, client_uuid: clientUuid }),
+        body: JSON.stringify({ care_item_id: careItemId, client_uuid: clientUuid, client_recorded_at: clientRecordedAt }),
       })
         .then((res) => res.json())
         .then((body) => {
@@ -329,8 +336,11 @@ export function initMedical() {
         })
         .catch(() => {
           careBtn.disabled = false;
-          enqueueOfflineAction('/api/care-checks', { care_item_id: careItemId, client_uuid: clientUuid }, 'Soin rapide');
-          closeSheet();
+          enqueueOfflineAction(
+            '/api/care-checks',
+            { care_item_id: careItemId, client_uuid: clientUuid, client_recorded_at: clientRecordedAt },
+            'Soin rapide'
+          );
         });
       return;
     }
