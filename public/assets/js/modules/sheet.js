@@ -23,6 +23,7 @@ export function openSheet(sheetId) {
   activeSheetBackdrop = backdrop;
   backdrop.classList.add('is-open');
   backdrop.setAttribute('aria-hidden', 'false');
+  document.documentElement.classList.add('has-open-sheet');
   document.body.style.overflow = 'hidden';
   triggerHaptic(8);
 
@@ -46,6 +47,7 @@ export function closeSheet(backdrop = activeSheetBackdrop) {
 
   backdrop.classList.remove('is-open');
   backdrop.setAttribute('aria-hidden', 'true');
+  document.documentElement.classList.remove('has-open-sheet');
   document.body.style.overflow = '';
 
   if (activeSheetBackdrop === backdrop) {
@@ -59,6 +61,15 @@ export function closeSheet(backdrop = activeSheetBackdrop) {
 }
 
 export function initSheets() {
+  const unlockIfNoOpenSheet = () => {
+    if (!document.querySelector('.pc-sheet-backdrop.is-open, .pc-alert-backdrop.is-open')) {
+      document.documentElement.classList.remove('has-open-sheet');
+      document.body.style.overflow = '';
+    }
+  };
+  unlockIfNoOpenSheet();
+  window.addEventListener('pageshow', unlockIfNoOpenSheet);
+
   const plusBtn = document.getElementById('pc-tabbar-plus');
   if (plusBtn) {
     plusBtn.addEventListener('click', (e) => {
