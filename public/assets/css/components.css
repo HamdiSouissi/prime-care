@@ -68,6 +68,7 @@
     background-color: rgba(10, 22, 51, 0.992);
     color: #FFFFFF;
     transition: opacity 250ms var(--ease-out), visibility 250ms;
+    animation: pc-loader-failsafe 4s ease-out forwards;
   }
 
   .pc-loader::before,
@@ -978,6 +979,7 @@
     background-color: var(--backdrop-overlay);
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transition: opacity var(--dur-sheet) var(--ease-out), visibility var(--dur-sheet);
     display: flex;
     align-items: flex-end;
@@ -987,6 +989,7 @@
   .pc-sheet-backdrop.is-open {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
   }
 
   .pc-sheet {
@@ -994,6 +997,9 @@
     max-width: 480px;
     max-height: 90dvh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
     background-color: var(--surface-1);
     border-radius: var(--r-sheet) var(--r-sheet) 0 0;
     padding: 10px var(--screen-pad) calc(var(--safe-bottom) + 24px);
@@ -1078,12 +1084,14 @@
     padding: 24px;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transition: opacity 200ms var(--ease-out), visibility 200ms;
   }
 
   .pc-alert-backdrop.is-open {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
   }
 
   .pc-alert-dialog {

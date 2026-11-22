@@ -121,7 +121,8 @@
 
   .pc-auth-screen {
     position: relative;
-    overflow: hidden;
+    overflow-x: clip;
+    overflow-y: visible;
     min-height: 100dvh;
     width: 100%;
     display: flex;
@@ -2022,6 +2023,7 @@
     align-items: center;
     justify-content: center;
     cursor: grab;
+    touch-action: pan-x;
     transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
   }
 

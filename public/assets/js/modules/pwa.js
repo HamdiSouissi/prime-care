@@ -41,14 +41,23 @@ export function initPwa() {
 
   // Home install banner visibility (only in browser mode & if not dismissed within 7 days)
   const homeBanner = document.getElementById('pc-home-install-banner');
-  const dismissedUntil = Number(localStorage.getItem(DISMISS_KEY) || '0');
+  let dismissedUntil = 0;
+  try {
+    dismissedUntil = Number(window.localStorage?.getItem(DISMISS_KEY) || '0');
+  } catch {
+    dismissedUntil = 0;
+  }
   if (homeBanner && !standalone && Date.now() > dismissedUntil) {
     homeBanner.classList.remove('is-hidden');
   }
 
   document.querySelectorAll('[data-dismiss-install-banner]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      localStorage.setItem(DISMISS_KEY, String(Date.now() + SEVEN_DAYS_MS));
+      try {
+        window.localStorage?.setItem(DISMISS_KEY, String(Date.now() + SEVEN_DAYS_MS));
+      } catch {
+        // Ignore storage restrictions
+      }
       homeBanner?.classList.add('is-hidden');
     });
   });

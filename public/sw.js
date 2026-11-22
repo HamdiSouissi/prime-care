@@ -7,8 +7,8 @@
  * - Web Push VAPID listener (`push`) and notification click routing (`notificationclick`)
  */
 
-const STATIC_CACHE = 'prime-care-static-v3';
-const HTML_CACHE = 'prime-care-html-v3';
+const STATIC_CACHE = 'prime-care-static-v4';
+const HTML_CACHE = 'prime-care-html-v4';
 const OFFLINE_URL = '/offline.html';
 const OFFLINE_NAV_WHITELIST = ['/', '/today', '/journal'];
 
@@ -18,6 +18,19 @@ const PRECACHE_ASSETS = [
   '/assets/css/app.min.css',
   '/assets/js/app.js',
   '/assets/js/offline-queue.js',
+  '/assets/js/modules/charts.js',
+  '/assets/js/modules/haptics.js',
+  '/assets/js/modules/loader.js',
+  '/assets/js/modules/medical.js',
+  '/assets/js/modules/navbar.js',
+  '/assets/js/modules/phase3.js',
+  '/assets/js/modules/pin-pad.js',
+  '/assets/js/modules/pwa.js',
+  '/assets/js/modules/segmented.js',
+  '/assets/js/modules/sheet.js',
+  '/assets/js/modules/tabs.js',
+  '/assets/js/modules/toast.js',
+  '/assets/js/modules/transitions.js',
   '/assets/fonts/inter-var.woff2',
   '/assets/brand/prime-care-logo-complet.svg',
   '/assets/brand/prime-care-icone-transparent.svg',
@@ -88,22 +101,24 @@ self.addEventListener('fetch', (event) => {
   // Cache-first for static assets (/assets/...)
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) {
-          return cached;
+      caches.match(request).then((exactCached) => {
+        if (exactCached) {
+          return exactCached;
         }
-        return fetch(request).then((response) => {
-          if (
-            response.ok &&
-            response.status === 200 &&
-            response.type === 'basic' &&
-            !hasForbiddenCacheHeaders(response)
-          ) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
+        return fetch(request)
+          .then((response) => {
+            if (
+              response.ok &&
+              response.status === 200 &&
+              response.type === 'basic' &&
+              !hasForbiddenCacheHeaders(response)
+            ) {
+              const clone = response.clone();
+              caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+          .catch(() => caches.match(request, { ignoreSearch: true }));
       })
     );
     return;
@@ -112,7 +127,9 @@ self.addEventListener('fetch', (event) => {
   // Network-first for HTML navigations: only cache exact whitelist ['/', '/today', '/journal']
   if (request.mode === 'navigate') {
     const normalizedPath = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, '') : '/';
-    const isWhitelistedScreen = OFFLINE_NAV_WHITELIST.includes(normalizedPath) && url.search === '';
+    const isWhitelistedScreen =
+      OFFLINE_NAV_WHITELIST.includes(normalizedPath) &&
+      (url.search === '' || url.search === '?source=pwa');
 
     event.respondWith(
       fetch(request)

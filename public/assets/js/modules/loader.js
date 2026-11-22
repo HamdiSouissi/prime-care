@@ -24,7 +24,12 @@ export function initLaunchLoader() {
 
   const minDurationMs = Number(loader.dataset.minMs || DEFAULT_MIN_MS) || DEFAULT_MIN_MS;
   const forceShow = loader.dataset.forceLoader === '1' || loader.dataset.forceShow === '1';
-  const alreadyShown = sessionStorage.getItem(SESSION_KEY) === '1';
+  let alreadyShown = false;
+  try {
+    alreadyShown = window.sessionStorage?.getItem(SESSION_KEY) === '1';
+  } catch {
+    alreadyShown = false;
+  }
 
   // Detect full browser reload via Navigation Timing Level 2
   let isReload = false;
@@ -45,7 +50,11 @@ export function initLaunchLoader() {
     return;
   }
 
-  sessionStorage.setItem(SESSION_KEY, '1');
+  try {
+    window.sessionStorage?.setItem(SESSION_KEY, '1');
+  } catch {
+    // Ignore storage restrictions in WebView / private mode
+  }
   const startTime = performance.now();
 
   const dismiss = () => {

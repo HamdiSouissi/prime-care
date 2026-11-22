@@ -222,23 +222,33 @@ function initPhase4() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initLaunchLoader();
-  initNavbar();
-  initTabs();
-  initSheets();
-  initToasts();
-  initSegmented();
-  initPinPad();
-  initTransitions();
-  initPwa();
-  initCharts();
-  initMedical();
-  initPhase3();
-  initPhase4();
-  initOfflineQueue();
-  initPasswordToggles();
-  initFieldValidation();
-  initInstantSearch();
-  initCopyButtons();
-  initAvatarCropAndUpload();
+  const initializers = [
+    initLaunchLoader,
+    initNavbar,
+    initTabs,
+    initSheets,
+    initToasts,
+    initSegmented,
+    initPinPad,
+    initTransitions,
+    initPwa,
+    initCharts,
+    initMedical,
+    initPhase3,
+    initPhase4,
+    initOfflineQueue,
+    initPasswordToggles,
+    initFieldValidation,
+    initInstantSearch,
+    initCopyButtons,
+    initAvatarCropAndUpload,
+  ];
+
+  initializers.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      // Keep remaining UI modules interactive if a browser capability is restricted
+    }
+  });
 });
